@@ -133,15 +133,29 @@ export default function Home() {
           </div>
 
           <p className="text-[10px] sm:text-xs text-foreground/15 uppercase tracking-[0.2em] sm:tracking-[0.4em] font-bold">
-            Simplicity in every byte
+            Meris Protocol // Simplicity in every byte
           </p>
         </motion.div>
+
+        {/* Philosophy Section */}
+        <motion.section 
+          variants={itemVariants}
+          className="mt-24 mb-16 max-w-3xl mx-auto px-6 text-center space-y-8"
+        >
+          <h2 className="text-xl sm:text-2xl font-serif text-foreground/80 tracking-tight">The Philosophy of Meris</h2>
+          <div className="glass-panel rounded-glass p-8 sm:p-12 border-white/5 bg-white/[0.01] relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-12 bg-linear-to-b from-sage/40 to-transparent" />
+            <p className="font-serif italic text-lg sm:text-xl text-foreground/50 leading-relaxed">
+              &ldquo;Derived from the Ancient Greek word &mu;&tilde;&epsilon;&rho;&iota;&sigmaf; (M&eacute;ris), meaning &apos;portion&apos; or &apos;part&apos;. We believe that every shared moment shouldn&apos;t be burdened by the complexity of numbers. Meris is built to ensure every portion is accounted for with absolute fairness, allowing you to focus on the experience, not the expense.&rdquo;
+            </p>
+          </div>
+        </motion.section>
       </motion.main>
 
       {/* Subtle Footer */}
       <footer className="mt-auto py-8 text-center relative z-10">
         <p className="text-[10px] text-foreground/10 uppercase tracking-[0.5em] font-bold">
-          SplitBill AI &copy; 2026
+          Meris &copy; 2026
         </p>
       </footer>
     </div>
