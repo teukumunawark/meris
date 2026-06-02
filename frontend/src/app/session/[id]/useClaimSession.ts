@@ -90,7 +90,8 @@ export function useClaimSession(sessionId: string) {
   useEffect(() => {
     if (!sessionId) return;
 
-    const sseUrl = `http://localhost:8080/stream?sessionId=${sessionId}`;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+    const sseUrl = `${backendUrl}/stream?sessionId=${sessionId}`;
     addLog(`Connecting to Server-Sent Events stream at: ${sseUrl}`);
     setConnectionStatus("connecting");
 
@@ -163,9 +164,9 @@ export function useClaimSession(sessionId: string) {
   }, [logs]);
 
   // Outbound claims syncing to backend
-  const syncClaimToBackend = async (itemId: string, shares: number) => {
+  const syncClaimToBackend = async (itemId: string, shares: number): Promise<boolean> => {
     const targetUser = userName.trim();
-    if (!targetUser) return;
+    if (!targetUser) return false;
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
     const url = `${backendUrl}/session/${sessionId}/claim`;
@@ -190,11 +191,13 @@ export function useClaimSession(sessionId: string) {
       }
 
       addLog(`[Network] Claim synchronized successfully with server.`);
+      return true;
     } catch (err) {
       // Log errors inside catch blocks (as requested)
       const errMsg = err instanceof Error ? err.message : String(err);
-      addLog(`[Network Warning] Failed to sync claim to backend: ${errMsg}. App running in offline local mode.`);
+      addLog(`[Network Warning] Failed to sync claim to backend: ${errMsg}.`);
       console.warn("Outbound claim sync failed:", err);
+      return false;
     }
   };
 
@@ -218,6 +221,9 @@ export function useClaimSession(sessionId: string) {
       addLog("Warning: Cannot claim item. Please enter your name first.");
       return;
     }
+
+    // Capture previous state for potential rollback
+    const previousItems = [...items];
 
     let updatedShares = 0;
 
@@ -253,10 +259,13 @@ export function useClaimSession(sessionId: string) {
     });
 
     // Fire outbound sync call asynchronously
-    setTimeout(() => {
-      syncClaimToBackend(itemId, updatedShares).catch((err) => {
-        console.error("Unhandled error in claim sync:", err);
-      });
+    setTimeout(async () => {
+      const success = await syncClaimToBackend(itemId, updatedShares);
+      // Rollback only if connectionStatus is "connected" (avoiding breaking standalone dev offline testing)
+      if (!success && connectionStatus === "connected") {
+        addLog(`[Network Rollback] Sync failed while connected to SSE server. Rolling back claim state for Item ${itemId}.`);
+        setItems(previousItems);
+      }
     }, 0);
   };
 
