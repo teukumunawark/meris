@@ -1,6 +1,6 @@
 # Todo List - Split Bill Implementation
 
-- [ ] Task 1: Scaffold Project & Folder Structure
+- [x] Task 1: Scaffold Project & Folder Structure
 - [ ] Task 2: Core Logic - Proportional Tax Calculation (TDD)
 - [ ] Task 3: AI Service Standardized Schema Definitions
 - [ ] Task 4: Setup Server-Sent Events (SSE) Endpoint
