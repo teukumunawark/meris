@@ -117,10 +117,10 @@ export default function ClaimSessionPage({ params }: PageProps) {
               style={{ backgroundColor: '#8ba895' }}
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base sm:text-lg shrink-0"
             >
-              $
+              M
             </div>
             <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase">
-              SplitBill <span className="text-sage font-mono font-light">// AI</span>
+              Meris <span className="text-sage font-mono font-light">// Protocol</span>
             </span>
           </div>
           
@@ -146,7 +146,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-10">
           <div className="space-y-3 sm:space-y-6">
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-serif text-foreground tracking-tight leading-tight">
-              Reviewing the <span className="text-sage font-sans font-light">Check</span>
+              Reviewing the <span className="text-sage font-sans font-light">Meris</span>
             </h1>
             <div className="flex items-center gap-3">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30">Session Code</span>
@@ -382,7 +382,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
       {/* Footer Branding */}
       <footer className="mt-24 py-12 border-t border-white/5 opacity-40">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-[0.3em] text-foreground/40">
-          <p>SplitBill &copy; 2026</p>
+          <p>Meris &copy; 2026</p>
           <p className="font-mono tracking-normal opacity-50 uppercase">Session: {sessionId}</p>
         </div>
       </footer>
