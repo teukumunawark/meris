@@ -46,13 +46,13 @@ export default function ParticipantBreakdown({
       {breakdowns.length === 0 ? (
         <p className="text-xs text-zinc-500 italic">No one has claimed any items yet.</p>
       ) : (
-        <div className="space-y-5">
+        <ul className="space-y-5" role="list">
           {breakdowns.map((p, idx) => {
             const isCurrentUser = isJoined && p.name === userName.trim();
             const percentOfReceipt = totalSubtotal > 0 ? Math.round((p.subtotal / totalSubtotal) * 100) : 0;
 
             return (
-              <div
+              <li
                 key={idx}
                 className={`p-4 rounded-2xl border ${
                   isCurrentUser
@@ -106,10 +106,10 @@ export default function ParticipantBreakdown({
                     ))}
                   </div>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

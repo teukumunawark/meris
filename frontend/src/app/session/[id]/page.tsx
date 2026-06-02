@@ -213,6 +213,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
                 onChange={(e) => setUserName(e.target.value)}
                 placeholder="Enter your name (e.g. Charlie)"
                 maxLength={20}
+                aria-label="Enter your guest name"
                 className="flex-1 px-4 py-3 rounded-2xl bg-zinc-950/60 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 font-medium transition-all"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") joinSession(userName);
@@ -285,7 +286,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
                 <p className="text-zinc-400 text-sm">No items extracted yet.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <ul className="space-y-4" role="list">
                 {items.map((item) => (
                   <ItemCard
                     key={item.id}
@@ -297,7 +298,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
                     getAvatarBg={getAvatarBg}
                   />
                 ))}
-              </div>
+              </ul>
             )}
           </div>
 

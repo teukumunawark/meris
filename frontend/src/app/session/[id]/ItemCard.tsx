@@ -29,7 +29,7 @@ export default function ItemCard({
   const remainingQty = item.quantity - totalClaimed;
 
   return (
-    <div
+    <li
       className={`relative bg-zinc-900/40 border backdrop-blur-sm rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 ${
         userClaimAmt > 0
           ? "border-violet-500/40 bg-gradient-to-r from-zinc-900/50 to-violet-950/10 shadow-lg shadow-violet-500/5"
@@ -99,6 +99,7 @@ export default function ItemCard({
             onClick={() => onUpdateClaim(item.id, -0.5)}
             className="w-8 h-8 rounded-lg flex items-center justify-center font-bold hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent text-zinc-400 hover:text-white transition-all cursor-pointer"
             title="Unclaim 0.5 portion"
+            aria-label={`Decrease claim for ${item.name} by 0.5 shares`}
           >
             -
           </button>
@@ -113,11 +114,12 @@ export default function ItemCard({
             onClick={() => onUpdateClaim(item.id, 0.5)}
             className="w-8 h-8 rounded-lg flex items-center justify-center font-bold hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent text-zinc-400 hover:text-white transition-all cursor-pointer"
             title="Claim 0.5 portion"
+            aria-label={`Increase claim for ${item.name} by 0.5 shares`}
           >
             +
           </button>
         </div>
       </div>
-    </div>
+    </li>
   );
 }
