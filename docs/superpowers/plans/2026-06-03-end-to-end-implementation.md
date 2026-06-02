@@ -244,16 +244,57 @@ git commit -m "feat: implement session creation and claim endpoints"
 
 ---
 
-### Task 4: Frontend Landing Page Upload
+### Task 4: Frontend Landing Page Upload & Client-Side Compression
 
 **Files:**
+- Modify: `frontend/package.json`
 - Modify: `frontend/src/app/page.tsx`
 
-- [ ] **Step 1: Connect Upload Input to API**
-Implement `fetch` to `POST /session` in the `onChange` handler.
-
-- [ ] **Step 2: Commit**
+- [ ] **Step 1: Install browser-image-compression**
+Run in `frontend` directory:
 ```bash
-git add frontend/src/app/page.tsx
-git commit -m "feat: connect frontend upload to backend AI extraction"
+npm install browser-image-compression
+```
+
+- [ ] **Step 2: Implement Compression and Upload Logic in `page.tsx`**
+Update the upload input to compress the image before sending `FormData` to the new `POST /session` backend endpoint.
+
+```tsx
+// Inside frontend/src/app/page.tsx
+import imageCompression from 'browser-image-compression';
+
+// ... existing code ...
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const options = {
+                              maxSizeMB: 1,
+                              maxWidthOrHeight: 1600,
+                              useWebWorker: true
+                            };
+                            const compressedFile = await imageCompression(file, options);
+                            
+                            const formData = new FormData();
+                            formData.append("receipt", compressedFile);
+                            
+                            // const response = await fetch("http://localhost:8080/session", {
+                            //   method: "POST",
+                            //   body: formData,
+                            // });
+                            // const data = await response.json();
+                            // router.push(`/session/${data.id}`);
+                            console.log("Compressed and uploaded:", compressedFile.name);
+                          } catch (error) {
+                            console.error("Error compressing image:", error);
+                          }
+                        }
+                      }}
+// ... existing code ...
+```
+
+- [ ] **Step 3: Commit**
+```bash
+git add frontend/package.json frontend/package-lock.json frontend/src/app/page.tsx
+git commit -m "feat: implement client-side image compression and connect upload API"
 ```
