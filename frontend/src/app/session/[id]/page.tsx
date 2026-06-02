@@ -1,12 +1,10 @@
 "use client";
 
-import React, { use, useState } from "react";
+import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useClaimSession } from "./useClaimSession";
 import ItemCard from "./ItemCard";
 import ParticipantBreakdown from "./ParticipantBreakdown";
-import SimulatorPanel from "./SimulatorPanel";
-import LogConsole from "./LogConsole";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,7 +15,13 @@ export default function ClaimSessionPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const sessionId = resolvedParams.id;
 
-  // Use Custom Hook for state, SSE sync, claim handlers, and simulators
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  // Use Custom Hook for state, SSE sync, claim handlers
   const {
     userName,
     setUserName,
@@ -25,16 +29,9 @@ export default function ClaimSessionPage({ params }: PageProps) {
     items,
     tax,
     serviceCharge,
-    logs,
-    connectionStatus,
-    logEndRef,
     joinSession,
     changeName,
     updateClaim,
-    simulateClientAction,
-    simulateRawMessage,
-    simulateReceiptUpdate,
-    clearLogs,
   } = useClaimSession(sessionId);
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -63,13 +60,10 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
   const getAvatarBg = (name: string) => {
     const colors = [
-      "bg-violet-600 text-white border-violet-400",
-      "bg-emerald-600 text-white border-emerald-400",
-      "bg-amber-600 text-white border-amber-400",
-      "bg-rose-600 text-white border-rose-400",
-      "bg-indigo-600 text-white border-indigo-400",
-      "bg-cyan-600 text-white border-cyan-400",
-      "bg-pink-600 text-white border-pink-400",
+      "bg-slate-700 text-slate-100",
+      "bg-sage/40 text-white",
+      "bg-emerald-900/40 text-emerald-100",
+      "bg-slate-800 text-slate-200",
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -98,123 +92,116 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div 
+          style={{ borderTopColor: '#8ba895' }}
+          className="w-12 h-12 rounded-full border-4 border-sage/10 animate-spin" 
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-slate-950 to-black text-zinc-100 antialiased font-sans">
-      
-      {/* Navbar Header */}
-      <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg shadow-violet-500/20 animate-pulse">
+    <div className="relative min-h-screen bg-background text-foreground antialiased font-sans overflow-x-hidden pb-20">
+      {/* Background Ambience */}
+      <div className="fixed top-[-10%] right-[-10%] w-[60%] h-[60%] bg-orb-sage blur-[120px] rounded-full opacity-20 pointer-events-none" />
+      <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-orb-slate blur-[120px] rounded-full opacity-10 pointer-events-none" />
+
+      {/* Navbar */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto h-16 sm:h-20 flex items-center justify-between px-4 sm:px-10">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div 
+              style={{ backgroundColor: '#8ba895' }}
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base sm:text-lg shrink-0"
+            >
               $
             </div>
-            <div>
-              <span className="font-bold text-lg bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-                SplitBill AI
-              </span>
-              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                Claim Mode
-              </span>
-            </div>
+            <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase">
+              SplitBill <span className="text-sage font-mono font-light">// AI</span>
+            </span>
           </div>
-
-          {/* SSE Sync Status Badge */}
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline text-xs text-zinc-400">SSE Sync:</span>
-            <div
-              className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${
-                connectionStatus === "connected"
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                  : connectionStatus === "connecting"
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                  : "bg-zinc-800 border-zinc-700 text-zinc-400"
-              }`}
+          
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-glass-sm bg-white/[0.03] border border-white/10 hover:bg-white/10 text-[10px] sm:text-xs font-mono tracking-wider text-foreground/70 hover:text-foreground transition-all cursor-pointer"
             >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  connectionStatus === "connected"
-                    ? "bg-emerald-400 animate-ping"
-                    : connectionStatus === "connecting"
-                    ? "bg-amber-400 animate-pulse"
-                    : "bg-zinc-500"
-                }`}
-              />
-              <span className="capitalize">{connectionStatus}</span>
-            </div>
+              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 19-7-7 7-7"/>
+                <path d="M19 12H5"/>
+              </svg>
+              <span>BACK HOME</span>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+      {/* Main Layout */}
+      <main className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-10 py-8 sm:py-16 flex flex-col gap-8 sm:gap-16">
         
-        {/* Session Meta Card */}
-        <section className="bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-zinc-800 transition-all duration-300">
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
-              Claim Session
+        {/* Header Section */}
+        <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-10">
+          <div className="space-y-3 sm:space-y-6">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-serif text-foreground tracking-tight leading-tight">
+              Reviewing the <span className="text-sage font-sans font-light">Check</span>
             </h1>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
-              <span>Session ID:</span>
-              <code className="px-2.5 py-1 rounded bg-zinc-800/80 text-zinc-200 font-mono text-xs font-semibold border border-zinc-700">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30">Session Code</span>
+              <code className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-glass-sm bg-white/[0.03] text-sage font-mono text-xs sm:text-sm font-bold border border-white/5">
                 {sessionId}
               </code>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="w-full md:w-auto">
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm font-semibold transition-all duration-200 active:scale-95 cursor-pointer"
+              className="w-full md:w-auto flex items-center justify-center gap-2 sm:gap-3 px-6 py-4 rounded-glass-sm glass-panel glass-panel-hover text-xs sm:text-sm font-bold uppercase tracking-[0.1em] sm:tracking-widest text-foreground/70 transition-all active:scale-95 cursor-pointer"
             >
               {copySuccess ? (
                 <>
-                  <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6 9 17l-5-5"/>
                   </svg>
-                  <span className="text-emerald-400">Copied!</span>
+                  <span className="text-sage">Copied</span>
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186l.955.513a2.25 2.25 0 010 3.16l-.955.513m0-2.186A2.25 2.25 0 1111.25 7.5v1.125m0-1.125a2.25 2.25 0 10-1.879 2.186l.955.513M12 18.75a2.25 2.25 0 101.879-2.186l-.955-.513m0 2.186a2.25 2.25 0 01-3.16 0l-.955-.513m0 0a2.25 2.25 0 10-1.879-2.186l.955-.513" />
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16 6 12 2 8 6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
                   </svg>
-                  <span>Share Link</span>
+                  <span>Share Session</span>
                 </>
               )}
             </button>
-
-            <Link
-              href="/"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-zinc-950 border border-zinc-800/80 hover:bg-zinc-900 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-200"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-              </svg>
-              <span>Back Home</span>
-            </Link>
           </div>
         </section>
 
-        {/* User Identity Banner or Join Form */}
+        {/* Identity Bar */}
         {!isJoined ? (
-          <section className="bg-gradient-to-br from-violet-950/20 via-zinc-900/40 to-indigo-950/20 border border-violet-900/20 backdrop-blur-md rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_0_50px_rgba(99,102,241,0.05)]">
-            <div className="space-y-2 max-w-xl">
-              <h2 className="text-xl font-bold text-white">Join the Bill Claiming</h2>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Enter your guest name to start selecting items you consumed. The system calculates your proportional taxes and services instantly.
+          <section className="glass-panel rounded-glass p-6 sm:p-10 md:p-14 flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-10 border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-orb-sage blur-[120px] opacity-10 pointer-events-none" />
+            <div className="space-y-3 sm:space-y-6 max-w-xl relative z-10">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-sans text-foreground font-normal">Who are you?</h2>
+              <p className="text-base sm:text-lg text-foreground/40 leading-relaxed font-sans">
+                Tell us your name so we can accurately track what you consumed. 
+                We&apos;ll calculate your share with pinpoint accuracy.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch gap-3 w-full md:max-w-md">
+            <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 w-full md:max-w-lg relative z-10">
               <input
                 type="text"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="Enter your name (e.g. Charlie)"
+                placeholder="Guest Name"
                 maxLength={20}
-                aria-label="Enter your guest name"
-                className="flex-1 px-4 py-3 rounded-2xl bg-zinc-950/60 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 font-medium transition-all"
+                className="flex-1 min-w-0 px-4 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-base sm:text-lg placeholder:text-foreground/20 focus:outline-none focus:ring-2 focus:ring-sage/40 transition-all font-sans"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") joinSession(userName);
                 }}
@@ -222,71 +209,91 @@ export default function ClaimSessionPage({ params }: PageProps) {
               <button
                 type="button"
                 onClick={() => joinSession(userName)}
-                className="px-6 py-3 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-violet-600/30 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                style={{ backgroundColor: '#8ba895' }}
+                className="flex-shrink-0 px-5 py-3 sm:px-8 sm:py-4 rounded-glass-sm text-background font-bold text-sm sm:text-base uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap text-center"
               >
-                <span>Join & Claim</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
+                Join & Claim
               </button>
             </div>
           </section>
         ) : (
-          <section className="bg-emerald-950/15 border border-emerald-900/30 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow">
+          <section className="glass-panel rounded-glass px-6 py-4 sm:px-10 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 border-sage/10 bg-sage/5">
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div 
+                style={{ backgroundColor: '#8ba895' }}
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full text-background flex items-center justify-center font-bold text-sm sm:text-base shrink-0"
+              >
                 {getInitials(userName)}
               </div>
-              <div>
-                <p className="text-xs text-zinc-400">Joined Active Participant</p>
-                <p className="text-sm font-bold text-white">
-                  {userName} <span className="text-xs font-normal text-emerald-400/90">(You)</span>
-                </p>
-              </div>
+              <p className="text-sm sm:text-lg font-sans text-foreground/70">
+                You are participating as <span className="text-foreground font-bold">{userName}</span>
+              </p>
             </div>
 
             <button
               onClick={changeName}
-              className="text-xs text-zinc-400 hover:text-white hover:underline transition-all cursor-pointer"
+              className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30 hover:text-foreground transition-all cursor-pointer border-b border-white/5 pb-1 self-start sm:self-auto"
             >
-              Change Name
+              Switch Account
             </button>
           </section>
         )}
 
-        {/* Claiming Progress indicator */}
-        <section className="bg-zinc-950/40 border border-zinc-800/80 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-sm font-medium">
-            <span className="text-zinc-400">Total Claimed Progress</span>
-            <span className="text-violet-400 font-mono font-semibold">{claimProgressPercent}%</span>
+        {/* Progress Section */}
+        <section className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-white/5 pb-3">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30 font-mono">
+              COLLABORATION STATE // CLAIMING
+            </span>
+            <span className="text-sm font-mono font-bold text-sage">
+              {claimProgressPercent.toFixed(1)}% COMPLETE
+            </span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-violet-600 to-indigo-500 h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${claimProgressPercent}%` }}
-            />
+
+          <div className="flex items-center gap-1 sm:gap-1.5 h-4 sm:h-5">
+            {Array.from({ length: 20 }).map((_, i) => {
+              const isActive = i < Math.round((claimProgressPercent / 100) * 20);
+              return (
+                <div 
+                  key={i}
+                  className={`h-full flex-1 transition-all duration-700 ease-out ${
+                    isActive 
+                      ? "bg-sage" 
+                      : "bg-white/2 border border-white/5"
+                  }`}
+                />
+              );
+            })}
           </div>
-          <p className="text-xs text-zinc-500">
-            {formatRupiah(totalClaimedSubtotal)} of {formatRupiah(totalSubtotal)} subtotal claimed
-          </p>
+
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider text-foreground/20">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-sage inline-block" />
+              <span>CLAIMED: {formatRupiah(totalClaimedSubtotal)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-white/10 inline-block" />
+              <span>TOTAL INVENTORY: {formatRupiah(totalSubtotal)}</span>
+            </div>
+          </div>
         </section>
 
-        {/* Main Grid split layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Main Grid Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
           
-          {/* Left Column: List of items */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold tracking-tight text-white">Items to Claim</h2>
-              <span className="text-xs text-zinc-500 font-semibold">{items.length} total items</span>
+          {/* Items Column */}
+          <div className="lg:col-span-8 space-y-6 sm:space-y-12">
+            <div className="flex items-end justify-between border-b border-white/5 pb-4 sm:pb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-sans text-foreground tracking-tight font-normal">Inventory</h2>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">{items.length} items</span>
             </div>
 
             {items.length === 0 ? (
-              <div className="bg-zinc-900/30 border border-zinc-800 rounded-2xl p-8 text-center">
-                <p className="text-zinc-400 text-sm">No items extracted yet.</p>
+              <div className="glass-panel rounded-glass p-12 sm:p-24 text-center border-dashed border-white/10">
+                <p className="text-foreground/20 font-sans text-lg sm:text-xl font-normal tracking-wide">No items have been uploaded yet.</p>
               </div>
             ) : (
-              <ul className="space-y-4" role="list">
+              <ul className="grid grid-cols-1 gap-4 sm:gap-8" role="list">
                 {items.map((item) => (
                   <ItemCard
                     key={item.id}
@@ -295,46 +302,42 @@ export default function ClaimSessionPage({ params }: PageProps) {
                     userName={userName}
                     onUpdateClaim={updateClaim}
                     formatRupiah={formatRupiah}
-                    getAvatarBg={getAvatarBg}
                   />
                 ))}
               </ul>
             )}
           </div>
 
-          {/* Right Column: Calculations breakdowns & Payment details */}
-          <div className="space-y-6">
+          {/* Sidebar Column */}
+          <div className="lg:col-span-4 space-y-8 sm:space-y-16">
             
-            {/* Bill Receipt Summary */}
-            <div className="bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md rounded-3xl p-6 space-y-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-                <span>Bill Total Summary</span>
+            {/* Bill Summary */}
+            <div className="glass-panel rounded-glass p-6 sm:p-10 space-y-6 sm:space-y-10 border-white/5 bg-white/[0.01]">
+              <h2 className="text-xl sm:text-2xl font-sans text-foreground font-normal border-b border-white/5 pb-4 sm:pb-6">
+                Bill Summary
               </h2>
 
-              <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between text-zinc-400">
+              <div className="space-y-4 sm:space-y-6 font-sans text-sm sm:text-base">
+                <div className="flex justify-between text-foreground/40 uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs font-bold">
                   <span>Subtotal</span>
-                  <span className="font-mono text-zinc-200">{formatRupiah(totalSubtotal)}</span>
+                  <span className="text-foreground/80">{formatRupiah(totalSubtotal)}</span>
                 </div>
-                <div className="flex justify-between text-zinc-400">
+                <div className="flex justify-between text-foreground/40 uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs font-bold">
                   <span>Tax (PPN)</span>
-                  <span className="font-mono text-zinc-200">{formatRupiah(tax)}</span>
+                  <span className="text-foreground/80">{formatRupiah(tax)}</span>
                 </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>Service Charge</span>
-                  <span className="font-mono text-zinc-200">{formatRupiah(serviceCharge)}</span>
+                <div className="flex justify-between text-foreground/40 uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs font-bold">
+                  <span>Service</span>
+                  <span className="text-foreground/80">{formatRupiah(serviceCharge)}</span>
                 </div>
-                <div className="border-t border-zinc-800/80 my-2 pt-2.5 flex justify-between font-bold text-base">
-                  <span className="text-white">Grand Total</span>
-                  <span className="font-mono text-violet-400">{formatRupiah(grandTotal)}</span>
+                <div className="border-t border-white/10 pt-6 sm:pt-8 flex justify-between items-baseline gap-2">
+                  <span className="text-foreground font-sans text-sm sm:text-base font-semibold uppercase tracking-wider">Grand Total</span>
+                  <span className="text-sage font-sans text-xl sm:text-2xl font-bold text-glow-sage leading-none shrink-0">{formatRupiah(grandTotal)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Proportional Split Breakdown List Component */}
+            {/* Breakdown List */}
             <ParticipantBreakdown
               participants={participants}
               items={items}
@@ -348,48 +351,40 @@ export default function ClaimSessionPage({ params }: PageProps) {
               getInitials={getInitials}
             />
 
-            {/* Payment Destination Details Card */}
-            <div className="bg-gradient-to-tr from-zinc-950 via-zinc-900/50 to-zinc-950 border border-zinc-800/80 rounded-3xl p-6 space-y-3.5 shadow-md">
-              <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-wider">Payment Destination</h3>
-              <div className="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-zinc-500">Bank Transfer</span>
-                  <span className="font-bold text-zinc-300">Bank Central Asia (BCA)</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-zinc-500">Account No.</span>
-                  <span className="font-mono text-sm font-bold text-white select-all">872-0941-224</span>
-                </div>
-                <div className="flex justify-between items-center text-xs border-t border-zinc-900 pt-2">
-                  <span className="text-zinc-500 font-medium">Account Name</span>
-                  <span className="text-zinc-300">Munawar</span>
-                </div>
-              </div>
+            {/* Payment Details */}
+            <div className="glass-panel rounded-glass p-6 sm:p-10 space-y-6 sm:space-y-8 border-sage/10 relative overflow-hidden bg-sage/[0.02]">
+               <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-transparent via-sage/40 to-transparent" />
+               <h3 className="text-[10px] font-bold text-sage uppercase tracking-[0.2em] sm:tracking-[0.4em] text-center">Settlement Information</h3>
+               
+               <div className="space-y-6 sm:space-y-8">
+                 <div className="text-center space-y-1 sm:space-y-2">
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Bank</p>
+                   <p className="font-serif text-foreground text-xl sm:text-2xl tracking-tight font-light">Bank Central Asia (BCA)</p>
+                 </div>
+                 
+                 <div className="glass-panel rounded-glass p-4 sm:p-6 text-center border-white/5 bg-white/[0.03]">
+                   <p className="font-mono text-lg sm:text-xl md:text-2xl text-sage tracking-[0.1em] sm:tracking-[0.2em] font-bold text-glow-sage select-all">872-0941-224</p>
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20 mt-3 sm:mt-4">Account Number</p>
+                 </div>
+
+                 <div className="text-center space-y-1 sm:space-y-2">
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Name</p>
+                   <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">Munawar</p>
+                 </div>
+               </div>
             </div>
 
           </div>
         </div>
 
-        {/* Developer simulation panel */}
-        <SimulatorPanel
-          items={items}
-          onSimulateClientAction={simulateClientAction}
-          onSimulateRawMessage={simulateRawMessage}
-          onSimulateReceiptUpdate={simulateReceiptUpdate}
-        />
-
-        {/* Logs visual console component */}
-        <LogConsole
-          logs={logs}
-          onClearLogs={clearLogs}
-          logEndRef={logEndRef}
-        />
-
       </main>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-zinc-900 bg-zinc-950/50 text-center text-xs text-zinc-600">
-        <p>© 2026 SplitBill AI. Built for seamless and proportional expense sharing.</p>
+      {/* Footer Branding */}
+      <footer className="mt-24 py-12 border-t border-white/5 opacity-40">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-[0.3em] text-foreground/40">
+          <p>SplitBill &copy; 2026</p>
+          <p className="font-mono tracking-normal opacity-50 uppercase">Session: {sessionId}</p>
+        </div>
       </footer>
     </div>
   );

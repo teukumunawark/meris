@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
 
 interface LogConsoleProps {
   logs: string[];
@@ -14,40 +15,47 @@ export default function LogConsole({
   logEndRef,
 }: LogConsoleProps) {
   return (
-    <section className="bg-zinc-950/80 border border-zinc-900 rounded-3xl overflow-hidden shadow-inner flex flex-col h-64">
-      <div className="px-5 py-3.5 bg-zinc-900/50 border-b border-zinc-900 flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wider font-extrabold text-zinc-400">
-          Live SSE Event Logs
+    <motion.section 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-panel rounded-glass overflow-hidden flex flex-col h-72 border-white/5 bg-black/40"
+    >
+      <div className="px-6 py-4 bg-white/5 border-b border-white/5 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/30 font-sans">
+          Live Event Stream
         </span>
         <button
           onClick={onClearLogs}
-          className="text-[10px] text-zinc-500 hover:text-zinc-300 uppercase font-semibold transition cursor-pointer"
+          className="text-[9px] text-white/20 hover:text-gold uppercase font-bold tracking-widest transition-all cursor-pointer"
         >
-          Clear Logs
+          Clear Stream
         </button>
       </div>
 
-      <div className="flex-1 p-4 overflow-y-auto font-mono text-[11px] text-zinc-300 space-y-2 select-text">
+      <div className="flex-1 p-6 overflow-y-auto font-mono text-[11px] space-y-3 selection:bg-gold/30">
         {logs.map((log, idx) => (
-          <div
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
             key={idx}
-            className={`py-0.5 border-l-2 pl-2 ${
+            className={`py-1 px-3 rounded-glass-sm border-l-2 ${
               log.includes("[Error]")
-                ? "border-rose-500 text-rose-300 bg-rose-950/10"
+                ? "border-rose-500/50 text-rose-300 bg-rose-500/5"
                 : log.includes("[System]")
-                ? "border-violet-500 text-violet-300"
+                ? "border-gold/50 text-gold/80 bg-gold/5"
                 : log.includes("[SSE]")
-                ? "border-emerald-500 text-emerald-300"
+                ? "border-emerald/50 text-emerald/80 bg-emerald/5"
                 : log.includes("[Simulator]")
-                ? "border-amber-500 text-amber-300"
-                : "border-zinc-800 text-zinc-400"
+                ? "border-amethyst/50 text-amethyst/80 bg-amethyst/5"
+                : "border-white/10 text-white/30"
             }`}
           >
+            <span className="opacity-40 mr-2">[{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
             {log}
-          </div>
+          </motion.div>
         ))}
         <div ref={logEndRef} />
       </div>
-    </section>
+    </motion.section>
   );
 }

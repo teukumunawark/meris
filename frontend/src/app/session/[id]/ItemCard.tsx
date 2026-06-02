@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ReceiptItem } from "@/utils/calculations";
 
 interface ItemCardProps {
@@ -9,7 +10,6 @@ interface ItemCardProps {
   userName: string;
   onUpdateClaim: (itemId: string, increment: number) => void;
   formatRupiah: (val: number) => string;
-  getAvatarBg: (name: string) => string;
 }
 
 export default function ItemCard({
@@ -18,7 +18,6 @@ export default function ItemCard({
   userName,
   onUpdateClaim,
   formatRupiah,
-  getAvatarBg,
 }: ItemCardProps) {
   const targetUser = userName.trim();
   const userClaim = item.claims.find((c) => c.name === targetUser);
@@ -29,97 +28,105 @@ export default function ItemCard({
   const remainingQty = item.quantity - totalClaimed;
 
   return (
-    <li
-      className={`relative bg-zinc-900/40 border backdrop-blur-sm rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 ${
-        userClaimAmt > 0
-          ? "border-violet-500/40 bg-gradient-to-r from-zinc-900/50 to-violet-950/10 shadow-lg shadow-violet-500/5"
-          : "border-zinc-800 hover:border-zinc-700/80"
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`glass-panel rounded-glass-sm p-5 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-10 transition-all duration-700 group relative overflow-hidden ${
+        userClaimAmt > 0 ? "border-sage/40 bg-sage/4" : "border-white/5"
       }`}
     >
-      <div className="space-y-2 flex-1">
-        <div className="flex items-start justify-between md:justify-start md:items-center gap-3">
-          <h3 className="font-bold text-white text-base sm:text-lg">{item.name}</h3>
-          {isFullyClaimed && (
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Fully Claimed
-            </span>
-          )}
+      <div className="absolute inset-0 bg-linear-to-r from-sage/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+      
+      <div className="space-y-4 sm:space-y-6 flex-1 relative z-10">
+        <div className="flex items-start justify-between md:justify-start md:items-center gap-4 sm:gap-6">
+          <h3 className="font-sans text-foreground text-lg sm:text-xl md:text-2xl tracking-tight font-normal">
+            {item.name}
+          </h3>
+          <AnimatePresence>
+            {isFullyClaimed && (
+              <motion.span 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-[9px] sm:text-[10px] uppercase font-bold tracking-[0.2em] sm:tracking-[0.3em] px-3 py-1 sm:px-4 sm:py-1.5 rounded-glass-sm bg-sage/10 text-sage border border-sage/20 shrink-0"
+              >
+                Claimed
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-400">
-          <div className="flex items-center gap-1 font-mono">
-            <span>Qty: {item.quantity}</span>
+        <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-10 gap-y-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] text-foreground/30">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-foreground/20 font-sans text-xs">qty</span>
+            <span className="text-foreground/50">{item.quantity}</span>
           </div>
-          <div>
-            Unit Price: <span className="font-mono">{formatRupiah(item.price)}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-foreground/20 font-sans text-xs">price</span>
+            <span className="text-foreground/50">{formatRupiah(item.price)}</span>
           </div>
-          <div className="font-bold text-zinc-300">
-            Total: <span className="font-mono text-zinc-100">{formatRupiah(item.price * item.quantity)}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-foreground/20 font-sans text-xs">total</span>
+            <span className="text-sage text-glow-sage">{formatRupiah(item.price * item.quantity)}</span>
           </div>
         </div>
 
-        {/* Avatars/Pills of claimants */}
+        {/* Claimants */}
         {item.claims.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-semibold">Claimed by:</span>
-            <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-white/5">
+            <span className="text-[9px] sm:text-[10px] text-foreground/20 uppercase font-bold tracking-widest">Participants</span>
+            <div className="flex flex-wrap items-center gap-2">
               {item.claims.map((claim, idx) => (
-                <div
+                <motion.div
                   key={idx}
-                  title={`${claim.name} claimed ${claim.shares} shares`}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-semibold ${getAvatarBg(
-                    claim.name
-                  )}`}
+                  layout
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-glass-sm border border-white/5 text-[10px] sm:text-[11px] font-bold tracking-wider sm:tracking-widest bg-white/5 text-foreground/60"
                 >
-                  <span>{claim.name}</span>
-                  <span className="opacity-80 px-1 bg-black/25 rounded">
-                    {claim.shares}x
-                  </span>
-                </div>
+                  <span className="font-sans text-xs sm:text-sm text-foreground/40">{claim.name}</span>
+                  <span className="text-sage font-mono">{claim.shares}x</span>
+                </motion.div>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Claim Control actions */}
-      <div className="flex flex-row sm:flex-col md:flex-row items-center justify-between sm:justify-end gap-4 border-t border-zinc-800/60 md:border-none pt-3 md:pt-0">
-        {/* Remaining indicator */}
-        <div className="text-right flex flex-col items-start sm:items-end">
-          <span className="text-[10px] text-zinc-500 uppercase font-semibold">Available</span>
-          <span className="text-xs font-mono font-bold text-zinc-300">
-            {remainingQty} of {item.quantity}
+      {/* Actions */}
+      <div className="flex flex-row items-center justify-between md:justify-end gap-4 sm:gap-6 md:gap-10 border-t border-white/5 md:border-none pt-6 md:pt-0 relative z-10">
+        {/* Remaining */}
+        <div className="text-left md:text-right flex flex-col gap-0.5">
+          <span className="text-[9px] sm:text-[10px] text-foreground/20 uppercase font-bold tracking-widest">Available</span>
+          <span className="text-xs sm:text-sm font-mono font-bold text-foreground/40">
+            {remainingQty} <span className="text-[10px] sm:text-xs text-foreground/20 font-sans">of</span> {item.quantity}
           </span>
         </div>
 
-        {/* Quantity Claim selector */}
-        <div className="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl p-1 shadow">
+        {/* Counter */}
+        <div className="flex items-center glass-panel rounded-glass-sm p-1 sm:p-2 border-white/10 bg-white/2">
           <button
             disabled={!isJoined || userClaimAmt <= 0}
             onClick={() => onUpdateClaim(item.id, -0.5)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent text-zinc-400 hover:text-white transition-all cursor-pointer"
-            title="Unclaim 0.5 portion"
-            aria-label={`Decrease claim for ${item.name} by 0.5 shares`}
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-glass-sm flex items-center justify-center text-lg sm:text-xl font-light hover:bg-white/5 active:scale-90 disabled:opacity-10 transition-all text-foreground/40 cursor-pointer"
           >
-            -
+            —
           </button>
           
-          <div className="w-14 text-center font-mono text-xs font-bold flex flex-col justify-center select-none">
-            <span className="text-[10px] text-zinc-500 block leading-none">CLAIM</span>
-            <span className="text-zinc-200 text-sm mt-0.5">{userClaimAmt}</span>
+          <div className="w-16 sm:w-20 text-center flex flex-col justify-center select-none">
+            <span className="text-[9px] sm:text-[10px] text-foreground/20 font-bold tracking-widest block uppercase">Share</span>
+            <span className="text-foreground text-lg sm:text-xl font-sans font-semibold">{userClaimAmt}</span>
           </div>
 
           <button
             disabled={!isJoined || isFullyClaimed}
             onClick={() => onUpdateClaim(item.id, 0.5)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent text-zinc-400 hover:text-white transition-all cursor-pointer"
-            title="Claim 0.5 portion"
-            aria-label={`Increase claim for ${item.name} by 0.5 shares`}
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-glass-sm flex items-center justify-center text-lg sm:text-xl font-light hover:bg-white/5 active:scale-90 disabled:opacity-10 transition-all text-sage cursor-pointer"
           >
-            +
+            ＋
           </button>
         </div>
       </div>
-    </li>
+    </motion.li>
   );
 }

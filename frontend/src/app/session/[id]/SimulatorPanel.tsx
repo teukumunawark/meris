@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ReceiptItem } from "@/utils/calculations";
+import { motion } from "framer-motion";
 
 interface SimulatorPanelProps {
   items: ReceiptItem[];
@@ -17,49 +18,53 @@ export default function SimulatorPanel({
   onSimulateReceiptUpdate,
 }: SimulatorPanelProps) {
   return (
-    <section className="bg-zinc-950/40 border border-zinc-800/60 rounded-3xl p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/80 pb-3">
+    <motion.section 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="glass-panel rounded-glass p-5 sm:p-8 space-y-6 sm:space-y-8 border-white/5 bg-white/5"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
         <div>
-          <h3 className="text-sm font-bold text-violet-400 uppercase tracking-wider">
-            Dev Simulation Panel
+          <h3 className="text-[10px] font-bold text-gold uppercase tracking-[0.3em] mb-2">
+            Developer Simulation
           </h3>
-          <p className="text-xs text-zinc-500">Simulate incoming Server-Sent Events to test real-time collaboration.</p>
+          <p className="text-xs text-white/30 font-sans">Test real-time collaboration with simulated events.</p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={() => onSimulateClientAction("Alice", "claim")}
-            className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-semibold transition cursor-pointer"
+            className="px-4 py-2 rounded-glass-sm bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
-            + Alice Claim
+            + Alice
           </button>
           <button
             onClick={() => onSimulateClientAction("Bob", "claim")}
-            className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-semibold transition cursor-pointer"
+            className="px-4 py-2 rounded-glass-sm bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
-            + Bob Claim
+            + Bob
           </button>
           <button
             onClick={() => {
               onSimulateClientAction("Alice", "reset");
               onSimulateClientAction("Bob", "reset");
             }}
-            className="px-3 py-1 rounded bg-zinc-800/50 hover:bg-rose-950/30 hover:text-rose-400 hover:border-rose-900 border border-transparent text-[11px] font-semibold transition cursor-pointer"
+            className="px-4 py-2 rounded-glass-sm bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-rose-400 hover:border-rose-400/30 transition-all cursor-pointer"
           >
-            Clear Simulators
+            Reset
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4">
         <button
           onClick={() => {
             const customMsg = `Demo Broadcast event fired at ${new Date().toLocaleTimeString()}`;
             onSimulateRawMessage(customMsg);
           }}
-          className="px-4 py-2 rounded-xl bg-violet-950/20 border border-violet-900/40 hover:bg-violet-900/30 text-xs font-semibold text-violet-300 transition cursor-pointer"
+          className="px-6 py-3 rounded-glass-sm glass-panel glass-panel-hover text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-gold transition-all cursor-pointer"
         >
-          Broadcast Mock Text Message
+          Broadcast Text Message
         </button>
 
         <button
@@ -81,11 +86,11 @@ export default function SimulatorPanel({
             });
             onSimulateReceiptUpdate(simulationItems);
           }}
-          className="px-4 py-2 rounded-xl bg-indigo-950/20 border border-indigo-900/40 hover:bg-indigo-900/30 text-xs font-semibold text-indigo-300 transition cursor-pointer"
+          className="px-6 py-3 rounded-glass-sm glass-panel glass-panel-hover text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-emerald transition-all cursor-pointer"
         >
-          Push Mock Receipt Update
+          Push Receipt Update
         </button>
       </div>
-    </section>
+    </motion.section>
   );
 }

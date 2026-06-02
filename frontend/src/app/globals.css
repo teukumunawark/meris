@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #111418;
+  --foreground: #f0f2f5;
+  --primary-sage: #8ba895;
+  --accent-slate: #475569;
+  --accent-sand: #d4d4d8;
+  --glass-bg: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.04);
+
+  /* Standard typography sizes (Clean and readable on both mobile and desktop) */
+  --size-xs: 0.75rem;      /* 12px */
+  --size-sm: 0.875rem;     /* 14px */
+  --size-base: 1rem;       /* 16px */
+  --size-lg: 1.125rem;     /* 18px */
+  --size-xl: 1.25rem;      /* 20px */
+  --size-2xl: 1.5rem;      /* 24px */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+@theme {
+  --color-background: #111418;
+  --color-foreground: #f0f2f5;
+  --color-sage: #8ba895;
+  --color-slate-muted: #334155;
+  
+  --font-serif: var(--font-fraunces);
+  --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-geist-mono);
+
+  --radius-glass: 0.5rem;
+  --radius-glass-sm: 0.25rem;
+
+  /* Responsive Tailwind font utilities */
+  --text-xs: var(--size-xs);
+  --text-sm: var(--size-sm);
+  --text-base: var(--size-base);
+  --text-lg: var(--size-lg);
+  --text-xl: var(--size-xl);
+  --text-2xl: var(--size-2xl);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    @apply bg-background text-foreground selection:bg-sage/30 selection:text-white antialiased font-sans;
+    font-size: var(--size-base);
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+    line-height: 1.2;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .glass-panel {
+    @apply bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)];
+  }
+
+  .glass-panel-hover {
+    @apply hover:bg-[var(--glass-highlight)] hover:border-white/15 transition-all duration-700;
+  }
+
+  .text-glow-sage {
+    text-shadow: none;
+  }
+
+  .bg-orb-sage {
+    background: radial-gradient(circle at center, rgba(139, 168, 149, 0.12) 0%, transparent 70%);
+  }
+
+  .bg-orb-slate {
+    background: radial-gradient(circle at center, rgba(71, 85, 105, 0.08) 0%, transparent 70%);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
