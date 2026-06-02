@@ -120,7 +120,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
               M
             </div>
             <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase">
-              Meris <span className="text-sage font-mono font-light">// Protocol</span>
+              Meris <span className="text-sage font-mono font-light">{"// Protocol"}</span>
             </span>
           </div>
           
