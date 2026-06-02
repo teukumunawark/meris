@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { ReceiptItem, ParticipantClaim } from "@/utils/calculations";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ReceiptItem } from "@/utils/calculations";
 
 export interface SSEServerUpdatePayload {
   items?: Array<{
@@ -22,10 +22,54 @@ export interface SSEServerUpdatePayload {
 export function useClaimSession(sessionId: string) {
   const [userName, setUserName] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
-  const [items, setItems] = useState<ReceiptItem[]>([]);
+  
+  // Lazy state initializers
+  const [items, setItems] = useState<ReceiptItem[]>(() => [
+    {
+      id: "item-1",
+      name: "Nasi Goreng Seafood Special",
+      price: 45000,
+      quantity: 2,
+      claims: [{ name: "Alice", shares: 1 }],
+    },
+    {
+      id: "item-2",
+      name: "Chicken Cordon Bleu",
+      price: 65000,
+      quantity: 1,
+      claims: [],
+    },
+    {
+      id: "item-3",
+      name: "Garlic Bread",
+      price: 25000,
+      quantity: 1,
+      claims: [
+        { name: "Alice", shares: 0.5 },
+        { name: "Bob", shares: 0.5 },
+      ],
+    },
+    {
+      id: "item-4",
+      name: "Ice Sweet Tea",
+      price: 15000,
+      quantity: 3,
+      claims: [{ name: "Bob", shares: 1 }],
+    },
+    {
+      id: "item-5",
+      name: "Es Jeruk Peras",
+      price: 18000,
+      quantity: 2,
+      claims: [],
+    },
+  ]);
   const [tax, setTax] = useState<number>(16800); // Default mock tax
   const [serviceCharge, setServiceCharge] = useState<number>(8400); // Default mock service charge
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<string[]>(() => {
+    const timestamp = new Date().toLocaleTimeString();
+    return [`[${timestamp}] System initialized with default mock items.`];
+  });
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
 
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -40,52 +84,6 @@ export function useClaimSession(sessionId: string) {
     setLogs([]);
   };
 
-  // Initialize Mock Data
-  useEffect(() => {
-    const initialItems: ReceiptItem[] = [
-      {
-        id: "item-1",
-        name: "Nasi Goreng Seafood Special",
-        price: 45000,
-        quantity: 2,
-        claims: [{ name: "Alice", shares: 1 }],
-      },
-      {
-        id: "item-2",
-        name: "Chicken Cordon Bleu",
-        price: 65000,
-        quantity: 1,
-        claims: [],
-      },
-      {
-        id: "item-3",
-        name: "Garlic Bread",
-        price: 25000,
-        quantity: 1,
-        claims: [
-          { name: "Alice", shares: 0.5 },
-          { name: "Bob", shares: 0.5 },
-        ],
-      },
-      {
-        id: "item-4",
-        name: "Ice Sweet Tea",
-        price: 15000,
-        quantity: 3,
-        claims: [{ name: "Bob", shares: 1 }],
-      },
-      {
-        id: "item-5",
-        name: "Es Jeruk Peras",
-        price: 18000,
-        quantity: 2,
-        claims: [],
-      },
-    ];
-    setItems(initialItems);
-    addLog("System initialized with default mock items.");
-  }, []);
-
   // SSE EventSource Connection
   useEffect(() => {
     if (!sessionId) return;
@@ -93,7 +91,7 @@ export function useClaimSession(sessionId: string) {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
     const sseUrl = `${backendUrl}/stream?sessionId=${sessionId}`;
     addLog(`Connecting to Server-Sent Events stream at: ${sseUrl}`);
-    setConnectionStatus("connecting");
+    setConnectionStatus((prev) => (prev !== "connecting" ? "connecting" : prev));
 
     let eventSource: EventSource;
     try {
@@ -118,7 +116,12 @@ export function useClaimSession(sessionId: string) {
                 name: item.name || "Unnamed Item",
                 price: typeof item.price === "number" ? item.price : 0,
                 quantity: typeof item.quantity === "number" ? item.quantity : 1,
-                claims: Array.isArray(item.claims) ? item.claims : [],
+                claims: Array.isArray(item.claims)
+                  ? item.claims.map((claim) => ({
+                      name: typeof claim?.name === "string" ? claim.name.trim() : "Unknown",
+                      shares: typeof claim?.shares === "number" ? claim.shares : 0,
+                    })).filter(c => c.shares > 0)
+                  : [],
               }));
               setItems(updatedItems);
               addLog("Updated items list based on server broadcast.");
@@ -164,7 +167,12 @@ export function useClaimSession(sessionId: string) {
   }, [logs]);
 
   // Outbound claims syncing to backend
-  const syncClaimToBackend = async (itemId: string, shares: number): Promise<boolean> => {
+  const syncClaimToBackend = useCallback(async (itemId: string, shares: number): Promise<boolean> => {
+    if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
+      addLog(`[Mock] Claim sync skipped (NEXT_PUBLIC_MOCK_API === "true").`);
+      return true;
+    }
+
     const targetUser = userName.trim();
     if (!targetUser) return false;
 
@@ -199,7 +207,7 @@ export function useClaimSession(sessionId: string) {
       console.warn("Outbound claim sync failed:", err);
       return false;
     }
-  };
+  }, [userName, sessionId]);
 
   // Join session handler
   const joinSession = (name: string) => {
@@ -215,7 +223,7 @@ export function useClaimSession(sessionId: string) {
   };
 
   // Claim portion of an item
-  const updateClaim = (itemId: string, increment: number) => {
+  const updateClaim = useCallback((itemId: string, increment: number) => {
     const targetUser = userName.trim();
     if (!isJoined || !targetUser) {
       addLog("Warning: Cannot claim item. Please enter your name first.");
@@ -260,14 +268,16 @@ export function useClaimSession(sessionId: string) {
 
     // Fire outbound sync call asynchronously
     setTimeout(async () => {
+      if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
+        return;
+      }
       const success = await syncClaimToBackend(itemId, updatedShares);
-      // Rollback only if connectionStatus is "connected" (avoiding breaking standalone dev offline testing)
-      if (!success && connectionStatus === "connected") {
-        addLog(`[Network Rollback] Sync failed while connected to SSE server. Rolling back claim state for Item ${itemId}.`);
+      if (!success) {
+        addLog(`[Network Rollback] Sync failed. Rolling back claim state for Item ${itemId}.`);
         setItems(previousItems);
       }
     }, 0);
-  };
+  }, [isJoined, userName, items, syncClaimToBackend]);
 
   // Developer Simulators
   const simulateClientAction = (actor: string, actionType: "claim" | "reset") => {

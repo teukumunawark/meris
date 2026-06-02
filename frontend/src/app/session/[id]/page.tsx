@@ -1,6 +1,7 @@
 "use client";
 
 import React, { use, useState } from "react";
+import Link from "next/link";
 import { useClaimSession } from "./useClaimSession";
 import ItemCard from "./ItemCard";
 import ParticipantBreakdown from "./ParticipantBreakdown";
@@ -183,7 +184,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
               )}
             </button>
 
-            <a
+            <Link
               href="/"
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-zinc-950 border border-zinc-800/80 hover:bg-zinc-900 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-200"
             >
@@ -191,7 +192,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
               <span>Back Home</span>
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -371,8 +372,6 @@ export default function ClaimSessionPage({ params }: PageProps) {
         {/* Developer simulation panel */}
         <SimulatorPanel
           items={items}
-          tax={tax}
-          serviceCharge={serviceCharge}
           onSimulateClientAction={simulateClientAction}
           onSimulateRawMessage={simulateRawMessage}
           onSimulateReceiptUpdate={simulateReceiptUpdate}

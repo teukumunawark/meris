@@ -5,8 +5,6 @@ import { ReceiptItem } from "@/utils/calculations";
 
 interface SimulatorPanelProps {
   items: ReceiptItem[];
-  tax: number;
-  serviceCharge: number;
   onSimulateClientAction: (actor: string, actionType: "claim" | "reset") => void;
   onSimulateRawMessage: (msg: string) => void;
   onSimulateReceiptUpdate: (simulationItems: ReceiptItem[]) => void;
@@ -14,8 +12,6 @@ interface SimulatorPanelProps {
 
 export default function SimulatorPanel({
   items,
-  tax,
-  serviceCharge,
   onSimulateClientAction,
   onSimulateRawMessage,
   onSimulateReceiptUpdate,
