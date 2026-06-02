@@ -21,7 +21,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	response := HealthResponse{
 		Status:  "OK",
 		Message: "Split Bill Backend is running",
@@ -36,7 +36,6 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthCheckHandler)
 
-	// Initialize global SSE Hub
 	hub := sse.NewHub()
 	mux.HandleFunc("/stream", hub.StreamHandler)
 
@@ -46,4 +45,3 @@ func main() {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
-
