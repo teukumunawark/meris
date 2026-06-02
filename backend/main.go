@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"split-bill-backend/sse"
 )
 
 type HealthResponse struct {
@@ -34,9 +36,14 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthCheckHandler)
 
+	// Initialize global SSE Hub
+	hub := sse.NewHub()
+	mux.HandleFunc("/stream", hub.StreamHandler)
+
 	port := ":8080"
-	log.Printf("Starting health check server on port %s...", port)
+	log.Printf("Starting health check and SSE server on port %s...", port)
 	if err := http.ListenAndServe(port, mux); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
+
