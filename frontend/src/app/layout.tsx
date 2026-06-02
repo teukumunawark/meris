@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SplitBill AI | Simple Expense Sharing",
+  title: "Meris | Share the moment, split the cost",
   description: "Approachable and proportional expense sharing with AI-powered receipt extraction.",
 };
 
