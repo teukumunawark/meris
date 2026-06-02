@@ -16,7 +16,7 @@
 - Modify: `frontend/src/app/layout.tsx`
 - Modify: `frontend/src/app/globals.css`
 
-- [ ] **Step 1: Update Metadata in layout.tsx**
+- [x] **Step 1: Update Metadata in layout.tsx**
 
 ```typescript
 // frontend/src/app/layout.tsx
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend/src/app/layout.tsx
@@ -40,7 +40,7 @@ git commit -m "chore: update metadata for Meris rebranding"
 **Files:**
 - Modify: `frontend/src/app/page.tsx`
 
-- [ ] **Step 1: Update Logo and Headline**
+- [x] **Step 1: Update Logo and Headline**
 
 Replace the old "SplitBill AI" or text-based logo references with the new dual-font "Meris" style.
 
@@ -54,7 +54,7 @@ Replace the old "SplitBill AI" or text-based logo references with the new dual-f
 </footer>
 ```
 
-- [ ] **Step 2: Add "The Philosophy of Meris" Section**
+- [x] **Step 2: Add "The Philosophy of Meris" Section**
 
 Insert the new section between the main card and the footer.
 
@@ -75,7 +75,7 @@ Insert the new section between the main card and the footer.
 </motion.section>
 ```
 
-- [ ] **Step 3: Update Join Button and Input**
+- [x] **Step 3: Update Join Button and Input**
 
 ```tsx
 // frontend/src/app/page.tsx
@@ -84,7 +84,7 @@ Insert the new section between the main card and the footer.
 </p>
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/src/app/page.tsx
@@ -98,7 +98,7 @@ git commit -m "feat: implement Meris branding and Philosophy section on home pag
 **Files:**
 - Modify: `frontend/src/app/session/[id]/page.tsx`
 
-- [ ] **Step 1: Update Header Branding**
+- [x] **Step 1: Update Header Branding**
 
 ```tsx
 // frontend/src/app/session/[id]/page.tsx
@@ -107,7 +107,7 @@ git commit -m "feat: implement Meris branding and Philosophy section on home pag
 </h1>
 ```
 
-- [ ] **Step 2: Update Footer**
+- [x] **Step 2: Update Footer**
 
 ```tsx
 // frontend/src/app/session/[id]/page.tsx
@@ -119,7 +119,7 @@ git commit -m "feat: implement Meris branding and Philosophy section on home pag
 </footer>
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/app/session/[id]/page.tsx
@@ -130,12 +130,12 @@ git commit -m "chore: rebrand session page to Meris"
 
 ### Task 4: Final Consistency Check
 
-- [ ] **Step 1: Grep for any remaining "SplitBill" occurrences**
+- [x] **Step 1: Grep for any remaining "SplitBill" occurrences**
 
 Run: `grep -r "SplitBill" frontend/src`
 Expected: No matches in user-facing UI.
 
-- [ ] **Step 2: Commit any cleanups**
+- [x] **Step 2: Commit any cleanups**
 
 ```bash
 git commit -m "chore: finalize Meris rebranding consistency"

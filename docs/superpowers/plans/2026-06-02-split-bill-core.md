@@ -22,14 +22,14 @@
 - Create: `frontend/package.json` (via Next.js CLI)
 - Create: `docker-compose.yml`
 
-- [ ] **Step 1: Inisialisasi Backend Golang**
+- [x] **Step 1: Inisialisasi Backend Golang**
 ```bash
 mkdir backend
 cd backend
 go mod init split-bill-backend
 ```
 
-- [ ] **Step 2: Buat entry point backend dasar (`backend/main.go`)**
+- [x] **Step 2: Buat entry point backend dasar (`backend/main.go`)**
 ```go
 package main
 
@@ -48,12 +48,12 @@ func main() {
 }
 ```
 
-- [ ] **Step 3: Scaffold Frontend Next.js**
+- [x] **Step 3: Scaffold Frontend Next.js**
 ```bash
 npx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm
 ```
 
-- [ ] **Step 4: Buat `docker-compose.yml` di root proyek**
+- [x] **Step 4: Buat `docker-compose.yml` di root proyek**
 ```yaml
 version: '3.8'
 services:
@@ -67,7 +67,7 @@ services:
       - "5432:5432"
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git init
 git add .
@@ -82,7 +82,7 @@ git commit -m "chore: scaffold Next.js frontend, Go backend, and docker-compose"
 - Create: `backend/calculator/calculator.go`
 - Create: `backend/calculator/calculator_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 Create `backend/calculator/calculator_test.go`:
 ```go
 package calculator
@@ -115,13 +115,13 @@ func TestCalculateProportional(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 ```bash
 cd backend && go test ./calculator -v
 ```
 Expected: FAIL (Package calculator not found / undefined CalculateShare)
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 Create `backend/calculator/calculator.go`:
 ```go
 package calculator
@@ -136,13 +136,13 @@ func CalculateShare(personSubtotal, totalSubtotal, tax, service float64) float64
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 ```bash
 cd backend && go test ./calculator -v
 ```
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add backend/calculator
 git commit -m "feat: implement proportional tax calculation logic with tests"
@@ -156,7 +156,7 @@ git commit -m "feat: implement proportional tax calculation logic with tests"
 - Create: `backend/ai/schema.go`
 - Create: `backend/ai/client.go`
 
-- [ ] **Step 1: Definisikan Struct untuk output AI yang konsisten**
+- [x] **Step 1: Definisikan Struct untuk output AI yang konsisten**
 Create `backend/ai/schema.go`:
 ```go
 package ai
@@ -176,7 +176,7 @@ type ExtractedReceipt struct {
 }
 ```
 
-- [ ] **Step 2: Buat HTTP Client Mock/Interface dengan Retry Logic (Konseptual untuk MiMo API)**
+- [x] **Step 2: Buat HTTP Client Mock/Interface dengan Retry Logic (Konseptual untuk MiMo API)**
 Create `backend/ai/client.go`:
 ```go
 package ai
@@ -198,7 +198,7 @@ func ParseJSONWithRetry(rawJSON []byte) (*ExtractedReceipt, error) {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 ```bash
 git add backend/ai
 git commit -m "feat: define strict structs for AI output standardization"
@@ -211,7 +211,7 @@ git commit -m "feat: define strict structs for AI output standardization"
 **Files:**
 - Create: `backend/sse/hub.go`
 
-- [ ] **Step 1: Implementasi SSE Hub Sederhana**
+- [x] **Step 1: Implementasi SSE Hub Sederhana**
 Create `backend/sse/hub.go`:
 ```go
 package sse
@@ -242,7 +242,7 @@ func StreamHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 2: Daftarkan endpoint SSE di main.go**
+- [x] **Step 2: Daftarkan endpoint SSE di main.go**
 Modify `backend/main.go:8-13`:
 ```go
 import (
@@ -258,7 +258,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 ```bash
 git add backend
 git commit -m "feat: add Server-Sent Events base endpoint"
@@ -271,7 +271,7 @@ git commit -m "feat: add Server-Sent Events base endpoint"
 **Files:**
 - Create: `frontend/src/app/session/[id]/page.tsx`
 
-- [ ] **Step 1: Buat UI Klaim Dasar dan SSE Client Listener**
+- [x] **Step 1: Buat UI Klaim Dasar dan SSE Client Listener**
 Create `frontend/src/app/session/[id]/page.tsx`:
 ```tsx
 'use client';
@@ -302,13 +302,13 @@ export default function SessionPage({ params }: { params: { id: string } }) {
 }
 ```
 
-- [ ] **Step 2: Jalankan Next.js dan pastikan halamannya merender**
+- [x] **Step 2: Jalankan Next.js dan pastikan halamannya merender**
 ```bash
 cd frontend && npm run build
 ```
 *(Asumsi berhasil dicompile. Tidak bisa test dev server di background tanpa intervensi, build akan memvalidasi syntax).*
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 ```bash
 git add frontend/src/app
 git commit -m "feat: setup basic frontend session page with SSE listening"

@@ -15,7 +15,7 @@
 **Files:**
 - Create: `backend/ai/schema.go`
 
-- [ ] **Step 1: Write `backend/ai/schema.go`**
+- [x] **Step 1: Write `backend/ai/schema.go`**
 Define the standard schema structures `ExtractedItem` and `ExtractedReceipt`.
 
 ```go
@@ -43,7 +43,7 @@ type ExtractedReceipt struct {
 **Files:**
 - Create: `backend/ai/client.go`
 
-- [ ] **Step 1: Write `backend/ai/client.go`**
+- [x] **Step 1: Write `backend/ai/client.go`**
 Implement JSON parsing, calculation validation, and retry logic.
 
 ```go
@@ -114,7 +114,7 @@ func ParseReceiptWithRetry(rawJSON []byte, maxRetries int) (*ExtractedReceipt, e
 **Files:**
 - Create: `backend/ai/client_test.go`
 
-- [ ] **Step 1: Write `backend/ai/client_test.go`**
+- [x] **Step 1: Write `backend/ai/client_test.go`**
 Implement unit tests covering correct JSON, mismatch JSON, corrupted JSON, and retry execution verification.
 
 ```go
@@ -223,12 +223,12 @@ func TestParseReceiptWithRetry(t *testing.T) {
 
 ### Task 4: Commit Code and Update TODO
 
-- [ ] **Step 1: Run all tests in the package**
+- [x] **Step 1: Run all tests in the package**
 Run: `go test ./...` in the backend directory.
 Verify all tests pass.
 
-- [ ] **Step 2: Commit backend/ai/ changes**
+- [x] **Step 2: Commit backend/ai/ changes**
 Commit message: `"feat: define strict structs for AI output standardization"`
 
-- [ ] **Step 3: Update `TODO.md`**
+- [x] **Step 3: Update `TODO.md`**
 Mark Task 3 as completed in `TODO.md` and commit with message `"docs: update TODO.md task 3 completed"`

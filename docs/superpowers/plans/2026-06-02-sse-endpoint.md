@@ -15,7 +15,7 @@
 **Files:**
 - Create: `backend/sse/hub.go`
 
-- [ ] **Step 1: Write `backend/sse/hub.go`**
+- [x] **Step 1: Write `backend/sse/hub.go`**
   Implement the `Hub` struct, `NewHub()`, `Register()`, `StreamHandler()`, and `Broadcast()` methods using a `sync.Mutex` to coordinate client channels.
   ```go
   package sse
@@ -115,7 +115,7 @@
 **Files:**
 - Modify: `backend/main.go`
 
-- [ ] **Step 1: Set up Global Hub and Register `/stream` Route**
+- [x] **Step 1: Set up Global Hub and Register `/stream` Route**
   Update `backend/main.go` to initialize a global `sse.Hub` (or a variable instantiated in main) and register the `/stream` endpoint.
   ```go
   package main
@@ -175,7 +175,7 @@
 **Files:**
 - Create: `backend/sse/hub_test.go`
 
-- [ ] **Step 1: Create `backend/sse/hub_test.go`**
+- [x] **Step 1: Create `backend/sse/hub_test.go`**
   Implement tests to verify registration, message broadcasting, context/disconnection cleanup, and standard SSE headers.
   ```go
   package sse
@@ -286,7 +286,7 @@
   }
   ```
 
-- [ ] **Step 2: Run Tests to Verify Correct Behavior**
+- [x] **Step 2: Run Tests to Verify Correct Behavior**
   Run command: `go test -v ./sse` from `C:\Users\munawar\Development\split-bill\backend` or `go test -v ./...`.
   Expected: PASS
 
@@ -294,8 +294,8 @@
 
 ### Task 4: Commit and Update TODO
 
-- [ ] **Step 1: Commit Changes**
+- [x] **Step 1: Commit Changes**
   Add files and commit with exact commit message: `"feat: add Server-Sent Events base endpoint"`.
 
-- [ ] **Step 2: Update TODO.md**
+- [x] **Step 2: Update TODO.md**
   Mark Task 4 as completed in `TODO.md` and commit the update.
