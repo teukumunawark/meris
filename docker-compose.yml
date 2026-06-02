@@ -1,7 +1,6 @@
-version: '3.8'
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: splitbill
       POSTGRES_PASSWORD: password

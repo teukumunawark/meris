@@ -90,8 +90,10 @@ export function useClaimSession(sessionId: string) {
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
     const sseUrl = `${backendUrl}/stream?sessionId=${sessionId}`;
-    addLog(`Connecting to Server-Sent Events stream at: ${sseUrl}`);
-    setConnectionStatus((prev) => (prev !== "connecting" ? "connecting" : prev));
+    setTimeout(() => {
+      addLog(`Connecting to Server-Sent Events stream at: ${sseUrl}`);
+      setConnectionStatus((prev) => (prev !== "connecting" ? "connecting" : prev));
+    }, 0);
 
     let eventSource: EventSource;
     try {
@@ -147,9 +149,11 @@ export function useClaimSession(sessionId: string) {
         console.error("SSE connection error:", err);
       };
     } catch (err) {
-      setConnectionStatus("disconnected");
       const errMsg = err instanceof Error ? err.message : String(err);
-      addLog(`Failed to construct EventSource: ${errMsg}`);
+      setTimeout(() => {
+        setConnectionStatus("disconnected");
+        addLog(`Failed to construct EventSource: ${errMsg}`);
+      }, 0);
       console.error("EventSource construction failed:", err);
     }
 
