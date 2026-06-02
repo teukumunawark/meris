@@ -278,15 +278,19 @@ import imageCompression from 'browser-image-compression';
                             const formData = new FormData();
                             formData.append("receipt", compressedFile);
                             
-                            // const response = await fetch("http://localhost:8080/session", {
-                            //   method: "POST",
-                            //   body: formData,
-                            // });
-                            // const data = await response.json();
-                            // router.push(`/session/${data.id}`);
-                            console.log("Compressed and uploaded:", compressedFile.name);
+                            const response = await fetch("http://localhost:8080/session", {
+                              method: "POST",
+                              body: formData,
+                            });
+                            
+                            if (response.ok) {
+                              const data = await response.json();
+                              router.push(`/session/${data.id}`);
+                            } else {
+                              console.error("Upload failed");
+                            }
                           } catch (error) {
-                            console.error("Error compressing image:", error);
+                            console.error("Error compressing/uploading image:", error);
                           }
                         }
                       }}
