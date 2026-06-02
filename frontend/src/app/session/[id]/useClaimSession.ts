@@ -66,23 +66,25 @@ export function useClaimSession(sessionId: string) {
   ]);
   const [tax, setTax] = useState<number>(16800); // Default mock tax
   const [serviceCharge, setServiceCharge] = useState<number>(8400); // Default mock service charge
-  const [logs, setLogs] = useState<string[]>(() => {
-    const timestamp = new Date().toLocaleTimeString();
-    return [`[${timestamp}] System initialized with default mock items.`];
-  });
+  const [logs, setLogs] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // Logger helper
-  const addLog = (message: string) => {
+  const addLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs((prev) => [...prev, `[${timestamp}] ${message}`]);
-  };
+  }, []);
 
   const clearLogs = () => {
     setLogs([]);
   };
+
+  // Mount effect to initialize logs without SSR mismatch
+  useEffect(() => {
+    addLog("System initialized with default mock items.");
+  }, [addLog]);
 
   // SSE EventSource Connection
   useEffect(() => {
