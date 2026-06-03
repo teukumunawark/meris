@@ -58,13 +58,13 @@ export default function Home() {
           
           let friendlyMsg = "An unexpected error occurred while processing the receipt. Please try again.";
           if (text.includes("401") || text.includes("Invalid API Key") || text.includes("invalid_key")) {
-            friendlyMsg = "The server's AI scanning service is misconfigured. Please check the backend .env configuration.";
+            friendlyMsg = "The receipt scanning service is temporarily unavailable. Please try again later.";
           } else if (text.includes("AI extraction failed")) {
             friendlyMsg = "We couldn't parse the receipt details. Please make sure the photo is clear and contains readable items.";
           } else if (text.includes("Failed to save session")) {
-            friendlyMsg = "Failed to create the split bill session. Database save operation failed.";
+            friendlyMsg = "We couldn't create the split bill session. Please try again later.";
           } else if (text.includes("Invalid receipt image") || text.includes("Failed to read image")) {
-            friendlyMsg = "The uploaded file format is invalid. Please upload a clear JPG/PNG photo.";
+            friendlyMsg = "The uploaded file is not a valid image. Please choose another photo.";
           }
           
           setErrorMsg(friendlyMsg);
@@ -72,7 +72,7 @@ export default function Home() {
         }
       } catch (error) {
         console.error("Error compressing/uploading image:", error);
-        setErrorMsg("Network error or connection failed. Please ensure the backend server is running.");
+        setErrorMsg("Unable to connect to the server. Please check your network connection and try again.");
         setIsUploading(false);
       }
     }
