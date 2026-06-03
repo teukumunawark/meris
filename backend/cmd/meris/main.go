@@ -57,6 +57,7 @@ func main() {
 	mux.HandleFunc("POST /session/{id}/join", sessionHandler.JoinSession)
 	mux.HandleFunc("POST /session/{id}/claim", sessionHandler.ClaimItem)
 	mux.HandleFunc("PUT /session/{id}/item/{itemId}/rename", sessionHandler.RenameItem)
+	mux.HandleFunc("DELETE /session/{id}/participant/{participantId}", sessionHandler.DeleteParticipant)
 	mux.HandleFunc("GET /stream", hub.StreamHandler)
 
 	handlerWithLogging := middleware.RequestLogger(handlers.CORS(mux))

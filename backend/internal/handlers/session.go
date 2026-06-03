@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"meris-backend/internal/ai"
 	"meris-backend/internal/models"
 	"meris-backend/internal/sse"
@@ -342,6 +343,63 @@ func (h *SessionHandler) RenameItem(w http.ResponseWriter, r *http.Request) {
 	item.Name = payload.Name
 	if err := h.DB.WithContext(r.Context()).Save(&item).Error; err != nil {
 		http.Error(w, "Failed to update item name", http.StatusInternalServerError)
+		return
+	}
+
+	go h.broadcastFullState(context.WithoutCancel(r.Context()), sessionID)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *SessionHandler) DeleteParticipant(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("id")
+	targetParticipantID := r.PathValue("participantId")
+	callerToken := r.URL.Query().Get("token")
+
+	if sessionID == "" || targetParticipantID == "" || callerToken == "" {
+		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+		return
+	}
+
+	targetID, err := strconv.ParseUint(targetParticipantID, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid participant ID format", http.StatusBadRequest)
+		return
+	}
+
+	var session models.Session
+	if err := h.DB.WithContext(r.Context()).First(&session, "id = ?", sessionID).Error; err != nil {
+		http.Error(w, "Session not found", http.StatusNotFound)
+		return
+	}
+
+	var payer models.Participant
+	if err := h.DB.WithContext(r.Context()).Where("session_id = ? AND name = ?", sessionID, session.PayerName).First(&payer).Error; err != nil || payer.Token != callerToken {
+		http.Error(w, "Unauthorized caller token", http.StatusUnauthorized)
+		return
+	}
+
+	tx := h.DB.WithContext(r.Context()).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Where("participant_id = ?", targetID).Delete(&models.Claim{}).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to delete claims", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Delete(&models.Participant{}, targetID).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to delete participant", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
 		return
 	}
 
