@@ -42,6 +42,7 @@ export function useClaimSession(sessionId: string) {
   const [serviceCharge, setServiceCharge] = useState<number>(0);
   const [payerName, setPayerName] = useState<string>("");
   const [payerBank, setPayerBank] = useState<string>("");
+  const [participants, setParticipants] = useState<Array<{ id: number; name: string }>>([]);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -109,7 +110,21 @@ export function useClaimSession(sessionId: string) {
       localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
     }
     if (data.payerBank) setPayerBank(data.payerBank);
+    if (Array.isArray(data.participants)) {
+      setParticipants(data.participants);
+    }
   }, [sessionId]);
+  useEffect(() => {
+    if (isJoined && participantId !== null && participants.length > 0) {
+      const stillJoined = participants.some((p) => p.id === participantId);
+      if (!stillJoined) {
+        setIsJoined(false);
+        setParticipantId(null);
+        setParticipantToken("");
+        localStorage.removeItem(`meris_session_${sessionId}_participant`);
+      }
+    }
+  }, [participants, isJoined, participantId, sessionId]);
 
   // Task 1: Fetch Initial Session State
   useEffect(() => {
@@ -315,6 +330,18 @@ export function useClaimSession(sessionId: string) {
     }
   }, [sessionId, backendUrl, items]);
 
+  const removeParticipant = useCallback(async (targetParticipantId: number): Promise<boolean> => {
+    if (!participantToken) return false;
+    try {
+      const response = await fetch(`${backendUrl}/session/${sessionId}/participant/${targetParticipantId}?token=${participantToken}`, {
+        method: "DELETE",
+      });
+      return response.ok;
+    } catch (err) {
+      return false;
+    }
+  }, [sessionId, backendUrl, participantToken]);
+
   return {
     userName,
     setUserName,
@@ -329,5 +356,7 @@ export function useClaimSession(sessionId: string) {
     updateClaim,
     renameItem,
     joinError,
+    participants,
+    removeParticipant,
   };
 }
