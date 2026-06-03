@@ -55,7 +55,19 @@ export default function Home() {
         } else {
           const text = await response.text();
           console.error("Upload failed:", text);
-          setErrorMsg(text || "AI extraction failed. Please check your receipt image.");
+          
+          let friendlyMsg = "An unexpected error occurred while processing the receipt. Please try again.";
+          if (text.includes("401") || text.includes("Invalid API Key") || text.includes("invalid_key")) {
+            friendlyMsg = "The server's AI scanning service is misconfigured. Please check the backend .env configuration.";
+          } else if (text.includes("AI extraction failed")) {
+            friendlyMsg = "We couldn't parse the receipt details. Please make sure the photo is clear and contains readable items.";
+          } else if (text.includes("Failed to save session")) {
+            friendlyMsg = "Failed to create the split bill session. Database save operation failed.";
+          } else if (text.includes("Invalid receipt image") || text.includes("Failed to read image")) {
+            friendlyMsg = "The uploaded file format is invalid. Please upload a clear JPG/PNG photo.";
+          }
+          
+          setErrorMsg(friendlyMsg);
           setIsUploading(false);
         }
       } catch (error) {
@@ -184,9 +196,15 @@ export default function Home() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
-                      className="p-4 rounded-glass-sm bg-rose-950/20 border border-rose-500/25 text-rose-300 text-sm font-sans text-center"
+                      className="p-4 rounded-glass-sm bg-rose-950/20 border border-rose-500/25 text-rose-300 text-sm font-sans flex items-start gap-3 text-left"
                     >
-                      {errorMsg}
+                      <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className="font-semibold text-rose-200">Unable to Start Session</p>
+                        <p className="text-rose-300/80 text-xs mt-1 leading-relaxed">{errorMsg}</p>
+                      </div>
                     </motion.div>
                   )}
                 </div>
