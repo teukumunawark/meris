@@ -206,3 +206,42 @@ func (h *SessionHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(session)
 }
+
+func (h *SessionHandler) RenameItem(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("id")
+	itemID := r.PathValue("itemId")
+	if sessionID == "" || itemID == "" {
+		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+		return
+	}
+
+	var payload struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Name == "" {
+		http.Error(w, "Name cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	var item models.Item
+	err := h.DB.WithContext(r.Context()).Where("id = ? AND session_id = ?", itemID, sessionID).First(&item).Error
+	if err != nil {
+		http.Error(w, "Item not found", http.StatusNotFound)
+		return
+	}
+
+	item.Name = payload.Name
+	if err := h.DB.WithContext(r.Context()).Save(&item).Error; err != nil {
+		http.Error(w, "Failed to update item name", http.StatusInternalServerError)
+		return
+	}
+
+	go h.broadcastFullState(context.WithoutCancel(r.Context()), sessionID)
+
+	w.WriteHeader(http.StatusOK)
+}
