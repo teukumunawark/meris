@@ -30,7 +30,8 @@ export default function ClaimSessionPage({ params }: PageProps) {
     tax,
     serviceCharge,
     payerName,
-    payerBank,
+    payerBankName,
+    payerBankAccount,
     joinSession,
     changeName,
     updateClaim,
@@ -41,13 +42,21 @@ export default function ClaimSessionPage({ params }: PageProps) {
   } = useClaimSession(sessionId);
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
+  const [copyAccountSuccess, setCopyAccountSuccess] = useState<boolean>(false);
 
-  // Copy share link helper
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
+  const handleCopyAccount = () => {
+    if (typeof window !== "undefined" && payerBankAccount) {
+      navigator.clipboard.writeText(payerBankAccount);
+      setCopyAccountSuccess(true);
+      setTimeout(() => setCopyAccountSuccess(false), 2000);
     }
   };
 
@@ -367,12 +376,39 @@ export default function ClaimSessionPage({ params }: PageProps) {
                
                <div className="space-y-6 sm:space-y-8">
                  <div className="text-center space-y-1 sm:space-y-2">
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Transfer To</p>
-                   <p className="font-serif text-foreground text-xl sm:text-2xl tracking-tight font-light">{payerBank || "Not specified"}</p>
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Payment Method</p>
+                   <p className="font-serif text-foreground text-xl sm:text-2xl tracking-tight font-light">{payerBankName || "Not specified"}</p>
                  </div>
+
+                 {payerBankAccount && (
+                   <div className="text-center space-y-1 sm:space-y-2">
+                     <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Number</p>
+                     <div className="flex items-center justify-center gap-2">
+                       <span className="font-mono text-foreground text-xl sm:text-2xl tracking-wider font-semibold">
+                         {payerBankAccount}
+                       </span>
+                       <button
+                         onClick={handleCopyAccount}
+                         className="text-sage hover:text-white p-1 cursor-pointer transition-colors"
+                         title="Copy Account Number"
+                       >
+                         {copyAccountSuccess ? (
+                           <svg className="w-4.5 h-4.5 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                             <path d="M20 6 9 17l-5-5"/>
+                           </svg>
+                         ) : (
+                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                           </svg>
+                         )}
+                       </button>
+                     </div>
+                   </div>
+                 )}
                  
                  <div className="text-center space-y-1 sm:space-y-2">
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Owner (Payer)</p>
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Owner</p>
                    <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">{payerName || "Anonymous Payer"}</p>
                  </div>
                </div>

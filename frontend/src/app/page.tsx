@@ -18,7 +18,8 @@ export default function Home() {
   const [sessionId, setSessionId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [payerName, setPayerName] = useState("");
-  const [payerBank, setPayerBank] = useState("");
+  const [payerBankName, setPayerBankName] = useState("");
+  const [payerBankAccount, setPayerBankAccount] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
 
@@ -65,7 +66,8 @@ export default function Home() {
         const formData = new FormData();
         formData.append("receipt", compressedFile);
         formData.append("payerName", payerName.trim());
-        formData.append("payerBank", payerBank.trim());
+        formData.append("payerBankName", payerBankName.trim());
+        formData.append("payerBankAccount", payerBankAccount.trim());
 
         const response = await fetch("http://localhost:8080/session", {
           method: "POST",
@@ -202,13 +204,22 @@ export default function Home() {
                       placeholder="Your Name (Payer)" 
                       className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
                     />
-                    <input 
-                      type="text" 
-                      value={payerBank}
-                      onChange={(e) => setPayerBank(e.target.value)}
-                      placeholder="Payment Info (e.g., BCA 1234567890)" 
-                      className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input 
+                        type="text" 
+                        value={payerBankName}
+                        onChange={(e) => setPayerBankName(e.target.value)}
+                        placeholder="Bank / E-Wallet (e.g., BCA)" 
+                        className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
+                      />
+                      <input 
+                        type="text" 
+                        value={payerBankAccount}
+                        onChange={(e) => setPayerBankAccount(e.target.value)}
+                        placeholder="Account No / Phone" 
+                        className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-4">

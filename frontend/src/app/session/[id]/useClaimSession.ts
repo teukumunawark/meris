@@ -23,7 +23,8 @@ export interface SSEServerUpdatePayload {
   service_charge?: number;
   serviceCharge?: number;
   payerName?: string;
-  payerBank?: string;
+  payerBankName?: string;
+  payerBankAccount?: string;
   participants?: Array<{
     id: number;
     name: string;
@@ -41,7 +42,8 @@ export function useClaimSession(sessionId: string) {
   const [tax, setTax] = useState<number>(0);
   const [serviceCharge, setServiceCharge] = useState<number>(0);
   const [payerName, setPayerName] = useState<string>("");
-  const [payerBank, setPayerBank] = useState<string>("");
+  const [payerBankName, setPayerBankName] = useState<string>("");
+  const [payerBankAccount, setPayerBankAccount] = useState<string>("");
   const [participants, setParticipants] = useState<Array<{ id: number; name: string }>>([]);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
@@ -109,7 +111,8 @@ export function useClaimSession(sessionId: string) {
       });
       localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
     }
-    if (data.payerBank) setPayerBank(data.payerBank);
+    if (data.payerBankName) setPayerBankName(data.payerBankName);
+    if (data.payerBankAccount) setPayerBankAccount(data.payerBankAccount);
     if (Array.isArray(data.participants)) {
       setParticipants(data.participants);
     }
@@ -350,7 +353,8 @@ export function useClaimSession(sessionId: string) {
     tax,
     serviceCharge,
     payerName,
-    payerBank,
+    payerBankName,
+    payerBankAccount,
     joinSession,
     changeName,
     updateClaim,
