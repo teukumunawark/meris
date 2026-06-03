@@ -34,16 +34,27 @@ func (r *ExtractedReceipt) Validate() error {
 func cleanJSON(content []byte) []byte {
 	str := string(content)
 	str = strings.TrimSpace(str)
-	if strings.HasPrefix(str, "```") {
-		str = strings.TrimPrefix(str, "```")
-		if strings.HasPrefix(strings.ToLower(str), "json") {
-			str = str[4:]
+
+	if idx := strings.Index(str, "```json"); idx != -1 {
+		sub := str[idx+7:]
+		if endIdx := strings.Index(sub, "```"); endIdx != -1 {
+			str = sub[:endIdx]
 		}
-		if strings.HasSuffix(str, "```") {
-			str = strings.TrimSuffix(str, "```")
+	} else if idx := strings.Index(str, "```"); idx != -1 {
+		sub := str[idx+3:]
+		if endIdx := strings.Index(sub, "```"); endIdx != -1 {
+			str = sub[:endIdx]
 		}
-		str = strings.TrimSpace(str)
 	}
+
+	str = strings.TrimSpace(str)
+
+	start := strings.Index(str, "{")
+	end := strings.LastIndex(str, "}")
+	if start != -1 && end != -1 && start < end {
+		str = str[start : end+1]
+	}
+
 	return []byte(str)
 }
 
