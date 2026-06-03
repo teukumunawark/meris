@@ -106,7 +106,14 @@ export default function Home() {
           console.error("Upload failed:", text);
           
           let friendlyMsg = "An unexpected error occurred while processing the receipt. Please try again.";
-          if (text.includes("401") || text.includes("Invalid API Key") || text.includes("invalid_key")) {
+          if (response.status === 429) {
+            try {
+              const data = JSON.parse(text);
+              friendlyMsg = data.message || "Too many requests. Please try again later.";
+            } catch {
+              friendlyMsg = "You have exceeded the session creation limit (5 sessions per 8 hours). Please try again later.";
+            }
+          } else if (text.includes("401") || text.includes("Invalid API Key") || text.includes("invalid_key")) {
             friendlyMsg = "The receipt scanning service is temporarily unavailable. Please try again later.";
           } else if (text.includes("AI extraction failed")) {
             friendlyMsg = "We couldn't parse the receipt details. Please make sure the photo is clear and contains readable items.";
