@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"split-bill-backend/sse"
+	"meris-backend/sse"
 )
 
 type HealthResponse struct {
@@ -24,7 +24,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := HealthResponse{
 		Status:  "OK",
-		Message: "Split Bill Backend is running",
+		Message: "Meris Backend is running",
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {

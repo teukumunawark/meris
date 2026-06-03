@@ -1,0 +1,38 @@
+package models
+
+import (
+	"time"
+)
+
+type Session struct {
+	ID            string    `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	Tax           float64   `json:"tax"`
+	ServiceCharge float64   `json:"serviceCharge"`
+	GrandTotal    float64   `json:"grandTotal"`
+	CreatedAt     time.Time `json:"createdAt"`
+	Items         []Item    `gorm:"foreignKey:SessionID" json:"items"`
+}
+
+type Participant struct {
+	ID        uint   `gorm:"primaryKey" json:"id"`
+	SessionID string `gorm:"index;type:varchar(50)" json:"sessionId"`
+	Name      string `json:"name"`
+	Claims    []Claim `gorm:"foreignKey:ParticipantID" json:"claims"`
+}
+
+type Item struct {
+	ID        string  `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	SessionID string  `gorm:"index;type:varchar(50)" json:"sessionId"`
+	Name      string  `json:"name"`
+	Price     float64 `json:"price"`
+	Quantity  int     `json:"quantity"`
+	Claims    []Claim `gorm:"foreignKey:ItemID" json:"claims"`
+}
+
+type Claim struct {
+	ID            uint        `gorm:"primaryKey" json:"id"`
+	ItemID        string      `gorm:"index;type:varchar(50)" json:"itemId"`
+	ParticipantID uint        `gorm:"index" json:"participantId"`
+	Participant   Participant `gorm:"foreignKey:ParticipantID" json:"participant"`
+	Shares        float64     `json:"shares"`
+}
