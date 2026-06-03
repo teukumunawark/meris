@@ -20,6 +20,7 @@ type Participant struct {
 	ID        uint   `gorm:"primaryKey" json:"id"`
 	SessionID string `gorm:"index;type:varchar(50)" json:"sessionId"`
 	Name      string `json:"name"`
+	Token     string `gorm:"type:varchar(50)" json:"-"`
 	Claims    []Claim `gorm:"foreignKey:ParticipantID" json:"claims"`
 }
 
