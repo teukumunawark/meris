@@ -65,7 +65,11 @@ type MiMoImageURL struct {
 
 func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 	apiKey := os.Getenv("MIMO_API_KEY")
-	endpoint := os.Getenv("MIMO_ENDPOINT") // e.g., https://token-plan-sgp.xiaomimimo.com/v1/chat/completions
+	endpoint := os.Getenv("MIMO_ENDPOINT")
+	model := os.Getenv("MIMO_MODEL")
+	if model == "" {
+		model = "mimo-v2.5"
+	}
 
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
@@ -75,7 +79,7 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 	{"items": [{"name": string, "price": number, "quantity": number}], "subtotal": number, "tax": number, "service_charge": number, "grand_total": number}`
 
 	payload := MiMoRequest{
-		Model: "mimo-v2.5-pro",
+		Model: model,
 		Messages: []MiMoMessage{
 			{
 				Role: "user",

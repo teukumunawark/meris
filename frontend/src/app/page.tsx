@@ -98,171 +98,196 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background px-4 sm:px-6 py-12">
-      {/* Muted Background Elements */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-orb-sage blur-[120px] rounded-full opacity-40 pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-orb-slate blur-[120px] rounded-full opacity-30 pointer-events-none" />
-      
-      <motion.main
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 w-full max-w-5xl text-center flex flex-col items-center"
-      >
-        <motion.div variants={itemVariants} className="mb-8 sm:mb-16">
-          <span className="inline-block px-4 py-1.5 sm:px-6 sm:py-2 rounded-glass-sm border border-sage/20 bg-sage/5 text-sage text-xs sm:text-sm font-semibold tracking-[0.1em] sm:tracking-widest mb-6 sm:mb-10">
-            A Better Way to Share
-          </span>
-          <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-serif text-foreground tracking-tight leading-tight sm:leading-[0.85] mb-6 sm:mb-12">
-            Share the <span className="font-sans font-light">moment,</span> <br />
-            <span className="text-sage text-glow-sage">split the cost.</span>
-          </h1>
-          <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-foreground/50 font-sans leading-relaxed px-4">
-            A calm and intuitive tool for proportional expense sharing. 
-            Upload your receipt and let our AI handle the nuances.
-          </p>
+    <div className="relative min-h-screen bg-background overflow-x-hidden font-sans">
+      <div className="absolute top-[10%] left-[-5%] w-[50vw] h-[50vw] bg-orb-sage blur-[140px] rounded-full opacity-45 pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[-5%] w-[45vw] h-[45vw] bg-orb-slate blur-[120px] rounded-full opacity-35 pointer-events-none" />
+
+      <div className="min-h-screen w-full max-w-7xl mx-auto px-6 lg:px-12 flex flex-col lg:grid lg:grid-cols-12 lg:gap-16">
+        
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="lg:col-span-6 py-12 lg:py-24 flex flex-col justify-between min-h-max lg:min-h-screen lg:sticky lg:top-0"
+        >
+          <div className="space-y-6 sm:space-y-10">
+            <motion.div variants={itemVariants} className="text-left">
+              <span className="inline-block px-4 py-1.5 rounded-glass-sm border border-sage/20 bg-sage/5 text-sage text-xs font-semibold tracking-widest uppercase">
+                Meris Protocol
+              </span>
+            </motion.div>
+            
+            <motion.div variants={itemVariants} className="space-y-6">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-serif text-foreground tracking-tight leading-[1.05] text-left">
+                Share the <span className="font-sans font-light italic text-sage/80">moment,</span> <br />
+                <span className="text-sage text-glow-sage">split the cost.</span>
+              </h1>
+              <p className="max-w-xl text-left text-base sm:text-lg text-foreground/50 font-sans leading-relaxed">
+                A calm, intuitive platform for proportional expense sharing. 
+                Upload your receipt and let our AI handle the nuances.
+              </p>
+            </motion.div>
+          </div>
+
+          <motion.div 
+            variants={itemVariants}
+            className="mt-16 lg:mt-auto border-t border-white/5 pt-10 text-left space-y-6 max-w-xl"
+          >
+            <h2 className="text-xs uppercase tracking-[0.2em] font-bold text-foreground/30">Philosophy</h2>
+            <div className="relative pl-6">
+              <div className="absolute top-0 left-0 w-0.5 h-full bg-gradient-to-b from-sage to-transparent opacity-60" />
+              <p className="font-serif italic text-base sm:text-lg text-foreground/40 leading-relaxed">
+                &ldquo;Derived from the Ancient Greek word &mu;&tilde;&epsilon;&rho;&iota;&sigmaf; (M&eacute;ris), meaning &apos;portion&apos;. We believe that shared experiences shouldn&apos;t be burdened by the friction of math. Meris ensures every share is accounted for with absolute fairness.&rdquo;
+              </p>
+            </div>
+          </motion.div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="flex flex-col items-center gap-6 sm:gap-10 w-full">
-          <div className="glass-panel p-6 sm:p-10 md:p-16 rounded-glass w-full max-w-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
-            
-            <div className="flex flex-col items-center gap-10">
-              <div className="w-full space-y-6">
-                <h2 className="text-2xl sm:text-3xl font-serif text-foreground mb-6 sm:mb-8 text-center">Start a Session</h2>
-                
-                <div className="space-y-4">
-                  <input 
-                    type="text" 
-                    value={payerName}
-                    onChange={(e) => setPayerName(e.target.value)}
-                    placeholder="Your Name (Payer)" 
-                    className="w-full px-5 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-sm sm:text-base placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
-                  />
-                  <input 
-                    type="text" 
-                    value={payerBank}
-                    onChange={(e) => setPayerBank(e.target.value)}
-                    placeholder="Payment Info (e.g. BCA 1234567890)" 
-                    className="w-full px-5 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-sm sm:text-base placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div 
-                    className="relative group/upload cursor-pointer"
-                    onClick={() => document.getElementById('receipt-upload')?.click()}
-                  >
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="lg:col-span-6 py-12 lg:py-24 flex flex-col justify-center min-h-max"
+        >
+          <motion.div variants={itemVariants} className="w-full max-w-lg mx-auto lg:ml-auto">
+            <div className="glass-panel p-8 sm:p-10 rounded-glass relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+              
+              <div className="space-y-8">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sage" />
+                    <h2 className="text-lg font-serif text-foreground font-medium uppercase tracking-wider text-xs">Create New Session</h2>
+                  </div>
+                  
+                  <div className="space-y-3">
                     <input 
-                      type="file" 
-                      id="receipt-upload" 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
+                      type="text" 
+                      value={payerName}
+                      onChange={(e) => setPayerName(e.target.value)}
+                      placeholder="Your Name (Payer)" 
+                      className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
                     />
-                    <div className={`w-full border-2 border-dashed ${isUploading ? 'border-sage/50 bg-sage/5' : 'border-white/5 bg-white/[0.02] group-hover/upload:border-sage/30 group-hover/upload:bg-sage/[0.03]'} rounded-glass-sm p-8 sm:p-12 transition-all duration-500 flex flex-col items-center gap-4`}>
-                      <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-sage/10 flex items-center justify-center text-sage ${!isUploading && 'group-hover/upload:scale-110'} transition-transform duration-500`}>
-                        {isUploading ? (
-                          <svg className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="2" x2="12" y2="6" />
-                            <line x1="12" y1="18" x2="12" y2="22" />
-                            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
-                            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
-                            <line x1="2" y1="12" x2="6" y2="12" />
-                            <line x1="18" y1="12" x2="22" y2="12" />
-                            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
-                            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
-                          </svg>
-                        ) : (
-                          <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-foreground text-sm sm:text-base font-sans font-medium">
-                          {isUploading ? "Processing Receipt..." : "Upload Receipt Photo"}
-                        </p>
-                        <p className="text-foreground/30 text-[10px] sm:text-xs uppercase tracking-[0.2em] mt-2">AI Vision Scan System</p>
+                    <input 
+                      type="text" 
+                      value={payerBank}
+                      onChange={(e) => setPayerBank(e.target.value)}
+                      placeholder="Payment Info (e.g., BCA 1234567890)" 
+                      className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <div 
+                      className="relative group/upload cursor-pointer"
+                      onClick={() => document.getElementById('receipt-upload')?.click()}
+                    >
+                      <input 
+                        type="file" 
+                        id="receipt-upload" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                      />
+                      <div className={`w-full border border-dashed ${isUploading ? 'border-sage/50 bg-sage/5' : 'border-white/10 bg-white/[0.01] group-hover/upload:border-sage/30 group-hover/upload:bg-sage/[0.02]'} rounded-glass-sm p-8 transition-all duration-300 flex flex-col items-center gap-3`}>
+                        <div className={`w-12 h-12 rounded-full bg-sage/10 flex items-center justify-center text-sage ${!isUploading && 'group-hover/upload:scale-105'} transition-transform duration-300`}>
+                          {isUploading ? (
+                            <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="2" x2="12" y2="6" />
+                              <line x1="12" y1="18" x2="12" y2="22" />
+                              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+                              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+                              <line x1="2" y1="12" x2="6" y2="12" />
+                              <line x1="18" y1="12" x2="22" y2="12" />
+                              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+                              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="17 8 12 3 7 8" />
+                              <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <p className="text-foreground text-sm font-sans font-medium">
+                            {isUploading ? "Reading Receipt..." : "Upload Receipt Photo"}
+                          </p>
+                          <p className="text-foreground/20 text-[9px] uppercase tracking-widest mt-1">AI Scan Engine</p>
+                        </div>
                       </div>
                     </div>
+                    
+                    {errorMsg && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.3 }}
+                        className="p-4 rounded-glass-sm bg-rose-950/20 border border-rose-500/25 text-rose-300 text-sm font-sans flex items-start gap-3 text-left"
+                      >
+                        <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-rose-200">Unable to Start Session</p>
+                          <p className="text-rose-300/80 text-xs mt-1 leading-relaxed">{errorMsg}</p>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
-                  {errorMsg && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.3 }}
-                      className="p-4 rounded-glass-sm bg-rose-950/20 border border-rose-500/25 text-rose-300 text-sm font-sans flex items-start gap-3 text-left"
+                </div>
+
+                <div className="flex items-center gap-4 py-2">
+                  <div className="h-px flex-1 bg-white/5" />
+                  <span className="text-[9px] font-bold text-foreground/15 uppercase tracking-[0.25em]">OR</span>
+                  <div className="h-px flex-1 bg-white/5" />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-muted" />
+                    <h2 className="text-lg font-serif text-foreground font-medium uppercase tracking-wider text-xs">Join Existing Session</h2>
+                  </div>
+                  
+                  <div className="flex flex-col gap-3">
+                    <input 
+                      type="text" 
+                      value={sessionId}
+                      onChange={(e) => setSessionId(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleJoinSession();
+                      }}
+                      placeholder="Enter Session ID" 
+                      className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans text-center uppercase tracking-wider"
+                    />
+                    <button 
+                      onClick={handleJoinSession}
+                      style={{ backgroundColor: '#8ba895' }}
+                      className="w-full py-3.5 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider hover:brightness-105 active:scale-[0.99] transition-all cursor-pointer font-sans"
                     >
-                      <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div>
-                        <p className="font-semibold text-rose-200">Unable to Start Session</p>
-                        <p className="text-rose-300/80 text-xs mt-1 leading-relaxed">{errorMsg}</p>
-                      </div>
-                    </motion.div>
-                  )}
+                      Join Session
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="w-full flex items-center gap-4">
-                <div className="h-px flex-1 bg-white/5" />
-                <span className="text-[10px] font-bold text-foreground/20 uppercase tracking-[0.3em]">OR</span>
-                <div className="h-px flex-1 bg-white/5" />
-              </div>
-
-              <div className="w-full space-y-6">
-                <div className="flex flex-col gap-4">
-                  <input 
-                    type="text" 
-                    value={sessionId}
-                    onChange={(e) => setSessionId(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleJoinSession();
-                    }}
-                    placeholder="Enter Session ID" 
-                    className="w-full px-5 py-4 sm:px-8 sm:py-5 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-base sm:text-lg placeholder:text-foreground/20 focus:outline-none focus:ring-2 focus:ring-sage/40 transition-all font-sans text-center uppercase"
-                  />
-                  <button 
-                    onClick={handleJoinSession}
-                    style={{ backgroundColor: '#8ba895' }}
-                    className="w-full py-4 sm:py-5 rounded-glass-sm text-background font-bold text-base sm:text-lg uppercase tracking-wider hover:brightness-110 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
-                  >
-                    Join Existing Session
-                  </button>
-                </div>
               </div>
             </div>
-          </div>
-
-          <p className="text-[10px] sm:text-xs text-foreground/15 uppercase tracking-[0.2em] sm:tracking-[0.4em] font-bold">
-            Meris Protocol // Simplicity in every byte
-          </p>
+            
+            <div className="mt-8 text-center lg:text-right">
+              <p className="text-[9px] text-foreground/15 uppercase tracking-widest font-bold">
+                Meris Protocol // Simplicity in every byte
+              </p>
+            </div>
+          </motion.div>
         </motion.div>
 
-        {/* Philosophy Section */}
-        <motion.section 
-          variants={itemVariants}
-          className="mt-24 mb-16 max-w-3xl mx-auto px-6 text-center space-y-8"
-        >
-          <h2 className="text-xl sm:text-2xl font-serif text-foreground/80 tracking-tight">The Philosophy of Meris</h2>
-          <div className="glass-panel rounded-glass p-8 sm:p-12 border-white/5 bg-white/[0.01] relative overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-12 bg-linear-to-b from-sage/40 to-transparent" />
-            <p className="font-serif italic text-lg sm:text-xl text-foreground/50 leading-relaxed">
-              &ldquo;Derived from the Ancient Greek word &mu;&tilde;&epsilon;&rho;&iota;&sigmaf; (M&eacute;ris), meaning &apos;portion&apos; or &apos;part&apos;. We believe that every shared moment shouldn&apos;t be burdened by the complexity of numbers. Meris is built to ensure every portion is accounted for with absolute fairness, allowing you to focus on the experience, not the expense.&rdquo;
-            </p>
-          </div>
-        </motion.section>
-      </motion.main>
+      </div>
 
-      {/* Subtle Footer */}
-      <footer className="mt-auto py-8 text-center relative z-10">
-        <p className="text-[10px] text-foreground/10 uppercase tracking-[0.5em] font-bold">
+      <footer className="w-full py-8 border-t border-white/5 text-center relative z-10 bg-background/50 backdrop-blur-xs">
+        <p className="text-[9px] text-foreground/10 uppercase tracking-[0.4em] font-bold">
           Meris &copy; 2026
         </p>
       </footer>
