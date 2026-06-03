@@ -136,37 +136,67 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
       {/* Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto h-16 sm:h-20 flex items-center justify-between px-4 sm:px-10">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Back Button to the left of the Logo */}
+        <div className="max-w-7xl mx-auto h-16 sm:h-20 flex items-center justify-between px-4 sm:px-10 relative">
+          
+          {/* MOBILE NAVBAR ELEMENTS (Hidden on Desktop) */}
+          {/* Mobile Left: Back Button */}
+          <div className="flex md:hidden items-center">
             <Link
               href="/"
               className="flex items-center justify-center p-2 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/10 text-foreground/75 hover:text-foreground transition-all duration-300 cursor-pointer active:scale-95 shrink-0"
               title="Back to Home"
             >
-              <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m12 19-7-7 7-7"/>
                 <path d="M19 12H5"/>
               </svg>
             </Link>
+          </div>
 
-            {/* Clickable Logo */}
-            <Link href="/" className="flex items-center gap-3 sm:gap-4 group cursor-pointer select-none">
+          {/* Mobile Center: Logo (No [M]) */}
+          <Link href="/" className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center group cursor-pointer select-none">
+            <span className="font-sans text-base text-foreground tracking-[0.2em] font-semibold uppercase group-hover:text-sage transition-all duration-300">
+              Meris
+            </span>
+          </Link>
+
+          {/* Mobile Right Spacer */}
+          <div className="md:hidden w-8 h-8 opacity-0 pointer-events-none" aria-hidden="true" />
+
+          {/* DESKTOP NAVBAR ELEMENTS (Hidden on Mobile) */}
+          {/* Desktop Left: Logo [M] Meris + Breadcrumb */}
+          <div className="hidden md:flex items-center gap-6">
+            {/* Desktop Clickable Logo */}
+            <Link href="/" className="flex items-center gap-3 group cursor-pointer select-none">
               <div 
                 style={{ backgroundColor: '#8ba895' }}
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base sm:text-lg shrink-0 group-hover:scale-105 transition-all duration-300"
+                className="w-9 h-9 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base shrink-0 group-hover:scale-105 transition-all duration-300"
               >
                 M
               </div>
-              <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase group-hover:text-sage transition-all duration-300">
+              <span className="font-sans text-lg text-foreground tracking-tight font-medium uppercase group-hover:text-sage transition-all duration-300">
                 Meris
               </span>
             </Link>
+
+            {/* Breadcrumb Divider */}
+            <div className="h-4 w-px bg-white/10" />
+
+            {/* Breadcrumb Path */}
+            <nav className="flex items-center gap-2 font-mono text-[10px] font-bold tracking-wider text-foreground/35" aria-label="Breadcrumb">
+              <Link href="/" className="hover:text-foreground transition-colors">HOME</Link>
+              <svg className="w-3 h-3 text-foreground/15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+              <span className="text-sage font-sans font-medium uppercase tracking-normal">Session</span>
+            </nav>
           </div>
-          
-          <div className="flex items-center gap-4">
-            {/* Right side spacer/placeholder */}
+
+          {/* Desktop Right Side spacer */}
+          <div className="hidden md:block">
+            {/* Keeping it empty to focus attention on the breadcrumb */}
           </div>
+
         </div>
       </header>
 
