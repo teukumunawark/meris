@@ -201,7 +201,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
       </header>
 
       {/* Main Layout */}
-      <main className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-10 py-8 sm:py-16 flex flex-col gap-8 sm:gap-16">
+      <main className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-10 pt-4 sm:pt-8 pb-8 sm:pb-16 flex flex-col gap-8 sm:gap-16">
         
         {/* Mobile Only: Header Title & Integrated Card (Untouched for Mobile) */}
         <section className="md:hidden flex flex-col gap-4">
