@@ -3,14 +3,50 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, Variants } from "framer-motion";
+import imageCompression from "browser-image-compression";
 
 export default function Home() {
   const router = useRouter();
   const [sessionId, setSessionId] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleJoinSession = () => {
     if (sessionId.trim()) {
       router.push(`/session/${sessionId.trim()}`);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        setIsUploading(true);
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1600,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+
+        const formData = new FormData();
+        formData.append("receipt", compressedFile);
+
+        const response = await fetch("http://localhost:8080/session", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          router.push(`/session/${data.id}`);
+        } else {
+          console.error("Upload failed");
+          setIsUploading(false);
+        }
+      } catch (error) {
+        console.error("Error compressing/uploading image:", error);
+        setIsUploading(false);
+      }
     }
   };
   const containerVariants: Variants = {
@@ -76,24 +112,34 @@ export default function Home() {
                       id="receipt-upload" 
                       className="hidden" 
                       accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          // TODO: Implement actual upload logic
-                          console.log("File selected:", file.name);
-                        }
-                      }}
+                      onChange={handleFileUpload}
+                      disabled={isUploading}
                     />
-                    <div className="w-full border-2 border-dashed border-white/5 group-hover/upload:border-sage/30 bg-white/[0.02] group-hover/upload:bg-sage/[0.03] rounded-glass-sm p-8 sm:p-12 transition-all duration-500 flex flex-col items-center gap-4">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-sage/10 flex items-center justify-center text-sage group-hover/upload:scale-110 transition-transform duration-500">
-                        <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="17 8 12 3 7 8" />
-                          <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
+                    <div className={`w-full border-2 border-dashed ${isUploading ? 'border-sage/50 bg-sage/5' : 'border-white/5 bg-white/[0.02] group-hover/upload:border-sage/30 group-hover/upload:bg-sage/[0.03]'} rounded-glass-sm p-8 sm:p-12 transition-all duration-500 flex flex-col items-center gap-4`}>
+                      <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-sage/10 flex items-center justify-center text-sage ${!isUploading && 'group-hover/upload:scale-110'} transition-transform duration-500`}>
+                        {isUploading ? (
+                          <svg className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="2" x2="12" y2="6" />
+                            <line x1="12" y1="18" x2="12" y2="22" />
+                            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+                            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+                            <line x1="2" y1="12" x2="6" y2="12" />
+                            <line x1="18" y1="12" x2="22" y2="12" />
+                            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+                            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+                          </svg>
+                        ) : (
+                          <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                        )}
                       </div>
                       <div className="text-center">
-                        <p className="text-foreground text-sm sm:text-base font-sans font-medium">Upload Receipt Photo</p>
+                        <p className="text-foreground text-sm sm:text-base font-sans font-medium">
+                          {isUploading ? "Processing Receipt..." : "Upload Receipt Photo"}
+                        </p>
                         <p className="text-foreground/30 text-[10px] sm:text-xs uppercase tracking-[0.2em] mt-2">AI Vision Scan System</p>
                       </div>
                     </div>
