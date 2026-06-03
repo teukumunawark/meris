@@ -44,7 +44,6 @@ func TestParseReceipt_Success(t *testing.T) {
 }
 
 func TestParseReceipt_Mismatch(t *testing.T) {
-	// Subtotal is 60000, but sum of items is 2*25000 + 3*5000 = 65000.
 	raw := []byte(`{
 		"items": [
 			{"name": "Nasi Goreng", "price": 25000.0, "quantity": 2},
@@ -56,13 +55,18 @@ func TestParseReceipt_Mismatch(t *testing.T) {
 		"grand_total": 70400.0
 	}`)
 
-	_, err := ParseReceipt(raw)
-	if err == nil {
-		t.Fatal("Expected mismatch error, got nil")
+	receipt, err := ParseReceipt(raw)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	if !strings.Contains(err.Error(), "subtotal mismatch") {
-		t.Errorf("Expected subtotal mismatch error message, got: %v", err)
+	if receipt.Subtotal != 65000.0 {
+		t.Errorf("Expected subtotal adjusted to 65000.0, got %f", receipt.Subtotal)
+	}
+
+	expectedGrand := 65000.0 + 7150.0 + 3250.0
+	if receipt.GrandTotal != expectedGrand {
+		t.Errorf("Expected grand total adjusted to %f, got %f", expectedGrand, receipt.GrandTotal)
 	}
 }
 

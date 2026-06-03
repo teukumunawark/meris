@@ -27,7 +27,9 @@ func (r *ExtractedReceipt) Validate() error {
 	}
 
 	if math.Abs(r.Subtotal-sum) > 0.01 {
-		return fmt.Errorf("%w: subtotal is %.2f, sum of items is %.2f", ErrCalculationMismatch, r.Subtotal, sum)
+		slog.Warn("AI receipt subtotal mismatch, adjusting to sum of items", "original_subtotal", r.Subtotal, "sum_of_items", sum)
+		r.Subtotal = sum
+		r.GrandTotal = sum + r.Tax + r.ServiceCharge
 	}
 
 	return nil
