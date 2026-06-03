@@ -39,102 +39,8 @@ func getClientIP(r *http.Request) string {
 	return ip
 }
 
-// Lua script to atomically increment the counter and set the expiration TTL if it's the first request
-const fixedWindowLua = `
-local current = redis.call('incr', KEYS[1])
-local ttl = redis.call('ttl', KEYS[1])
-if current == 1 then
-    redis.call('expire', KEYS[1], tonumber(ARGV[1]))
-    ttl = tonumber(ARGV[1])
-end
-return {current, ttl}
-`
-
-func RateLimiter(keyPrefix string, limit int, window time.Duration) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			ip := getClientIP(r)
-			key := fmt.Sprintf("rate_limit:%s:%s", keyPrefix, ip)
-
-			if redis.Client == nil {
-				slog.ErrorContext(ctx, "Redis client not initialized")
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-
-			// Run atomic operations in Redis via Lua
-			res, err := redis.Client.Eval(ctx, fixedWindowLua, []string{key}, int(window.Seconds())).Result()
-			if err != nil {
-				slog.ErrorContext(ctx, "Failed to execute rate limit Lua script", "error", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-
-			slice, ok := res.([]interface{})
-			if !ok || len(slice) < 2 {
-				slog.ErrorContext(ctx, "Invalid response from rate limit Lua script")
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-
-			count, ok1 := slice[0].(int64)
-			ttlSec, ok2 := slice[1].(int64)
-			if !ok1 || !ok2 {
-				slog.ErrorContext(ctx, "Invalid type in rate limit Lua response")
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-
-			remaining := int64(limit) - count
-			if remaining < 0 {
-				remaining = 0
-			}
-
-			// Set standard rate limit headers
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
-			w.Header().Set("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
-			resetTime := time.Now().Add(time.Duration(ttlSec) * time.Second).Unix()
-			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(resetTime, 10))
-
-			// Deny request if limit exceeded
-			if count > int64(limit) {
-				w.Header().Set("Retry-After", strconv.FormatInt(ttlSec, 10))
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusTooManyRequests)
-
-				var msg string
-				if keyPrefix == "session" {
-					hours := ttlSec / 3600
-					minutes := (ttlSec % 3600) / 60
-					seconds := ttlSec % 60
-					if hours > 0 {
-						msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d hours, %d minutes.", hours, minutes)
-					} else if minutes > 0 {
-						msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d minutes.", minutes)
-					} else {
-						msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d seconds.", seconds)
-					}
-				} else {
-					msg = "Too many requests. Please try again later."
-				}
-
-				resp := RateLimitResponse{
-					Error:      "Too Many Requests",
-					Message:    msg,
-					RetryAfter: int(ttlSec),
-				}
-				json.NewEncoder(w).Encode(resp)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// Lua script to atomically implement Sliding Window Log
-const slidingWindowLua = `
+// Lua script to atomically implement Sliding Window Log (ZSET)
+const rateLimitLua = `
 local key = KEYS[1]
 local now = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
@@ -168,7 +74,7 @@ end
 return {allowed, count, oldest_score}
 `
 
-func SlidingRateLimiter(keyPrefix string, limit int, window time.Duration) func(http.Handler) http.Handler {
+func RateLimiter(keyPrefix string, limit int, window time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -185,16 +91,16 @@ func SlidingRateLimiter(keyPrefix string, limit int, window time.Duration) func(
 			// Create a unique member for this request to avoid overwrites in ZSET
 			member := fmt.Sprintf("%d:%d", now, time.Now().UnixNano())
 
-			res, err := redis.Client.Eval(ctx, slidingWindowLua, []string{key}, now, int64(window.Seconds()), limit, member).Result()
+			res, err := redis.Client.Eval(ctx, rateLimitLua, []string{key}, now, int64(window.Seconds()), limit, member).Result()
 			if err != nil {
-				slog.ErrorContext(ctx, "Failed to execute sliding rate limit Lua script", "error", err)
+				slog.ErrorContext(ctx, "Failed to execute rate limit Lua script", "error", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 
 			slice, ok := res.([]interface{})
 			if !ok || len(slice) < 3 {
-				slog.ErrorContext(ctx, "Invalid response from sliding rate limit Lua script")
+				slog.ErrorContext(ctx, "Invalid response from rate limit Lua script")
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -203,7 +109,7 @@ func SlidingRateLimiter(keyPrefix string, limit int, window time.Duration) func(
 			count, ok2 := slice[1].(int64)
 			oldestScore, ok3 := slice[2].(int64)
 			if !ok1 || !ok2 || !ok3 {
-				slog.ErrorContext(ctx, "Invalid type in sliding rate limit Lua response")
+				slog.ErrorContext(ctx, "Invalid type in rate limit Lua response")
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -240,12 +146,16 @@ func SlidingRateLimiter(keyPrefix string, limit int, window time.Duration) func(
 				seconds := ttlSec % 60
 
 				var msg string
-				if hours > 0 {
-					msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d hours, %d minutes.", hours, minutes)
-				} else if minutes > 0 {
-					msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d minutes.", minutes)
+				if keyPrefix == "session" {
+					if hours > 0 {
+						msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d hours, %d minutes.", hours, minutes)
+					} else if minutes > 0 {
+						msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d minutes.", minutes)
+					} else {
+						msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d seconds.", seconds)
+					}
 				} else {
-					msg = fmt.Sprintf("You have exceeded the session creation limit (5 sessions per 8 hours). Please try again in %d seconds.", seconds)
+					msg = "Too many requests. Please try again later."
 				}
 
 				resp := RateLimitResponse{

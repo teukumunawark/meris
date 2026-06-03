@@ -57,7 +57,7 @@ func main() {
 	hub := sse.NewHub()
 	sessionHandler := handlers.NewSessionHandler(hub, database)
 
-	sessionRateLimiter := middleware.SlidingRateLimiter("session", 5, 8*time.Hour)
+	sessionRateLimiter := middleware.RateLimiter("session", 5, 8*time.Hour)
 	generalRateLimiter := middleware.RateLimiter("general", 100, 1*time.Minute)
 
 	mux := http.NewServeMux()
