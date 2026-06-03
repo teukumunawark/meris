@@ -138,16 +138,48 @@ func (h *SessionHandler) JoinSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Name string `json:"name"`
+		Name  string `json:"name"`
+		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	trimmedName := payload.Name
+	if trimmedName == "" {
+		http.Error(w, "Name cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	var existing models.Participant
+	err := h.DB.WithContext(r.Context()).Where("session_id = ? AND name = ?", sessionID, trimmedName).First(&existing).Error
+	if err == nil {
+		if payload.Token != "" && existing.Token == payload.Token {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			var resp struct {
+				ID        uint   `json:"id"`
+				SessionID string `json:"sessionId"`
+				Name      string `json:"name"`
+				Token     string `json:"token"`
+			}
+			resp.ID = existing.ID
+			resp.SessionID = existing.SessionID
+			resp.Name = existing.Name
+			resp.Token = existing.Token
+			json.NewEncoder(w).Encode(resp)
+			return
+		}
+		http.Error(w, "Name already taken in this session", http.StatusConflict)
+		return
+	}
+
+	newToken := uuid.New().String()
 	participant := models.Participant{
 		SessionID: sessionID,
-		Name:      payload.Name,
+		Name:      trimmedName,
+		Token:     newToken,
 	}
 
 	if err := h.DB.WithContext(r.Context()).Create(&participant).Error; err != nil {
@@ -159,7 +191,17 @@ func (h *SessionHandler) JoinSession(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(participant)
+	var resp struct {
+		ID        uint   `json:"id"`
+		SessionID string `json:"sessionId"`
+		Name      string `json:"name"`
+		Token     string `json:"token"`
+	}
+	resp.ID = participant.ID
+	resp.SessionID = participant.SessionID
+	resp.Name = participant.Name
+	resp.Token = participant.Token
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SessionHandler) broadcastFullState(ctx context.Context, sessionID string) {
