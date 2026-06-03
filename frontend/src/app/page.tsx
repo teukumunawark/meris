@@ -11,6 +11,7 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [payerName, setPayerName] = useState("");
   const [payerBank, setPayerBank] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleJoinSession = () => {
     if (sessionId.trim()) {
@@ -21,8 +22,9 @@ export default function Home() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setErrorMsg(null);
       if (!payerName.trim()) {
-        alert("Please enter your name first");
+        setErrorMsg("Please enter your name first");
         e.target.value = "";
         return;
       }
@@ -48,15 +50,17 @@ export default function Home() {
 
         if (response.ok) {
           const data = await response.json();
-          // Set local storage so the payer is auto-joined
           localStorage.setItem("meris_username", payerName.trim());
           router.push(`/session/${data.id}`);
         } else {
-          console.error("Upload failed");
+          const text = await response.text();
+          console.error("Upload failed:", text);
+          setErrorMsg(text || "AI extraction failed. Please check your receipt image.");
           setIsUploading(false);
         }
       } catch (error) {
         console.error("Error compressing/uploading image:", error);
+        setErrorMsg("Network error or connection failed. Please ensure the backend server is running.");
         setIsUploading(false);
       }
     }
@@ -174,6 +178,17 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+                  {errorMsg && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="p-4 rounded-glass-sm bg-rose-950/20 border border-rose-500/25 text-rose-300 text-sm font-sans text-center"
+                    >
+                      {errorMsg}
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
