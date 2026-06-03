@@ -165,6 +165,8 @@ func (h *SessionHandler) JoinSession(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) broadcastFullState(ctx context.Context, sessionID string) {
 	var session models.Session
 	err := h.DB.WithContext(ctx).Preload("Items").
+		Preload("Items.Claims").
+		Preload("Items.Claims.Participant").
 		Preload("Participants").
 		Preload("Participants.Claims").
 		First(&session, "id = ?", sessionID).Error
@@ -190,6 +192,8 @@ func (h *SessionHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 
 	var session models.Session
 	err := h.DB.WithContext(r.Context()).Preload("Items").
+		Preload("Items.Claims").
+		Preload("Items.Claims.Participant").
 		Preload("Participants").
 		Preload("Participants.Claims").
 		First(&session, "id = ?", id).Error
