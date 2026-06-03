@@ -73,8 +73,20 @@ func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
 }
 
 type MiMoRequest struct {
-	Model    string        `json:"model"`
-	Messages []MiMoMessage `json:"messages"`
+	Model          string             `json:"model"`
+	Messages       []MiMoMessage      `json:"messages"`
+	ResponseFormat *MiMoResponseFormat `json:"response_format,omitempty"`
+}
+
+type MiMoResponseFormat struct {
+	Type       string              `json:"type"`
+	JSONSchema *MiMoJSONSchemaConfig `json:"json_schema,omitempty"`
+}
+
+type MiMoJSONSchemaConfig struct {
+	Name   string      `json:"name"`
+	Strict bool        `json:"strict"`
+	Schema interface{} `json:"schema"`
 }
 
 type MiMoMessage struct {
@@ -103,9 +115,32 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
 
-	prompt := `Extract receipt items, prices, quantities, subtotal, tax, and service_charge. 
-	Return valid JSON following this schema: 
-	{"items": [{"name": string, "price": number, "quantity": number}], "subtotal": number, "tax": number, "service_charge": number, "grand_total": number}`
+	prompt := "Extract receipt items, prices, quantities, subtotal, tax, and service_charge."
+
+	schema := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"items": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"name":     map[string]interface{}{"type": "string"},
+						"price":    map[string]interface{}{"type": "number"},
+						"quantity": map[string]interface{}{"type": "integer"},
+					},
+					"required":             []string{"name", "price", "quantity"},
+					"additionalProperties": false,
+				},
+			},
+			"subtotal":       map[string]interface{}{"type": "number"},
+			"tax":            map[string]interface{}{"type": "number"},
+			"service_charge": map[string]interface{}{"type": "number"},
+			"grand_total":    map[string]interface{}{"type": "number"},
+		},
+		"required":             []string{"items", "subtotal", "tax", "service_charge", "grand_total"},
+		"additionalProperties": false,
+	}
 
 	payload := MiMoRequest{
 		Model: model,
@@ -116,6 +151,14 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 					{Type: "text", Text: prompt},
 					{Type: "image_url", ImageURL: &MiMoImageURL{URL: dataURL}},
 				},
+			},
+		},
+		ResponseFormat: &MiMoResponseFormat{
+			Type: "json_schema",
+			JSONSchema: &MiMoJSONSchemaConfig{
+				Name:   "receipt",
+				Strict: true,
+				Schema: schema,
 			},
 		},
 	}
