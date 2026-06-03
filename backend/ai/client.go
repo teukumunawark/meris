@@ -1,11 +1,15 @@
 package ai
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"io"
 	"math"
+	"net/http"
+	"os"
 )
 
 var (
@@ -39,15 +43,88 @@ func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
 	return &receipt, nil
 }
 
-func ParseReceiptWithRetry(rawJSON []byte, maxRetries int) (*ExtractedReceipt, error) {
-	var lastErr error
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		receipt, err := ParseReceipt(rawJSON)
-		if err == nil {
-			return receipt, nil
-		}
-		lastErr = err
-		log.Printf("[AI Client] Parsing failed (Attempt %d/%d): %v. Retrying API call...", attempt, maxRetries, err)
+type MiMoRequest struct {
+	Model    string        `json:"model"`
+	Messages []MiMoMessage `json:"messages"`
+}
+
+type MiMoMessage struct {
+	Role    string        `json:"role"`
+	Content []MiMoContent `json:"content"`
+}
+
+type MiMoContent struct {
+	Type     string         `json:"type"`
+	Text     string         `json:"text,omitempty"`
+	ImageURL *MiMoImageURL `json:"image_url,omitempty"`
+}
+
+type MiMoImageURL struct {
+	URL string `json:"url"`
+}
+
+func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
+	apiKey := os.Getenv("MIMO_API_KEY")
+	endpoint := os.Getenv("MIMO_ENDPOINT") // e.g., https://token-plan-sgp.xiaomimimo.com/v1/chat/completions
+
+	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
+	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
+
+	prompt := `Extract receipt items, prices, quantities, subtotal, tax, and service_charge. 
+	Return valid JSON following this schema: 
+	{"items": [{"name": string, "price": number, "quantity": number}], "subtotal": number, "tax": number, "service_charge": number, "grand_total": number}`
+
+	payload := MiMoRequest{
+		Model: "mimo-v2.5-pro",
+		Messages: []MiMoMessage{
+			{
+				Role: "user",
+				Content: []MiMoContent{
+					{Type: "text", Text: prompt},
+					{Type: "image_url", ImageURL: &MiMoImageURL{URL: dataURL}},
+				},
+			},
+		},
 	}
-	return nil, fmt.Errorf("parsing failed after %d attempts: %w", maxRetries, lastErr)
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("api-key", apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Parse OpenAI-style response
+	var completion struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(body, &completion); err != nil {
+		return nil, err
+	}
+
+	if len(completion.Choices) == 0 {
+		return nil, fmt.Errorf("no choices returned from AI")
+	}
+
+	return ParseReceipt([]byte(completion.Choices[0].Message.Content))
 }
