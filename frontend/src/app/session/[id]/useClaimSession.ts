@@ -241,6 +241,30 @@ export function useClaimSession(sessionId: string) {
     }, 0);
   }, [isJoined, userName, items, syncClaimToBackend]);
 
+  const renameItem = useCallback(async (itemId: string, newName: string): Promise<boolean> => {
+    const previousItems = [...items];
+    setItems((prevItems) =>
+      prevItems.map((item) => (item.id === itemId ? { ...item, name: newName } : item))
+    );
+    try {
+      const response = await fetch(`${backendUrl}/session/${sessionId}/item/${itemId}/rename`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (!response.ok) {
+        setItems(previousItems);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      setItems(previousItems);
+      return false;
+    }
+  }, [sessionId, backendUrl, items]);
+
   return {
     userName,
     setUserName,
@@ -253,5 +277,6 @@ export function useClaimSession(sessionId: string) {
     joinSession,
     changeName,
     updateClaim,
+    renameItem,
   };
 }
