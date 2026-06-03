@@ -5,13 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ReceiptItem, calculateParticipantBreakdowns } from "@/utils/calculations";
 
 interface ParticipantBreakdownProps {
-  participants: string[];
+  participants: Array<{ id: number; name: string }>;
   items: ReceiptItem[];
   totalSubtotal: number;
   tax: number;
   serviceCharge: number;
   userName: string;
   isJoined: boolean;
+  isPayer: boolean;
+  payerName: string;
+  onRemoveParticipant: (id: number) => void;
   formatRupiah: (val: number) => string;
   getAvatarBg: (name: string) => string;
   getInitials: (name: string) => string;
@@ -25,12 +28,16 @@ export default function ParticipantBreakdown({
   serviceCharge,
   userName,
   isJoined,
+  isPayer,
+  payerName,
+  onRemoveParticipant,
   formatRupiah,
   getAvatarBg,
   getInitials,
 }: ParticipantBreakdownProps) {
+  const participantNames = participants.map((p) => p.name);
   const breakdowns = calculateParticipantBreakdowns(
-    participants,
+    participantNames,
     items,
     totalSubtotal,
     tax,
@@ -77,6 +84,25 @@ export default function ParticipantBreakdown({
                       <span className="font-sans text-base sm:text-xl text-foreground tracking-tight font-normal truncate">
                         {p.name} {isCurrentUser && <span className="inline-block text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-sage not-italic ml-2 sm:ml-4">(You)</span>}
                       </span>
+                      {(() => {
+                        const match = participants.find((part) => part.name === p.name);
+                        const isTargetPayer = p.name.trim().toLowerCase() === payerName.trim().toLowerCase();
+                        if (isPayer && match && !isTargetPayer) {
+                          return (
+                            <button
+                              onClick={() => onRemoveParticipant(match.id)}
+                              className="text-foreground/30 hover:text-rose-400 p-1 cursor-pointer transition-colors shrink-0"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              </svg>
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                     <span className="text-lg sm:text-xl font-sans font-bold text-sage text-glow-sage shrink-0">
                       {formatRupiah(p.total)}

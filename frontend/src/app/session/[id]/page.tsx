@@ -36,6 +36,8 @@ export default function ClaimSessionPage({ params }: PageProps) {
     updateClaim,
     renameItem,
     joinError,
+    participants,
+    removeParticipant,
   } = useClaimSession(sessionId);
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -81,13 +83,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
   const totalSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const grandTotal = totalSubtotal + tax + serviceCharge;
 
-  // Extract unique participant list
-  const participants = Array.from(
-    new Set([
-      ...items.flatMap((item) => item.claims.map((c) => c.name)),
-      ...(isJoined && userName.trim() ? [userName.trim()] : []),
-    ])
-  );
+  const isPayer = isJoined && userName.trim().toLowerCase() === payerName.trim().toLowerCase();
 
   const totalClaimedSubtotal = items.reduce((sum, item) => {
     const claimedShares = item.claims.reduce((s, c) => s + c.shares, 0);
@@ -356,6 +352,9 @@ export default function ClaimSessionPage({ params }: PageProps) {
               serviceCharge={serviceCharge}
               userName={userName}
               isJoined={isJoined}
+              isPayer={isPayer}
+              payerName={payerName}
+              onRemoveParticipant={removeParticipant}
               formatRupiah={formatRupiah}
               getAvatarBg={getAvatarBg}
               getInitials={getInitials}
