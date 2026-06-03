@@ -29,6 +29,7 @@ export default function ItemCard({
   const [editValue, setEditValue] = React.useState(item.name);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditValue(item.name);
   }, [item.name]);
   
@@ -84,7 +85,7 @@ export default function ItemCard({
               {isJoined && (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="opacity-0 group-hover/title:opacity-100 text-foreground/30 hover:text-sage transition-opacity p-1 cursor-pointer shrink-0"
+                  className="opacity-100 md:opacity-0 md:group-hover/title:opacity-100 text-foreground/30 hover:text-sage transition-opacity p-1 cursor-pointer shrink-0"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 20h9" />

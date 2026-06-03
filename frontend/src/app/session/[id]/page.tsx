@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useClaimSession } from "./useClaimSession";
 import ItemCard from "./ItemCard";
 import ParticipantBreakdown from "./ParticipantBreakdown";
+import { calculateParticipantBreakdowns } from "@/utils/calculations";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -101,6 +102,21 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
 
+  // Calculate current user's total share
+  const currentUserTotal = React.useMemo(() => {
+    if (!isJoined || !userName) return 0;
+    const participantNames = participants.map((p) => p.name);
+    const breakdowns = calculateParticipantBreakdowns(
+      participantNames,
+      items,
+      totalSubtotal,
+      tax,
+      serviceCharge
+    );
+    const userBreakdown = breakdowns.find((b) => b.name === userName.trim());
+    return userBreakdown ? userBreakdown.total : 0;
+  }, [isJoined, userName, participants, items, totalSubtotal, tax, serviceCharge]);
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -113,7 +129,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
   }
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground antialiased font-sans overflow-x-hidden pb-20">
+    <div className={`relative min-h-screen bg-background text-foreground antialiased font-sans overflow-x-hidden ${isJoined ? 'pb-32 lg:pb-20' : 'pb-20'}`}>
       {/* Background Ambience */}
       <div className="fixed top-[-10%] right-[-10%] w-[60%] h-[60%] bg-orb-sage blur-[120px] rounded-full opacity-20 pointer-events-none" />
       <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-orb-slate blur-[120px] rounded-full opacity-10 pointer-events-none" />
@@ -129,7 +145,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
               M
             </div>
             <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase">
-              Meris <span className="text-sage font-mono font-light">{"// Protocol"}</span>
+              Meris
             </span>
           </div>
           
@@ -260,7 +276,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
               COLLABORATION STATE // CLAIMING
             </span>
             <span className="text-sm font-mono font-bold text-sage">
-              {claimProgressPercent.toFixed(1)}% COMPLETE
+              {claimProgressPercent}% COMPLETE
             </span>
           </div>
 
@@ -352,27 +368,28 @@ export default function ClaimSessionPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Breakdown List */}
-            <ParticipantBreakdown
-              participants={participants}
-              items={items}
-              totalSubtotal={totalSubtotal}
-              tax={tax}
-              serviceCharge={serviceCharge}
-              userName={userName}
-              isJoined={isJoined}
-              isPayer={isPayer}
-              payerName={payerName}
-              onRemoveParticipant={removeParticipant}
-              formatRupiah={formatRupiah}
-              getAvatarBg={getAvatarBg}
-              getInitials={getInitials}
-            />
+            <div id="breakdown-section" className="space-y-8 sm:space-y-16">
+              {/* Breakdown List */}
+              <ParticipantBreakdown
+                participants={participants}
+                items={items}
+                totalSubtotal={totalSubtotal}
+                tax={tax}
+                serviceCharge={serviceCharge}
+                userName={userName}
+                isJoined={isJoined}
+                isPayer={isPayer}
+                payerName={payerName}
+                onRemoveParticipant={removeParticipant}
+                formatRupiah={formatRupiah}
+                getAvatarBg={getAvatarBg}
+                getInitials={getInitials}
+              />
 
-            {/* Payment Details */}
-            <div className="glass-panel rounded-glass p-6 sm:p-10 space-y-6 sm:space-y-8 border-sage/10 relative overflow-hidden bg-sage/[0.02]">
-               <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-transparent via-sage/40 to-transparent" />
-               <h3 className="text-[10px] font-bold text-sage uppercase tracking-[0.2em] sm:tracking-[0.4em] text-center">Settlement Information</h3>
+              {/* Payment Details */}
+              <div className="glass-panel rounded-glass p-6 sm:p-10 space-y-6 sm:space-y-8 border-sage/10 relative overflow-hidden bg-sage/[0.02]">
+                 <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-transparent via-sage/40 to-transparent" />
+                 <h3 className="text-[10px] font-bold text-sage uppercase tracking-[0.2em] sm:tracking-[0.4em] text-center">Settlement Information</h3>
                
                <div className="space-y-6 sm:space-y-8">
                  <div className="text-center space-y-1 sm:space-y-2">
@@ -407,15 +424,16 @@ export default function ClaimSessionPage({ params }: PageProps) {
                    </div>
                  )}
                  
-                 <div className="text-center space-y-1 sm:space-y-2">
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Owner</p>
-                   <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">{payerName || "Anonymous Payer"}</p>
-                 </div>
-               </div>
+                  <div className="text-center space-y-1 sm:space-y-2">
+                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Owner</p>
+                    <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">{payerName || "Anonymous Payer"}</p>
+                  </div>
+                </div>
+             </div>
             </div>
 
-          </div>
-        </div>
+           </div>
+         </div>
 
       </main>
 
@@ -426,6 +444,25 @@ export default function ClaimSessionPage({ params }: PageProps) {
           <p className="font-mono tracking-normal opacity-50 uppercase">Session: {sessionId}</p>
         </div>
       </footer>
+
+      {isJoined && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden p-4 bg-background/80 backdrop-blur-xl border-t border-white/5 flex items-center justify-between shadow-2xl">
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-[0.2em] font-mono">Your Share</span>
+            <span className="text-xl font-bold text-sage text-glow-sage">{formatRupiah(currentUserTotal)}</span>
+          </div>
+          <button
+            onClick={() => {
+              const breakdownEl = document.getElementById("breakdown-section");
+              breakdownEl?.scrollIntoView({ behavior: "smooth" });
+            }}
+            style={{ backgroundColor: '#8ba895' }}
+            className="px-5 py-2.5 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider active:scale-[0.98] transition-all cursor-pointer font-sans"
+          >
+            View Details
+          </button>
+        </div>
+      )}
     </div>
   );
 }

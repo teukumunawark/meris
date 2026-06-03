@@ -36,6 +36,7 @@ export function useClaimSession(sessionId: string) {
   const [participantId, setParticipantId] = useState<number | null>(null);
   const [participantToken, setParticipantToken] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
+  const [justJoined, setJustJoined] = useState<boolean>(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   
   const [items, setItems] = useState<ReceiptItem[]>([]);
@@ -55,10 +56,12 @@ export function useClaimSession(sessionId: string) {
         try {
           const parsed = JSON.parse(stored);
           if (parsed && parsed.id && parsed.name && parsed.token) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setUserName(parsed.name);
             setParticipantId(parsed.id);
             setParticipantToken(parsed.token);
             setIsJoined(true);
+            setJustJoined(false);
           }
         } catch (e) {
           localStorage.removeItem(`meris_session_${sessionId}_participant`);
@@ -120,14 +123,17 @@ export function useClaimSession(sessionId: string) {
   useEffect(() => {
     if (isJoined && participantId !== null && participants.length > 0) {
       const stillJoined = participants.some((p) => p.id === participantId);
-      if (!stillJoined) {
+      if (stillJoined) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setJustJoined(false);
+      } else if (!justJoined) {
         setIsJoined(false);
         setParticipantId(null);
         setParticipantToken("");
         localStorage.removeItem(`meris_session_${sessionId}_participant`);
       }
     }
-  }, [participants, isJoined, participantId, sessionId]);
+  }, [participants, isJoined, participantId, justJoined, sessionId]);
 
   // Task 1: Fetch Initial Session State
   useEffect(() => {
@@ -240,6 +246,7 @@ export function useClaimSession(sessionId: string) {
         setParticipantId(participant.id);
         setParticipantToken(participant.token);
         setIsJoined(true);
+        setJustJoined(true);
         localStorage.setItem(
           `meris_session_${sessionId}_participant`,
           JSON.stringify({
@@ -260,6 +267,7 @@ export function useClaimSession(sessionId: string) {
 
   const changeName = () => {
     setIsJoined(false);
+    setJustJoined(false);
   };
 
   // Claim portion of an item (Optimistic Update)

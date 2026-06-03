@@ -34,3 +34,9 @@ node_modules/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Superpowers metadata
+.superpowers/
+
+# TypeScript build cache
+*.tsbuildinfo

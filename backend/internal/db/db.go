@@ -50,8 +50,8 @@ func (l *GormSlogLogger) Trace(ctx context.Context, begin time.Time, fc func() (
 	sql, rows := fc()
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			if l.LogLevel >= gormlogger.Warn {
-				slog.WarnContext(ctx, "database record not found", "sql", sql, "rows", rows, "error", err, "elapsed", elapsed)
+			if l.LogLevel >= gormlogger.Info {
+				slog.DebugContext(ctx, "database record not found", "sql", sql, "rows", rows, "error", err, "elapsed", elapsed)
 			}
 		} else {
 			if l.LogLevel >= gormlogger.Error {

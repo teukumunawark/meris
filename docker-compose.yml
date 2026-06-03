@@ -1,10 +1,11 @@
 services:
   postgres:
+    container_name: meris-database
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: splitbill
+      POSTGRES_USER: meris
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: splitbilldb
+      POSTGRES_DB: merisdb
     ports:
       - "5432:5432"
     volumes:
