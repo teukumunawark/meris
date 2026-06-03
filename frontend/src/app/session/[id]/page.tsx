@@ -34,6 +34,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
     joinSession,
     changeName,
     updateClaim,
+    renameItem,
   } = useClaimSession(sessionId);
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -303,6 +304,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
                     isJoined={isJoined}
                     userName={userName}
                     onUpdateClaim={updateClaim}
+                    onRenameItem={renameItem}
                     formatRupiah={formatRupiah}
                   />
                 ))}

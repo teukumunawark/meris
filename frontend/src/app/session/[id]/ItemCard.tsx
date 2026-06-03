@@ -9,6 +9,7 @@ interface ItemCardProps {
   isJoined: boolean;
   userName: string;
   onUpdateClaim: (itemId: string, increment: number) => void;
+  onRenameItem: (itemId: string, newName: string) => void;
   formatRupiah: (val: number) => string;
 }
 
@@ -17,11 +18,19 @@ export default function ItemCard({
   isJoined,
   userName,
   onUpdateClaim,
+  onRenameItem,
   formatRupiah,
 }: ItemCardProps) {
   const targetUser = userName.trim();
   const userClaim = item.claims.find((c) => c.name === targetUser);
   const userClaimAmt = isJoined ? (userClaim?.shares ?? 0) : 0;
+
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState(item.name);
+
+  React.useEffect(() => {
+    setEditValue(item.name);
+  }, [item.name]);
   
   const totalClaimed = item.claims.reduce((sum, c) => sum + c.shares, 0);
   const isFullyClaimed = totalClaimed >= item.quantity;
@@ -39,10 +48,52 @@ export default function ItemCard({
       <div className="absolute inset-0 bg-linear-to-r from-sage/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
       
       <div className="space-y-4 sm:space-y-6 flex-1 relative z-10">
-        <div className="flex items-start justify-between md:justify-start md:items-center gap-4 sm:gap-6">
-          <h3 className="font-sans text-foreground text-lg sm:text-xl md:text-2xl tracking-tight font-normal">
-            {item.name}
-          </h3>
+        <div className="flex items-center justify-between md:justify-start gap-4 sm:gap-6 min-h-12">
+          {isEditing ? (
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const trimmed = editValue.trim();
+                  if (trimmed && trimmed !== item.name) {
+                    onRenameItem(item.id, trimmed);
+                  }
+                  setIsEditing(false);
+                } else if (e.key === "Escape") {
+                  setEditValue(item.name);
+                  setIsEditing(false);
+                }
+              }}
+              onBlur={() => {
+                const trimmed = editValue.trim();
+                if (trimmed && trimmed !== item.name) {
+                  onRenameItem(item.id, trimmed);
+                }
+                setIsEditing(false);
+              }}
+              autoFocus
+              className="px-2 py-1.5 rounded-glass-sm bg-white/[0.04] border border-white/10 text-foreground text-lg sm:text-xl md:text-2xl font-sans focus:outline-none focus:border-sage/40 w-full max-w-md"
+            />
+          ) : (
+            <div className="flex items-center gap-3 w-full group/title">
+              <h3 className="font-sans text-foreground text-lg sm:text-xl md:text-2xl tracking-tight font-normal">
+                {item.name}
+              </h3>
+              {isJoined && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="opacity-0 group-hover/title:opacity-100 text-foreground/30 hover:text-sage transition-opacity p-1 cursor-pointer shrink-0"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
           <AnimatePresence>
             {isFullyClaimed && (
               <motion.span 
