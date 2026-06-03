@@ -73,18 +73,32 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var payerID uint
+	var payerToken string
 	if payerName != "" {
+		payerToken = uuid.New().String()
 		participant := models.Participant{
 			SessionID: sessionID,
 			Name:      payerName,
+			Token:     payerToken,
 		}
-		if err := h.DB.WithContext(r.Context()).Create(&participant).Error; err != nil {
+		if err := h.DB.WithContext(r.Context()).Create(&participant).Error; err == nil {
+			payerID = participant.ID
+		} else {
 			slog.ErrorContext(r.Context(), "Failed to auto-join payer", "error", err)
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(session)
+	var resp struct {
+		models.Session
+		PayerID    uint   `json:"payerId,omitempty"`
+		PayerToken string `json:"payerToken,omitempty"`
+	}
+	resp.Session = session
+	resp.PayerID = payerID
+	resp.PayerToken = payerToken
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SessionHandler) ClaimItem(w http.ResponseWriter, r *http.Request) {
