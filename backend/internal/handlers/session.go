@@ -1,9 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"meris-backend/internal/ai"
 	"meris-backend/internal/models"
@@ -65,20 +66,18 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		session.Items = append(session.Items, item)
 	}
 
-	if err := h.DB.Create(&session).Error; err != nil {
+	if err := h.DB.WithContext(r.Context()).Create(&session).Error; err != nil {
 		http.Error(w, "Failed to save session", http.StatusInternalServerError)
 		return
 	}
 
-	// Auto-join the payer as the first participant
 	if payerName != "" {
 		participant := models.Participant{
 			SessionID: sessionID,
 			Name:      payerName,
 		}
-		if err := h.DB.Create(&participant).Error; err != nil {
-			// Non-critical error, log and continue
-			log.Printf("Failed to auto-join payer: %v", err)
+		if err := h.DB.WithContext(r.Context()).Create(&participant).Error; err != nil {
+			slog.ErrorContext(r.Context(), "Failed to auto-join payer", "error", err)
 		}
 	}
 
@@ -109,26 +108,22 @@ func (h *SessionHandler) ClaimItem(w http.ResponseWriter, r *http.Request) {
 		Shares:        payload.Shares,
 	}
 
-	// Upsert: Find if claim already exists for this participant and item
 	var existing models.Claim
-	err := h.DB.Where("item_id = ? AND participant_id = ?", claim.ItemID, claim.ParticipantID).First(&existing).Error
+	err := h.DB.WithContext(r.Context()).Where("item_id = ? AND participant_id = ?", claim.ItemID, claim.ParticipantID).First(&existing).Error
 	if err == nil {
-		// Update
 		existing.Shares = claim.Shares
-		if err := h.DB.Save(&existing).Error; err != nil {
+		if err := h.DB.WithContext(r.Context()).Save(&existing).Error; err != nil {
 			http.Error(w, "Failed to update claim", http.StatusInternalServerError)
 			return
 		}
 	} else {
-		// Create
-		if err := h.DB.Create(&claim).Error; err != nil {
+		if err := h.DB.WithContext(r.Context()).Create(&claim).Error; err != nil {
 			http.Error(w, "Failed to create claim", http.StatusInternalServerError)
 			return
 		}
 	}
 
-	// Trigger broadcast
-	go h.broadcastFullState(sessionID)
+	go h.broadcastFullState(context.WithoutCancel(r.Context()), sessionID)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -153,22 +148,21 @@ func (h *SessionHandler) JoinSession(w http.ResponseWriter, r *http.Request) {
 		Name:      payload.Name,
 	}
 
-	if err := h.DB.Create(&participant).Error; err != nil {
+	if err := h.DB.WithContext(r.Context()).Create(&participant).Error; err != nil {
 		http.Error(w, "Failed to join session", http.StatusInternalServerError)
 		return
 	}
 
-	// Trigger broadcast
-	go h.broadcastFullState(sessionID)
+	go h.broadcastFullState(context.WithoutCancel(r.Context()), sessionID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(participant)
 }
 
-func (h *SessionHandler) broadcastFullState(sessionID string) {
+func (h *SessionHandler) broadcastFullState(ctx context.Context, sessionID string) {
 	var session models.Session
-	err := h.DB.Preload("Items").
+	err := h.DB.WithContext(ctx).Preload("Items").
 		Preload("Participants").
 		Preload("Participants.Claims").
 		First(&session, "id = ?", sessionID).Error
@@ -193,7 +187,7 @@ func (h *SessionHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var session models.Session
-	err := h.DB.Preload("Items").
+	err := h.DB.WithContext(r.Context()).Preload("Items").
 		Preload("Participants").
 		Preload("Participants.Claims").
 		First(&session, "id = ?", id).Error
