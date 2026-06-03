@@ -168,106 +168,99 @@ export default function ClaimSessionPage({ params }: PageProps) {
       <main className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-10 py-8 sm:py-16 flex flex-col gap-8 sm:gap-16">
         
         {/* Header Section */}
-        <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-10">
+        <section className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="space-y-3 sm:space-y-6">
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-serif text-foreground tracking-tight leading-tight">
               Reviewing the <span className="text-sage font-sans font-light">Meris</span>
             </h1>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30">Session Code</span>
-              <code className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-glass-sm bg-white/[0.03] text-sage font-mono text-xs sm:text-sm font-bold border border-white/5">
-                {sessionId}
-              </code>
-            </div>
           </div>
 
-          <div className="w-full md:w-auto">
-            <button
-              onClick={handleCopyLink}
-              className="w-full md:w-auto flex items-center justify-center gap-2 sm:gap-3 px-6 py-4 rounded-glass-sm glass-panel glass-panel-hover text-xs sm:text-sm font-bold uppercase tracking-[0.1em] sm:tracking-widest text-foreground/70 transition-all active:scale-95 cursor-pointer"
-            >
-              {copySuccess ? (
-                <>
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                  <span className="text-sage">Copied</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                    <polyline points="16 6 12 2 8 6"/>
-                    <line x1="12" y1="2" x2="12" y2="15"/>
-                  </svg>
-                  <span>Share Session</span>
-                </>
-              )}
-            </button>
-          </div>
-        </section>
-
-        {/* Identity Bar */}
-        {!isJoined ? (
-          <section className="glass-panel rounded-glass p-6 sm:p-10 md:p-14 flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-10 border-white/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-orb-sage blur-[120px] opacity-10 pointer-events-none" />
-            <div className="space-y-3 sm:space-y-6 max-w-xl relative z-10">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-sans text-foreground font-normal">Who are you?</h2>
-              <p className="text-base sm:text-lg text-foreground/40 leading-relaxed font-sans">
-                Tell us your name so we can accurately track what you consumed. 
-                We&apos;ll calculate your share with pinpoint accuracy.
-              </p>
+          {/* Integrated Header Card */}
+          <div className="w-full md:max-w-md glass-panel rounded-glass p-5 border-white/5 space-y-4 bg-white/[0.01] shrink-0">
+            {/* Row 1: Session Code & Copy Button */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-sage animate-pulse shrink-0" />
+                <span className="text-[10px] font-mono text-foreground/40 uppercase tracking-wider shrink-0">Session Code:</span>
+                <span className="text-sm font-mono font-bold text-sage tracking-wider truncate">{sessionId}</span>
+              </div>
+              <button
+                onClick={handleCopyLink}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-glass-sm bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-foreground/70 active:scale-95 transition-all cursor-pointer shrink-0"
+              >
+                {copySuccess ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    <span className="text-sage font-sans">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    <span className="font-sans">Copy Link</span>
+                  </>
+                )}
+              </button>
             </div>
 
-            <div className="flex flex-col gap-2 w-full md:max-w-lg relative z-10">
-              <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 w-full">
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Guest Name"
-                  maxLength={20}
-                  className="flex-1 min-w-0 px-4 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-base sm:text-lg placeholder:text-foreground/20 focus:outline-none focus:ring-2 focus:ring-sage/40 transition-all font-sans"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") joinSession(userName);
-                  }}
-                />
+            <div className="h-px bg-white/5" />
+
+            {/* Row 2: Identity & Switch Account (if joined) OR Join Form (if not joined) */}
+            {isJoined ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div 
+                    style={{ backgroundColor: '#8ba895' }}
+                    className="w-7 h-7 rounded-full text-background flex items-center justify-center font-bold text-xs shrink-0"
+                  >
+                    {getInitials(userName)}
+                  </div>
+                  <p className="text-xs font-sans text-foreground/70 truncate">
+                    Joined as <span className="font-bold text-foreground">{userName}</span>
+                  </p>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => joinSession(userName)}
-                  style={{ backgroundColor: '#8ba895' }}
-                  className="flex-shrink-0 px-5 py-3 sm:px-8 sm:py-4 rounded-glass-sm text-background font-bold text-sm sm:text-base uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap text-center"
+                  onClick={changeName}
+                  className="px-2.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-bold uppercase tracking-wider text-foreground/60 transition-all active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  Join & Claim
+                  Switch Account
                 </button>
               </div>
-              {joinError && (
-                <p className="text-rose-400 text-xs font-sans mt-2 text-left">{joinError}</p>
-              )}
-            </div>
-          </section>
-        ) : (
-          <section className="glass-panel rounded-glass px-6 py-4 sm:px-10 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 border-sage/10 bg-sage/5">
-            <div className="flex items-center gap-4 sm:gap-6">
-              <div 
-                style={{ backgroundColor: '#8ba895' }}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full text-background flex items-center justify-center font-bold text-sm sm:text-base shrink-0"
-              >
-                {getInitials(userName)}
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/30">Who are you?</p>
+                <div className="flex items-stretch gap-2">
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Guest Name"
+                    maxLength={20}
+                    className="flex-1 min-w-0 px-3 py-2 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-xs placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") joinSession(userName);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => joinSession(userName)}
+                    style={{ backgroundColor: '#8ba895' }}
+                    className="flex-shrink-0 px-4 py-2 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap text-center"
+                  >
+                    Join
+                  </button>
+                </div>
+                {joinError && (
+                  <p className="text-rose-400 text-[10px] font-sans mt-1">{joinError}</p>
+                )}
               </div>
-              <p className="text-sm sm:text-lg font-sans text-foreground/70">
-                You are participating as <span className="text-foreground font-bold">{userName}</span>
-              </p>
-            </div>
-
-            <button
-              onClick={changeName}
-              className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30 hover:text-foreground transition-all cursor-pointer border-b border-white/5 pb-1 self-start sm:self-auto"
-            >
-              Switch Account
-            </button>
-          </section>
-        )}
+            )}
+          </div>
+        </section>
 
         {/* Progress Section */}
         <section className="space-y-4 sm:space-y-6">
