@@ -42,14 +42,14 @@ export default function ItemCard({
       layout
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`glass-panel rounded-glass-sm p-5 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-10 transition-all duration-700 group relative overflow-hidden ${
+      className={`glass-panel rounded-glass-sm group relative flex flex-col justify-between gap-6 overflow-hidden p-5 transition-all duration-700 sm:p-8 md:flex-row md:items-center md:gap-10 ${
         userClaimAmt > 0 ? "border-sage/40 bg-sage/4" : "border-white/5"
       }`}
     >
-      <div className="absolute inset-0 bg-linear-to-r from-sage/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+      <div className="from-sage/3 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-0 transition-opacity duration-1000 group-hover:opacity-100" />
       
-      <div className="space-y-4 sm:space-y-6 flex-1 relative z-10">
-        <div className="flex items-center justify-between md:justify-start gap-4 sm:gap-6 min-h-12">
+      <div className="relative z-10 flex-1 space-y-4 sm:space-y-6">
+        <div className="flex min-h-12 items-center justify-between gap-4 sm:gap-6 md:justify-start">
           {isEditing ? (
             <input
               type="text"
@@ -75,19 +75,19 @@ export default function ItemCard({
                 setIsEditing(false);
               }}
               autoFocus
-              className="px-2 py-1.5 rounded-glass-sm bg-white/[0.04] border border-white/10 text-foreground text-lg sm:text-xl md:text-2xl font-sans focus:outline-none focus:border-sage/40 w-full max-w-md"
+              className="rounded-glass-sm text-foreground focus:border-sage/40 w-full max-w-md border border-white/10 bg-white/4 px-2 py-1.5 font-sans text-lg focus:outline-none sm:text-xl md:text-2xl"
             />
           ) : (
-            <div className="flex items-center gap-3 w-full group/title">
-              <h3 className="font-sans text-foreground text-lg sm:text-xl md:text-2xl tracking-tight font-normal">
+            <div className="group/title flex w-full items-center gap-3">
+              <h3 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">
                 {item.name}
               </h3>
               {isJoined && (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="opacity-100 md:opacity-0 md:group-hover/title:opacity-100 text-foreground/30 hover:text-sage transition-opacity p-1 cursor-pointer shrink-0"
+                  className="text-foreground/30 hover:text-sage shrink-0 cursor-pointer p-1 opacity-100 transition-opacity md:opacity-0 md:group-hover/title:opacity-100"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 20h9" />
                     <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                   </svg>
@@ -100,7 +100,7 @@ export default function ItemCard({
               <motion.span 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-[9px] sm:text-[10px] uppercase font-bold tracking-[0.2em] sm:tracking-[0.3em] px-3 py-1 sm:px-4 sm:py-1.5 rounded-glass-sm bg-sage/10 text-sage border border-sage/20 shrink-0"
+                className="rounded-glass-sm bg-sage/10 text-sage border-sage/20 shrink-0 border px-3 py-1 text-[9px] font-bold tracking-[0.2em] uppercase sm:px-4 sm:py-1.5 sm:text-[10px] sm:tracking-[0.3em]"
               >
                 Claimed
               </motion.span>
@@ -108,7 +108,7 @@ export default function ItemCard({
           </AnimatePresence>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-10 gap-y-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] text-foreground/30">
+        <div className="text-foreground/30 flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-bold tracking-widest uppercase sm:gap-x-10 sm:text-xs sm:tracking-[0.2em]">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-foreground/20 font-sans text-xs">qty</span>
             <span className="text-foreground/50">{item.quantity}</span>
@@ -125,8 +125,8 @@ export default function ItemCard({
 
         {/* Claimants */}
         {item.claims.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-white/5">
-            <span className="text-[9px] sm:text-[10px] text-foreground/20 uppercase font-bold tracking-widest">Participants</span>
+          <div className="flex flex-wrap items-center gap-3 border-t border-white/5 pt-3">
+            <span className="text-foreground/20 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Participants</span>
             <div className="flex flex-wrap items-center gap-2">
               {item.claims.map((claim, idx) => (
                 <motion.div
@@ -134,9 +134,9 @@ export default function ItemCard({
                   layout
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-glass-sm border border-white/5 text-[10px] sm:text-[11px] font-bold tracking-wider sm:tracking-widest bg-white/5 text-foreground/60"
+                  className="rounded-glass-sm text-foreground/60 flex items-center gap-2 border border-white/5 bg-white/5 px-3 py-1.5 text-[10px] font-bold tracking-wider sm:text-[11px] sm:tracking-widest"
                 >
-                  <span className="font-sans text-xs sm:text-sm text-foreground/40">{claim.name}</span>
+                  <span className="text-foreground/40 font-sans text-xs sm:text-sm">{claim.name}</span>
                   <span className="text-sage font-mono">{claim.shares}x</span>
                 </motion.div>
               ))}
@@ -146,34 +146,34 @@ export default function ItemCard({
       </div>
 
       {/* Actions */}
-      <div className="flex flex-row items-center justify-between md:justify-end gap-4 sm:gap-6 md:gap-10 border-t border-white/5 md:border-none pt-6 md:pt-0 relative z-10">
+      <div className="relative z-10 flex flex-row items-center justify-between gap-4 border-t border-white/5 pt-6 sm:gap-6 md:justify-end md:gap-10 md:border-none md:pt-0">
         {/* Remaining */}
-        <div className="text-left md:text-right flex flex-col gap-0.5">
-          <span className="text-[9px] sm:text-[10px] text-foreground/20 uppercase font-bold tracking-widest">Available</span>
-          <span className="text-xs sm:text-sm font-mono font-bold text-foreground/40">
-            {remainingQty} <span className="text-[10px] sm:text-xs text-foreground/20 font-sans">of</span> {item.quantity}
+        <div className="flex flex-col gap-0.5 text-left md:text-right">
+          <span className="text-foreground/20 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Available</span>
+          <span className="text-foreground/40 font-mono text-xs font-bold sm:text-sm">
+            {remainingQty} <span className="text-foreground/20 font-sans text-[10px] sm:text-xs">of</span> {item.quantity}
           </span>
         </div>
 
         {/* Counter */}
-        <div className="flex items-center glass-panel rounded-glass-sm p-1 sm:p-2 border-white/10 bg-white/2">
+        <div className="glass-panel rounded-glass-sm flex items-center border-white/10 bg-white/2 p-1 sm:p-2">
           <button
             disabled={!isJoined || userClaimAmt <= 0}
             onClick={() => onUpdateClaim(item.id, -0.5)}
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-glass-sm flex items-center justify-center text-lg sm:text-xl font-light hover:bg-white/5 active:scale-90 disabled:opacity-10 transition-all text-foreground/40 cursor-pointer"
+            className="rounded-glass-sm text-foreground/40 flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-white/5 active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
           >
             —
           </button>
           
-          <div className="w-16 sm:w-20 text-center flex flex-col justify-center select-none">
-            <span className="text-[9px] sm:text-[10px] text-foreground/20 font-bold tracking-widest block uppercase">Share</span>
-            <span className="text-foreground text-lg sm:text-xl font-sans font-semibold">{userClaimAmt}</span>
+          <div className="flex w-16 flex-col justify-center text-center select-none sm:w-20">
+            <span className="text-foreground/20 block text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Share</span>
+            <span className="text-foreground font-sans text-lg font-semibold sm:text-xl">{userClaimAmt}</span>
           </div>
 
           <button
             disabled={!isJoined || isFullyClaimed}
             onClick={() => onUpdateClaim(item.id, 0.5)}
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-glass-sm flex items-center justify-center text-lg sm:text-xl font-light hover:bg-white/5 active:scale-90 disabled:opacity-10 transition-all text-sage cursor-pointer"
+            className="rounded-glass-sm text-sage flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-white/5 active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
           >
             ＋
           </button>

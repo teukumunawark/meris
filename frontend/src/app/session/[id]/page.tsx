@@ -12,7 +12,6 @@ interface PageProps {
 }
 
 export default function ClaimSessionPage({ params }: PageProps) {
-  // Unwrap parameters using React 19 use()
   const resolvedParams = use(params);
   const sessionId = resolvedParams.id;
 
@@ -119,34 +118,34 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="bg-background flex min-h-screen items-center justify-center">
         <div 
           style={{ borderTopColor: '#8ba895' }}
-          className="w-12 h-12 rounded-full border-4 border-sage/10 animate-spin" 
+          className="border-sage/10 h-12 w-12 animate-spin rounded-full border-4" 
         />
       </div>
     );
   }
 
   return (
-    <div className={`relative min-h-screen bg-background text-foreground antialiased font-sans overflow-x-hidden ${isJoined ? 'pb-32 lg:pb-20' : 'pb-20'}`}>
+    <div className={`bg-background text-foreground relative min-h-screen overflow-x-hidden font-sans antialiased ${isJoined ? 'pb-32 lg:pb-20' : 'pb-20'}`}>
       {/* Background Ambience */}
-      <div className="fixed top-[-10%] right-[-10%] w-[60%] h-[60%] bg-orb-sage blur-[120px] rounded-full opacity-20 pointer-events-none" />
-      <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-orb-slate blur-[120px] rounded-full opacity-10 pointer-events-none" />
+      <div className="bg-orb-sage pointer-events-none fixed top-[-10%] right-[-10%] h-[60%] w-[60%] rounded-full opacity-20 blur-[120px]" />
+      <div className="bg-orb-slate pointer-events-none fixed bottom-[-10%] left-[-10%] h-[60%] w-[60%] rounded-full opacity-10 blur-[120px]" />
 
       {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto h-16 sm:h-20 flex items-center justify-between px-4 sm:px-10 relative">
+      <header className="bg-background/80 sticky top-0 z-50 w-full border-b border-white/5 backdrop-blur-xl">
+        <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-10">
           
           {/* MOBILE NAVBAR ELEMENTS (Hidden on Desktop) */}
           {/* Mobile Left: Back Button */}
-          <div className="flex md:hidden items-center">
+          <div className="flex items-center md:hidden">
             <Link
               href="/"
-              className="flex items-center justify-center p-2 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/10 text-foreground/75 hover:text-foreground transition-all duration-300 cursor-pointer active:scale-95 shrink-0"
+              className="text-foreground/75 hover:text-foreground flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/3 p-2 transition-all duration-300 hover:bg-white/10 active:scale-95"
               title="Back to Home"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m12 19-7-7 7-7"/>
                 <path d="M19 12H5"/>
               </svg>
@@ -154,27 +153,27 @@ export default function ClaimSessionPage({ params }: PageProps) {
           </div>
 
           {/* Mobile Center: Logo (No [M]) */}
-          <Link href="/" className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center group cursor-pointer select-none">
-            <span className="font-sans text-base text-foreground tracking-[0.2em] font-semibold uppercase group-hover:text-sage transition-all duration-300">
+          <Link href="/" className="group absolute left-1/2 flex -translate-x-1/2 cursor-pointer items-center select-none md:hidden">
+            <span className="text-foreground group-hover:text-sage font-sans text-base font-semibold tracking-[0.2em] uppercase transition-all duration-300">
               Meris
             </span>
           </Link>
 
           {/* Mobile Right Spacer */}
-          <div className="md:hidden w-8 h-8 opacity-0 pointer-events-none" aria-hidden="true" />
+          <div className="pointer-events-none h-8 w-8 opacity-0 md:hidden" aria-hidden="true" />
 
           {/* DESKTOP NAVBAR ELEMENTS (Hidden on Mobile) */}
           {/* Desktop Left: Logo [M] Meris + Breadcrumb */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden items-center gap-6 md:flex">
             {/* Desktop Clickable Logo */}
-            <Link href="/" className="flex items-center gap-3 group cursor-pointer select-none">
+            <Link href="/" className="group flex cursor-pointer items-center gap-3 select-none">
               <div 
                 style={{ backgroundColor: '#8ba895' }}
-                className="w-9 h-9 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base shrink-0 group-hover:scale-105 transition-all duration-300"
+                className="rounded-glass-sm text-background flex h-9 w-9 shrink-0 items-center justify-center font-mono text-base font-bold transition-all duration-300 group-hover:scale-105"
               >
                 M
               </div>
-              <span className="font-sans text-lg text-foreground tracking-tight font-medium uppercase group-hover:text-sage transition-all duration-300">
+              <span className="text-foreground group-hover:text-sage font-sans text-lg font-medium tracking-tight uppercase transition-all duration-300">
                 Meris
               </span>
             </Link>
@@ -183,12 +182,12 @@ export default function ClaimSessionPage({ params }: PageProps) {
             <div className="h-4 w-px bg-white/10" />
 
             {/* Breadcrumb Path */}
-            <nav className="flex items-center gap-2 font-mono text-[10px] font-bold tracking-wider text-foreground/35" aria-label="Breadcrumb">
+            <nav className="text-foreground/35 flex items-center gap-2 font-mono text-[10px] font-bold tracking-wider" aria-label="Breadcrumb">
               <Link href="/" className="hover:text-foreground transition-colors">HOME</Link>
-              <svg className="w-3 h-3 text-foreground/15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="text-foreground/15 h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m9 18 6-6-6-6"/>
               </svg>
-              <span className="text-sage font-sans font-medium uppercase tracking-normal">Session</span>
+              <span className="text-sage font-sans font-medium tracking-normal uppercase">Session</span>
             </nav>
           </div>
 
@@ -201,36 +200,36 @@ export default function ClaimSessionPage({ params }: PageProps) {
       </header>
 
       {/* Main Layout */}
-      <main className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-10 pt-4 sm:pt-8 pb-8 sm:pb-16 flex flex-col gap-8 sm:gap-16">
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-8 sm:gap-16 sm:px-10 sm:pt-8 sm:pb-16">
         
         {/* Mobile Only: Header Title & Integrated Card (Untouched for Mobile) */}
-        <section className="md:hidden flex flex-col gap-4">
+        <section className="flex flex-col gap-4 md:hidden">
           <div className="space-y-3">
-            <h1 className="text-3xl font-serif text-foreground tracking-tight leading-tight">
+            <h1 className="text-foreground font-serif text-3xl leading-tight tracking-tight">
               Reviewing the <span className="text-sage font-sans font-light">Meris</span>
             </h1>
           </div>
-          <div className="glass-panel rounded-glass p-5 border-white/5 space-y-4 bg-white/[0.01]">
+          <div className="glass-panel rounded-glass space-y-4 border-white/5 bg-white/1 p-5">
             {/* Row 1: Session Code with Copy Action (No pulsing dot) */}
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[10px] font-mono text-foreground/40 uppercase tracking-wider shrink-0">Code:</span>
-                <span className="text-sm font-mono font-bold text-sage tracking-wider truncate">{sessionId}</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-foreground/40 shrink-0 font-mono text-[10px] tracking-wider uppercase">Code:</span>
+                <span className="text-sage truncate font-mono text-sm font-bold tracking-wider">{sessionId}</span>
               </div>
               <button
                 onClick={handleCopyLink}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-glass-sm bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-foreground/70 active:scale-95 transition-all cursor-pointer shrink-0"
+                className="rounded-glass-sm text-foreground/70 flex shrink-0 cursor-pointer items-center gap-1.5 border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all hover:bg-white/10 active:scale-95"
               >
                 {copySuccess ? (
                   <>
-                    <svg className="w-3.5 h-3.5 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <svg className="text-sage h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M20 6 9 17l-5-5"/>
                     </svg>
                     <span className="text-sage">Copied</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-3.5 h-3.5 text-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg className="text-foreground/50 h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                     </svg>
@@ -245,27 +244,27 @@ export default function ClaimSessionPage({ params }: PageProps) {
             {/* Row 2: Identity & Switch Account (if joined) OR Join Form (if not joined) */}
             {isJoined ? (
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <div 
                     style={{ backgroundColor: '#8ba895' }}
-                    className="w-7 h-7 rounded-full text-background flex items-center justify-center font-bold text-xs shrink-0"
+                    className="text-background flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                   >
                     {getInitials(userName)}
                   </div>
-                  <p className="text-xs font-sans text-foreground/70 truncate">
-                    Joined as <span className="font-bold text-foreground">{userName}</span>
+                  <p className="text-foreground/70 truncate font-sans text-xs">
+                    Joined as <span className="text-foreground font-bold">{userName}</span>
                   </p>
                 </div>
                 <button
                   onClick={changeName}
-                  className="px-2.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-bold uppercase tracking-wider text-foreground/60 transition-all active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+                  className="text-foreground/60 shrink-0 cursor-pointer rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 text-[9px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-white/10 active:scale-95"
                 >
                   Switch Account
                 </button>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/30">Who are you?</p>
+                <p className="text-foreground/30 text-[10px] font-bold tracking-wider uppercase">Who are you?</p>
                 <div className="flex items-stretch gap-2">
                   <input
                     type="text"
@@ -273,7 +272,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder="Guest Name"
                     maxLength={20}
-                    className="flex-1 min-w-0 px-3 py-2 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-xs placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
+                    className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:ring-sage/40 min-w-0 flex-1 border border-white/10 bg-white/3 px-3 py-2 font-sans text-xs transition-all focus:ring-1 focus:outline-none"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") joinSession(userName);
                     }}
@@ -282,13 +281,13 @@ export default function ClaimSessionPage({ params }: PageProps) {
                     type="button"
                     onClick={() => joinSession(userName)}
                     style={{ backgroundColor: '#8ba895' }}
-                    className="flex-shrink-0 px-4 py-2 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap text-center"
+                    className="rounded-glass-sm text-background shrink-0 cursor-pointer px-4 py-2 text-center text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:brightness-110 active:scale-[0.98]"
                   >
                     Join
                   </button>
                 </div>
                 {joinError && (
-                  <p className="text-rose-400 text-[10px] font-sans mt-1">{joinError}</p>
+                  <p className="mt-1 font-sans text-[10px] text-rose-400">{joinError}</p>
                 )}
               </div>
             )}
@@ -296,30 +295,30 @@ export default function ClaimSessionPage({ params }: PageProps) {
         </section>
 
         {/* Desktop Header Banner (Hidden on Mobile) */}
-        <section className="hidden md:block glass-panel rounded-glass p-8 border-white/5 bg-white/[0.01] relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-orb-sage blur-[150px] opacity-10 pointer-events-none" />
+        <section className="glass-panel rounded-glass relative hidden overflow-hidden border-white/5 bg-white/1 p-8 md:block">
+          <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-96 w-96 opacity-10 blur-[150px]" />
           
           <div className="relative z-10 flex flex-col gap-6">
             {/* Top row: Title & Share Button */}
             <div className="flex items-center justify-between gap-6">
-              <h1 className="text-4xl lg:text-5xl font-serif text-foreground tracking-tight leading-tight">
+              <h1 className="text-foreground font-serif text-4xl leading-tight tracking-tight lg:text-5xl">
                 Reviewing the <span className="text-sage font-sans font-light">Meris</span>
               </h1>
               
               <button
                 onClick={handleCopyLink}
-                className="flex items-center justify-center gap-2.5 px-5 py-3 rounded-glass-sm glass-panel glass-panel-hover text-xs font-bold uppercase tracking-[0.1em] text-foreground/80 hover:text-foreground transition-all active:scale-95 cursor-pointer"
+                className="rounded-glass-sm glass-panel glass-panel-hover text-foreground/80 hover:text-foreground flex cursor-pointer items-center justify-center gap-2.5 px-5 py-3 text-xs font-bold tracking-widest uppercase transition-all active:scale-95"
               >
                 {copySuccess ? (
                   <>
-                    <svg className="w-4 h-4 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="text-sage h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 6 9 17l-5-5"/>
                     </svg>
                     <span className="text-sage">Copied</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="h-4 w-4 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                     </svg>
@@ -330,52 +329,52 @@ export default function ClaimSessionPage({ params }: PageProps) {
             </div>
 
             {/* Divider line */}
-            <div className="h-px bg-white/5 w-full" />
+            <div className="h-px w-full bg-white/5" />
 
             {/* Bottom row: Session Code & Identity Section */}
-            <div className="flex items-center justify-between gap-6 text-sm font-sans relative">
+            <div className="relative flex items-center justify-between gap-6 font-sans text-sm">
               
               {/* Left Side: Session Code details */}
-              <div className="flex items-center gap-2 text-foreground/70">
-                <span className="text-xs font-mono uppercase tracking-wider text-foreground/45">Code:</span>
-                <span className="font-mono font-bold text-sage tracking-wider select-all">{sessionId}</span>
+              <div className="text-foreground/70 flex items-center gap-2">
+                <span className="text-foreground/45 font-mono text-xs tracking-wider uppercase">Code:</span>
+                <span className="text-sage font-mono font-bold tracking-wider select-all">{sessionId}</span>
               </div>
 
               {/* Vertical Separator */}
               <div className="h-4 w-px bg-white/10" />
 
               {/* Right Side: Participant Identity / Join Action */}
-              <div className="flex-1 max-w-xl flex justify-end">
+              <div className="flex max-w-xl flex-1 justify-end">
                 {isJoined ? (
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-3">
                       <div 
                         style={{ backgroundColor: '#8ba895' }}
-                        className="w-8 h-8 rounded-full text-background flex items-center justify-center font-bold text-xs shrink-0 shadow-inner"
+                        className="text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-inner"
                       >
                         {getInitials(userName)}
                       </div>
                       <p className="text-foreground/70">
-                        You are participating as <span className="font-bold text-foreground">{userName}</span>
+                        You are participating as <span className="text-foreground font-bold">{userName}</span>
                       </p>
                     </div>
                     <button
                       onClick={changeName}
-                      className="px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider text-foreground/60 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                      className="text-foreground/60 cursor-pointer rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-white/10 active:scale-95"
                     >
                       Switch Account
                     </button>
                   </div>
                 ) : (
-                  <div className="w-full flex items-center justify-end gap-3 relative">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground/35 whitespace-nowrap">Who are you?</span>
+                  <div className="relative flex w-full items-center justify-end gap-3">
+                    <span className="text-foreground/35 text-xs font-bold tracking-wider whitespace-nowrap uppercase">Who are you?</span>
                     <input
                       type="text"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
                       placeholder="Enter Guest Name"
                       maxLength={20}
-                      className="w-48 px-3.5 py-1.5 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-xs placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
+                      className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:ring-sage/40 w-48 border border-white/10 bg-white/3 px-3.5 py-1.5 font-sans text-xs transition-all focus:ring-1 focus:outline-none"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") joinSession(userName);
                       }}
@@ -384,12 +383,12 @@ export default function ClaimSessionPage({ params }: PageProps) {
                       type="button"
                       onClick={() => joinSession(userName)}
                       style={{ backgroundColor: '#8ba895' }}
-                      className="px-4 py-1.5 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+                      className="rounded-glass-sm text-background cursor-pointer px-4 py-1.5 text-xs font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:brightness-110 active:scale-[0.98]"
                     >
                       Join & Claim
                     </button>
                     {joinError && (
-                      <p className="text-rose-400 text-[10px] font-sans absolute bottom-[-22px] right-0">{joinError}</p>
+                      <p className="absolute right-0 -bottom-5.5 font-sans text-[10px] text-rose-400">{joinError}</p>
                     )}
                   </div>
                 )}
@@ -401,16 +400,16 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
         {/* Progress Section */}
         <section className="space-y-4 sm:space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-white/5 pb-3">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/30 font-mono">
+          <div className="flex flex-col justify-between gap-2 border-b border-white/5 pb-3 sm:flex-row sm:items-baseline">
+            <span className="text-foreground/30 font-mono text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">
               COLLABORATION STATE // CLAIMING
             </span>
-            <span className="text-sm font-mono font-bold text-sage">
+            <span className="text-sage font-mono text-sm font-bold">
               {claimProgressPercent}% COMPLETE
             </span>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-1.5 h-4 sm:h-5">
+          <div className="flex h-4 items-center gap-1 sm:h-5 sm:gap-1.5">
             {Array.from({ length: 20 }).map((_, i) => {
               const isActive = i < Math.round((claimProgressPercent / 100) * 20);
               return (
@@ -419,38 +418,38 @@ export default function ClaimSessionPage({ params }: PageProps) {
                   className={`h-full flex-1 transition-all duration-700 ease-out ${
                     isActive 
                       ? "bg-sage" 
-                      : "bg-white/2 border border-white/5"
+                      : "border border-white/5 bg-white/2"
                   }`}
                 />
               );
             })}
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider text-foreground/20">
+          <div className="text-foreground/20 flex flex-col justify-between gap-2 font-mono text-[10px] font-bold tracking-wider uppercase sm:flex-row sm:items-center sm:text-xs">
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-sage inline-block" />
+              <span className="bg-sage inline-block h-1.5 w-1.5" />
               <span>CLAIMED: {formatRupiah(totalClaimedSubtotal)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-white/10 inline-block" />
+              <span className="inline-block h-1.5 w-1.5 bg-white/10" />
               <span>TOTAL INVENTORY: {formatRupiah(totalSubtotal)}</span>
             </div>
           </div>
         </section>
 
         {/* Main Grid Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-16">
           
           {/* Items Column */}
-          <div className="lg:col-span-8 space-y-6 sm:space-y-12">
+          <div className="space-y-6 sm:space-y-12 lg:col-span-8">
             <div className="flex items-end justify-between border-b border-white/5 pb-4 sm:pb-6">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-sans text-foreground tracking-tight font-normal">Inventory</h2>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">{items.length} items</span>
+              <h2 className="text-foreground font-sans text-2xl font-normal tracking-tight sm:text-3xl md:text-4xl">Inventory</h2>
+              <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">{items.length} items</span>
             </div>
 
             {items.length === 0 ? (
-              <div className="glass-panel rounded-glass p-12 sm:p-24 text-center border-dashed border-white/10">
-                <p className="text-foreground/20 font-sans text-lg sm:text-xl font-normal tracking-wide">No items have been uploaded yet.</p>
+              <div className="glass-panel rounded-glass border-dashed border-white/10 p-12 text-center sm:p-24">
+                <p className="text-foreground/20 font-sans text-lg font-normal tracking-wide sm:text-xl">No items have been uploaded yet.</p>
               </div>
             ) : (
               <ul className="grid grid-cols-1 gap-4 sm:gap-8" role="list">
@@ -470,30 +469,30 @@ export default function ClaimSessionPage({ params }: PageProps) {
           </div>
 
           {/* Sidebar Column */}
-          <div className="lg:col-span-4 space-y-8 sm:space-y-16">
+          <div className="space-y-8 sm:space-y-16 lg:col-span-4">
             
             {/* Bill Summary */}
-            <div className="glass-panel rounded-glass p-6 sm:p-10 space-y-6 sm:space-y-10 border-white/5 bg-white/[0.01]">
-              <h2 className="text-xl sm:text-2xl font-sans text-foreground font-normal border-b border-white/5 pb-4 sm:pb-6">
+            <div className="glass-panel rounded-glass space-y-6 border-white/5 bg-white/1 p-6 sm:space-y-10 sm:p-10">
+              <h2 className="text-foreground border-b border-white/5 pb-4 font-sans text-xl font-normal sm:pb-6 sm:text-2xl">
                 Bill Summary
               </h2>
 
-              <div className="space-y-4 sm:space-y-6 font-sans text-sm sm:text-base">
-                <div className="flex justify-between text-foreground/40 uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs font-bold">
+              <div className="space-y-4 font-sans text-sm sm:space-y-6 sm:text-base">
+                <div className="text-foreground/40 flex justify-between text-[10px] font-bold tracking-widest uppercase sm:text-xs sm:tracking-[0.2em]">
                   <span>Subtotal</span>
                   <span className="text-foreground/80">{formatRupiah(totalSubtotal)}</span>
                 </div>
-                <div className="flex justify-between text-foreground/40 uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs font-bold">
+                <div className="text-foreground/40 flex justify-between text-[10px] font-bold tracking-widest uppercase sm:text-xs sm:tracking-[0.2em]">
                   <span>Tax (PPN)</span>
                   <span className="text-foreground/80">{formatRupiah(tax)}</span>
                 </div>
-                <div className="flex justify-between text-foreground/40 uppercase tracking-[0.1em] sm:tracking-[0.2em] text-[10px] sm:text-xs font-bold">
+                <div className="text-foreground/40 flex justify-between text-[10px] font-bold tracking-widest uppercase sm:text-xs sm:tracking-[0.2em]">
                   <span>Service</span>
                   <span className="text-foreground/80">{formatRupiah(serviceCharge)}</span>
                 </div>
-                <div className="border-t border-white/10 pt-6 sm:pt-8 flex justify-between items-baseline gap-2">
-                  <span className="text-foreground font-sans text-sm sm:text-base font-semibold uppercase tracking-wider">Grand Total</span>
-                  <span className="text-sage font-sans text-xl sm:text-2xl font-bold text-glow-sage leading-none shrink-0">{formatRupiah(grandTotal)}</span>
+                <div className="flex items-baseline justify-between gap-2 border-t border-white/10 pt-6 sm:pt-8">
+                  <span className="text-foreground font-sans text-sm font-semibold tracking-wider uppercase sm:text-base">Grand Total</span>
+                  <span className="text-sage text-glow-sage shrink-0 font-sans text-xl leading-none font-bold sm:text-2xl">{formatRupiah(grandTotal)}</span>
                 </div>
               </div>
             </div>
@@ -517,34 +516,34 @@ export default function ClaimSessionPage({ params }: PageProps) {
               />
 
               {/* Payment Details */}
-              <div className="glass-panel rounded-glass p-6 sm:p-10 space-y-6 sm:space-y-8 border-sage/10 relative overflow-hidden bg-sage/[0.02]">
-                 <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-transparent via-sage/40 to-transparent" />
-                 <h3 className="text-[10px] font-bold text-sage uppercase tracking-[0.2em] sm:tracking-[0.4em] text-center">Settlement Information</h3>
+              <div className="glass-panel rounded-glass border-sage/10 bg-sage/2 relative space-y-6 overflow-hidden p-6 sm:space-y-8 sm:p-10">
+                 <div className="via-sage/40 absolute top-0 left-0 h-1.5 w-full bg-linear-to-r from-transparent to-transparent" />
+                 <h3 className="text-sage text-center text-[10px] font-bold tracking-[0.2em] uppercase sm:tracking-[0.4em]">Settlement Information</h3>
                
                <div className="space-y-6 sm:space-y-8">
-                 <div className="text-center space-y-1 sm:space-y-2">
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Payment Method</p>
-                   <p className="font-serif text-foreground text-xl sm:text-2xl tracking-tight font-light">{payerBankName || "Not specified"}</p>
+                 <div className="space-y-1 text-center sm:space-y-2">
+                   <p className="text-foreground/20 text-[9px] font-bold tracking-[0.2em] uppercase sm:text-[10px] sm:tracking-[0.3em]">Payment Method</p>
+                   <p className="text-foreground font-serif text-xl font-light tracking-tight sm:text-2xl">{payerBankName || "Not specified"}</p>
                  </div>
 
                  {payerBankAccount && (
-                   <div className="text-center space-y-1 sm:space-y-2">
-                     <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Number</p>
+                   <div className="space-y-1 text-center sm:space-y-2">
+                     <p className="text-foreground/20 text-[9px] font-bold tracking-[0.2em] uppercase sm:text-[10px] sm:tracking-[0.3em]">Account Number</p>
                      <div className="flex items-center justify-center gap-2">
-                       <span className="font-mono text-foreground text-xl sm:text-2xl tracking-wider font-semibold">
+                       <span className="text-foreground font-mono text-xl font-semibold tracking-wider sm:text-2xl">
                          {payerBankAccount}
                        </span>
                        <button
                          onClick={handleCopyAccount}
-                         className="text-sage hover:text-white p-1 cursor-pointer transition-colors"
+                         className="text-sage cursor-pointer p-1 transition-colors hover:text-white"
                          title="Copy Account Number"
                        >
                          {copyAccountSuccess ? (
-                           <svg className="w-4.5 h-4.5 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                           <svg className="text-sage h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                              <path d="M20 6 9 17l-5-5"/>
                            </svg>
                          ) : (
-                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                            </svg>
@@ -554,9 +553,9 @@ export default function ClaimSessionPage({ params }: PageProps) {
                    </div>
                  )}
                  
-                  <div className="text-center space-y-1 sm:space-y-2">
-                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Owner</p>
-                    <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">{payerName || "Anonymous Payer"}</p>
+                  <div className="space-y-1 text-center sm:space-y-2">
+                    <p className="text-foreground/20 text-[9px] font-bold tracking-[0.2em] uppercase sm:text-[10px] sm:tracking-[0.3em]">Account Owner</p>
+                    <p className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl">{payerName || "Anonymous Payer"}</p>
                   </div>
                 </div>
              </div>
@@ -568,18 +567,18 @@ export default function ClaimSessionPage({ params }: PageProps) {
       </main>
 
       {/* Footer Branding */}
-      <footer className="mt-24 py-12 border-t border-white/5 opacity-40">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-[0.3em] text-foreground/40">
+      <footer className="mt-24 border-t border-white/5 py-12 opacity-40">
+        <div className="text-foreground/40 mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 text-[10px] font-bold tracking-[0.3em] uppercase sm:flex-row">
           <p>Meris &copy; 2026</p>
-          <p className="font-mono tracking-normal opacity-50 uppercase">Session: {sessionId}</p>
+          <p className="font-mono tracking-normal uppercase opacity-50">Session: {sessionId}</p>
         </div>
       </footer>
 
       {isJoined && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden p-4 bg-background/80 backdrop-blur-xl border-t border-white/5 flex items-center justify-between shadow-2xl">
+        <div className="bg-background/80 fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between border-t border-white/5 p-4 shadow-2xl backdrop-blur-xl lg:hidden">
           <div className="flex flex-col text-left">
-            <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-[0.2em] font-mono">Your Share</span>
-            <span className="text-xl font-bold text-sage text-glow-sage">{formatRupiah(currentUserTotal)}</span>
+            <span className="text-foreground/30 font-mono text-[10px] font-bold tracking-[0.2em] uppercase">Your Share</span>
+            <span className="text-sage text-glow-sage text-xl font-bold">{formatRupiah(currentUserTotal)}</span>
           </div>
           <button
             onClick={() => {
@@ -587,7 +586,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
               breakdownEl?.scrollIntoView({ behavior: "smooth" });
             }}
             style={{ backgroundColor: '#8ba895' }}
-            className="px-5 py-2.5 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider active:scale-[0.98] transition-all cursor-pointer font-sans"
+            className="rounded-glass-sm text-background cursor-pointer px-5 py-2.5 font-sans text-xs font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
           >
             View Details
           </button>

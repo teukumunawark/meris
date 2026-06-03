@@ -7,6 +7,11 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   ...tailwind.configs["flat/recommended"],
+  {
+    rules: {
+      "tailwindcss/no-custom-classname": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

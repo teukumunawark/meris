@@ -147,23 +147,23 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background overflow-x-hidden font-sans">
-      <div className="absolute top-[10%] left-[-5%] w-[50vw] h-[50vw] bg-orb-sage blur-[140px] rounded-full opacity-45 pointer-events-none" />
-      <div className="absolute bottom-[10%] right-[-5%] w-[45vw] h-[45vw] bg-orb-slate blur-[120px] rounded-full opacity-35 pointer-events-none" />
+    <div className="bg-background relative min-h-screen overflow-x-hidden font-sans">
+      <div className="bg-orb-sage pointer-events-none absolute top-[10%] left-[-5%] h-[50vw] w-[50vw] rounded-full opacity-45 blur-[140px]" />
+      <div className="bg-orb-slate pointer-events-none absolute right-[-5%] bottom-[10%] h-[45vw] w-[45vw] rounded-full opacity-35 blur-[120px]" />
 
-      <div className="min-h-screen w-full max-w-7xl mx-auto px-6 lg:px-12 flex flex-col lg:grid lg:grid-cols-12 lg:gap-16">
+      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 lg:grid lg:grid-cols-12 lg:gap-16 lg:px-12">
         
         <motion.div 
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="lg:col-span-6 pt-10 pb-12 lg:py-20 flex flex-col justify-center gap-12 lg:gap-16 min-h-max lg:min-h-screen lg:sticky lg:top-0"
+          className="flex min-h-max flex-col justify-center gap-12 pt-10 pb-12 lg:sticky lg:top-0 lg:col-span-6 lg:min-h-screen lg:gap-16 lg:py-20"
         >
           <div className="space-y-6">
             <motion.div variants={itemVariants} className="space-y-6">
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-serif text-foreground tracking-tight leading-[1.05] text-left">
+              <h1 className="text-foreground text-left font-serif text-4xl leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl">
                 Share the{" "}
-                <span className="inline-block relative h-[1.1em] align-bottom min-w-[4.5ch]">
+                <span className="relative inline-block h-[1.1em] min-w-[4.5ch] align-bottom">
                   <AnimatePresence mode="wait">
                     <motion.span
                       key={words[wordIndex]}
@@ -171,7 +171,7 @@ export default function Home() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -12 }}
                       transition={{ duration: 0.25, ease: "easeInOut" }}
-                      className="absolute left-0 bottom-0 font-sans font-light italic text-sage/80"
+                      className="text-sage/80 absolute bottom-0 left-0 font-sans font-light italic"
                     >
                       {words[wordIndex]},
                     </motion.span>
@@ -180,7 +180,7 @@ export default function Home() {
                 <br />
                 <span className="text-sage text-glow-sage">split the cost.</span>
               </h1>
-              <p className="max-w-xl text-left text-base sm:text-lg text-foreground/50 font-sans leading-relaxed">
+              <p className="text-foreground/50 max-w-xl text-left font-sans text-base leading-relaxed sm:text-lg">
                 A calm, intuitive platform for proportional expense sharing. 
                 Upload your receipt and let our AI handle the nuances.
               </p>
@@ -189,12 +189,12 @@ export default function Home() {
 
           <motion.div 
             variants={itemVariants}
-            className="hidden lg:block border-t border-white/5 pt-8 text-left space-y-4 max-w-xl"
+            className="hidden max-w-xl space-y-4 border-t border-white/5 pt-8 text-left lg:block"
           >
-            <h2 className="text-xs uppercase tracking-[0.2em] font-bold text-foreground/30 font-sans">Philosophy</h2>
+            <h2 className="text-foreground/30 font-sans text-xs font-bold tracking-[0.2em] uppercase">Philosophy</h2>
             <div className="relative pl-6">
-              <div className="absolute top-0 left-0 w-0.5 h-full bg-gradient-to-b from-sage to-transparent opacity-60" />
-              <p className="font-serif italic text-base sm:text-lg text-foreground/40 leading-relaxed">
+              <div className="from-sage absolute top-0 left-0 h-full w-0.5 bg-linear-to-b to-transparent opacity-60" />
+              <p className="text-foreground/40 font-serif text-base leading-relaxed italic sm:text-lg">
                 &ldquo;Derived from the Ancient Greek word &mu;&tilde;&epsilon;&rho;&iota;&sigmaf; (M&eacute;ris), meaning &apos;portion&apos;. We believe that shared experiences shouldn&apos;t be burdened by the friction of math. Meris ensures every share is accounted for with absolute fairness.&rdquo;
               </p>
             </div>
@@ -205,19 +205,19 @@ export default function Home() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="lg:col-span-6 pt-6 pb-12 lg:pt-14 lg:pb-24 flex flex-col justify-center min-h-max"
+          className="flex min-h-max flex-col justify-center pt-6 pb-12 lg:col-span-6 lg:pt-14 lg:pb-24"
         >
-          <motion.div variants={itemVariants} className="w-full max-w-lg mx-auto lg:ml-auto">
-            <div className="glass-panel p-8 sm:p-10 rounded-glass relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+          <motion.div variants={itemVariants} className="mx-auto w-full max-w-lg lg:ml-auto">
+            <div className="glass-panel rounded-glass group relative overflow-hidden p-8 sm:p-10">
+              <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-white/1 to-transparent opacity-0 transition-opacity duration-1000 group-hover:opacity-100" />
               
               <div className="space-y-8">
                 {/* Tab Selectors (Segmented Control style) */}
-                <div className="flex bg-black/20 border border-white/5 rounded-glass-sm p-1 font-sans">
+                <div className="rounded-glass-sm flex border border-white/5 bg-black/20 p-1 font-sans">
                   <button
                     type="button"
                     onClick={() => setActiveTab('create')}
-                    className={`flex-1 text-center py-2.5 rounded-glass-sm font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`rounded-glass-sm flex-1 cursor-pointer py-2.5 text-center text-xs font-bold tracking-wider uppercase transition-all ${
                       activeTab === 'create'
                         ? "bg-sage/10 text-sage"
                         : "text-foreground/40 hover:text-foreground/60"
@@ -228,7 +228,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setActiveTab('join')}
-                    className={`flex-1 text-center py-2.5 rounded-glass-sm font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`rounded-glass-sm flex-1 cursor-pointer py-2.5 text-center text-xs font-bold tracking-wider uppercase transition-all ${
                       activeTab === 'join'
                         ? "bg-sage/10 text-sage"
                         : "text-foreground/40 hover:text-foreground/60"
@@ -254,7 +254,7 @@ export default function Home() {
                           value={payerName}
                           onChange={(e) => setPayerName(e.target.value)}
                           placeholder="Your Name (Payer)" 
-                          className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
+                          className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 font-sans text-sm transition-colors focus:outline-none"
                         />
                         <div className="grid grid-cols-[2.5fr_3.5fr] gap-3">
                           <input 
@@ -262,21 +262,21 @@ export default function Home() {
                             value={payerBankName}
                             onChange={(e) => setPayerBankName(e.target.value)}
                             placeholder="Bank (e.g., BCA)" 
-                            className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
+                            className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 font-sans text-sm transition-colors focus:outline-none"
                           />
                           <input 
                             type="text" 
                             value={payerBankAccount}
                             onChange={(e) => setPayerBankAccount(e.target.value)}
                             placeholder="Account No / Phone" 
-                            className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans"
+                            className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 font-sans text-sm transition-colors focus:outline-none"
                           />
                         </div>
                       </div>
 
                       <div className="flex flex-col gap-4">
                         <div 
-                          className="relative group/upload cursor-pointer"
+                          className="group/upload relative cursor-pointer"
                           onClick={() => document.getElementById('receipt-upload')?.click()}
                         >
                           <input 
@@ -287,23 +287,23 @@ export default function Home() {
                             onChange={handleFileUpload}
                             disabled={isUploading}
                           />
-                          <div className={`w-full border border-dashed ${isUploading ? 'border-sage/50 bg-sage/5' : 'border-white/10 bg-white/[0.01] group-hover/upload:border-sage/30 group-hover/upload:bg-sage/[0.02]'} rounded-glass-sm p-8 transition-all duration-300 flex flex-col items-center gap-3`}>
-                            <div className={`w-12 h-12 rounded-full bg-sage/10 flex items-center justify-center text-sage ${!isUploading && 'group-hover/upload:scale-105'} transition-transform duration-300`}>
+                          <div className={`w-full border border-dashed ${isUploading ? 'border-sage/50 bg-sage/5' : 'group-hover/upload:border-sage/30 group-hover/upload:bg-sage/2 border-white/10 bg-white/1'} rounded-glass-sm flex flex-col items-center gap-3 p-8 transition-all duration-300`}>
+                            <div className={`bg-sage/10 text-sage flex h-12 w-12 items-center justify-center rounded-full ${!isUploading && 'group-hover/upload:scale-105'} transition-transform duration-300`}>
                               {isUploading ? (
-                                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="4.93" y1="4.93" x2="7.76" y2="7.76" /><line x1="16.24" y1="16.24" x2="19.07" y2="19.07" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /><line x1="4.93" y1="19.07" x2="7.76" y2="16.24" /><line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
                                 </svg>
                               ) : (
-                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                                 </svg>
                               )}
                             </div>
                             <div className="text-center">
-                              <p className="text-foreground text-sm font-sans font-medium">
+                              <p className="text-foreground font-sans text-sm font-medium">
                                 {isUploading ? "Reading Receipt..." : "Upload Receipt Photo"}
                               </p>
-                              <p className="text-foreground/20 text-[9px] uppercase tracking-widest mt-1">AI Scan Engine</p>
+                              <p className="text-foreground/20 mt-1 text-[9px] tracking-widest uppercase">AI Scan Engine</p>
                             </div>
                           </div>
                         </div>
@@ -314,14 +314,14 @@ export default function Home() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.3 }}
-                            className="p-4 rounded-glass-sm bg-rose-950/20 border border-rose-500/25 text-rose-300 text-sm font-sans flex items-start gap-3 text-left"
+                            className="rounded-glass-sm flex items-start gap-3 border border-rose-500/25 bg-rose-950/20 p-4 text-left font-sans text-sm text-rose-300"
                           >
-                            <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <svg className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                             <div>
                               <p className="font-semibold text-rose-200">Unable to Start Session</p>
-                              <p className="text-rose-300/80 text-xs mt-1 leading-relaxed">{errorMsg}</p>
+                              <p className="mt-1 text-xs leading-relaxed text-rose-300/80">{errorMsg}</p>
                             </div>
                           </motion.div>
                         )}
@@ -345,12 +345,12 @@ export default function Home() {
                             if (e.key === "Enter") handleJoinSession();
                           }}
                           placeholder="Enter Session ID" 
-                          className="w-full px-4 py-3 rounded-glass-sm bg-white/[0.02] border border-white/5 text-foreground text-sm placeholder:text-foreground/20 focus:outline-none focus:border-sage/40 transition-colors font-sans text-center uppercase tracking-wider"
+                          className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 text-center font-sans text-sm tracking-wider uppercase transition-colors focus:outline-none"
                         />
                         <button 
                           onClick={handleJoinSession}
                           style={{ backgroundColor: '#8ba895' }}
-                          className="w-full py-3.5 rounded-glass-sm text-background font-bold text-xs uppercase tracking-wider hover:brightness-105 active:scale-[0.99] transition-all cursor-pointer font-sans"
+                          className="rounded-glass-sm text-background w-full cursor-pointer py-3.5 font-sans text-xs font-bold tracking-wider uppercase transition-all hover:brightness-105 active:scale-[0.99]"
                         >
                           Join Session
                         </button>
@@ -362,18 +362,22 @@ export default function Home() {
             </div>
 
             {recentSessions.length > 0 && (
-              <div className="glass-panel p-6 sm:p-8 rounded-glass mt-6 text-left">
-                <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-foreground/30 mb-4 font-sans">Recent Sessions</h3>
+              <div className="glass-panel rounded-glass mt-6 p-6 text-left sm:p-8">
+                <h3 className="text-foreground/30 mb-4 font-sans text-xs font-bold tracking-[0.2em] uppercase">Recent Sessions</h3>
                 <ul className="space-y-3">
                   {recentSessions.map((session) => (
-                    <li key={session.id} className="flex justify-between items-center py-2 border-b border-white/5">
-                      <div className="flex flex-col">
-                        <Link href={`/session/${session.id}`} className="font-mono text-xs text-sage hover:underline">
+                    <li key={session.id} className="flex items-center justify-between gap-4 border-b border-white/5 py-2">
+                      <div className="flex min-w-0 flex-col">
+                        <Link 
+                          href={`/session/${session.id}`} 
+                          className="text-sage block truncate font-mono text-xs hover:underline"
+                          title={session.id}
+                        >
                           {session.id}
                         </Link>
-                        <span className="text-[10px] text-foreground/40 font-sans">Payer: {session.payerName || "Anonymous"}</span>
+                        <span className="text-foreground/40 truncate font-sans text-[10px]">Payer: {session.payerName || "Anonymous"}</span>
                       </div>
-                      <span className="font-mono text-xs font-bold text-foreground/60">
+                      <span className="text-foreground/60 shrink-0 font-mono text-xs font-bold">
                         {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(session.grandTotal)}
                       </span>
                     </li>
@@ -383,7 +387,7 @@ export default function Home() {
             )}
             
             <div className="mt-8 text-center lg:text-right">
-              <p className="text-[9px] text-foreground/15 uppercase tracking-widest font-bold">
+              <p className="text-foreground/15 text-[9px] font-bold tracking-widest uppercase">
                 Meris // Simplicity in every byte
               </p>
             </div>
@@ -391,11 +395,11 @@ export default function Home() {
         </motion.div>
 
         {/* Mobile Philosophy Section */}
-        <div className="lg:hidden w-full max-w-lg mx-auto mt-6 mb-12 border-t border-white/5 pt-10 text-left space-y-6 px-6">
-          <h2 className="text-xs uppercase tracking-[0.2em] font-bold text-foreground/30 font-sans">Philosophy</h2>
+        <div className="mx-auto mt-6 mb-12 w-full max-w-lg space-y-6 border-t border-white/5 px-6 pt-10 text-left lg:hidden">
+          <h2 className="text-foreground/30 font-sans text-xs font-bold tracking-[0.2em] uppercase">Philosophy</h2>
           <div className="relative pl-6">
-            <div className="absolute top-0 left-0 w-0.5 h-full bg-gradient-to-b from-sage to-transparent opacity-60" />
-            <p className="font-serif italic text-base text-foreground/40 leading-relaxed">
+            <div className="from-sage absolute top-0 left-0 h-full w-0.5 bg-linear-to-b to-transparent opacity-60" />
+            <p className="text-foreground/40 font-serif text-base leading-relaxed italic">
               &ldquo;Derived from the Ancient Greek word &mu;&tilde;&epsilon;&rho;&iota;&sigmaf; (M&eacute;ris), meaning &apos;portion&apos;. We believe that shared experiences shouldn&apos;t be burdened by the friction of math. Meris ensures every share is accounted for with absolute fairness.&rdquo;
             </p>
           </div>
@@ -403,8 +407,8 @@ export default function Home() {
 
       </div>
 
-      <footer className="w-full py-8 border-t border-white/5 text-center relative z-10 bg-background/50 backdrop-blur-xs">
-        <p className="text-[9px] text-foreground/10 uppercase tracking-[0.4em] font-bold">
+      <footer className="bg-background/50 relative z-10 w-full border-t border-white/5 py-8 text-center backdrop-blur-xs">
+        <p className="text-foreground/10 text-[9px] font-bold tracking-[0.4em] uppercase">
           Meris &copy; 2026
         </p>
       </footer>
