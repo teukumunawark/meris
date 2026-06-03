@@ -4,11 +4,23 @@
 *.dll
 *.so
 *.dylib
-backend/main
-backend/main.exe
+bin/
+backend/bin/
+
+# Go
+vendor/
+
+# Next.js
+.next/
+out/
 
 # Dependency directories
 node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
 
 # IDE files
 .idea/
@@ -18,3 +30,7 @@ node_modules/
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+.DS_Store
+Thumbs.db

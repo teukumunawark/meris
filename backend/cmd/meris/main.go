@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
 	"meris-backend/internal/db"
 	"meris-backend/internal/handlers"
 	"meris-backend/internal/sse"
+
+	"github.com/joho/godotenv"
 )
 
 type HealthResponse struct {
@@ -30,6 +33,11 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, relying on system environment variables")
+	}
+
 	database, err := db.InitDB()
 	if err != nil {
 		log.Fatalf("Critical error during database initialization: %v", err)
@@ -46,9 +54,12 @@ func main() {
 	mux.HandleFunc("POST /session/{id}/claim", sessionHandler.ClaimItem)
 	mux.HandleFunc("GET /stream", hub.StreamHandler)
 
-	port := ":8080"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	log.Printf("Starting Meris Backend on port %s...", port)
-	if err := http.ListenAndServe(port, mux); err != nil {
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
