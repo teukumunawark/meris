@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"meris-backend/db"
+	"meris-backend/handlers"
 	"meris-backend/sse"
 )
 
@@ -33,8 +35,11 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	db.InitDB()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthCheckHandler)
+	mux.HandleFunc("/session", handlers.CreateSession)
 
 	hub := sse.NewHub()
 	mux.HandleFunc("/stream", hub.StreamHandler)
