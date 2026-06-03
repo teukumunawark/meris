@@ -37,7 +37,7 @@ export default function Home() {
           // eslint-disable-next-line react-hooks/set-state-in-effect
           setRecentSessions(valid);
           localStorage.setItem("meris_recent_sessions", JSON.stringify(valid));
-        } catch (e) {}
+        } catch {}
       }
     }
   }, []);

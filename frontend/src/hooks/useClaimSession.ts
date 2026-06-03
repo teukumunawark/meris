@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ReceiptItem } from "@/utils/calculations";
+import { ReceiptItem } from "@/types";
 
 export interface SSEServerUpdatePayload {
   items?: Array<{
@@ -63,7 +63,7 @@ export function useClaimSession(sessionId: string) {
             setIsJoined(true);
             setJustJoined(false);
           }
-        } catch (e) {
+        } catch {
           localStorage.removeItem(`meris_session_${sessionId}_participant`);
         }
       }
@@ -103,7 +103,7 @@ export function useClaimSession(sessionId: string) {
       if (stored) {
         try {
           list = JSON.parse(stored);
-        } catch (e) {}
+        } catch {}
       }
       list = list.filter(item => item.id !== sessionId);
       list.unshift({
@@ -228,7 +228,7 @@ export function useClaimSession(sessionId: string) {
         if (parsed && parsed.name.toLowerCase() === trimmedName.toLowerCase()) {
           cachedToken = parsed.token;
         }
-      } catch (e) {}
+      } catch {}
     }
 
     try {
@@ -260,7 +260,7 @@ export function useClaimSession(sessionId: string) {
       } else {
         setJoinError("Failed to join session. Please try again later.");
       }
-    } catch (err) {
+    } catch {
       setJoinError("Network error. Unable to connect to the server.");
     }
   };
@@ -335,7 +335,7 @@ export function useClaimSession(sessionId: string) {
         return false;
       }
       return true;
-    } catch (err) {
+    } catch {
       setItems(previousItems);
       return false;
     }
@@ -348,7 +348,7 @@ export function useClaimSession(sessionId: string) {
         method: "DELETE",
       });
       return response.ok;
-    } catch (err) {
+    } catch {
       return false;
     }
   }, [sessionId, backendUrl, participantToken]);

@@ -2,9 +2,9 @@
 
 import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { useClaimSession } from "./useClaimSession";
-import ItemCard from "./ItemCard";
-import ParticipantBreakdown from "./ParticipantBreakdown";
+import { useClaimSession } from "@/hooks/useClaimSession";
+import ItemCard from "@/components/ItemCard";
+import ParticipantBreakdown from "@/components/ParticipantBreakdown";
 import { calculateParticipantBreakdowns } from "@/utils/calculations";
 
 interface PageProps {

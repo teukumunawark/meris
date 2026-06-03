@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ReceiptItem } from "@/utils/calculations";
+import { ReceiptItem } from "@/types";
 
 interface ItemCardProps {
   item: ReceiptItem;

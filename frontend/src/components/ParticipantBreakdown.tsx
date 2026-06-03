@@ -2,7 +2,8 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ReceiptItem, calculateParticipantBreakdowns } from "@/utils/calculations";
+import { calculateParticipantBreakdowns } from "@/utils/calculations";
+import { ReceiptItem } from "@/types";
 
 interface ParticipantBreakdownProps {
   participants: Array<{ id: number; name: string }>;
