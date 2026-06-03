@@ -10,7 +10,11 @@ export interface SSEServerUpdatePayload {
     price?: number;
     quantity?: number;
     claims?: Array<{
-      name: string;
+      participantId?: number;
+      participant?: {
+        name: string;
+      };
+      name?: string; // Fallback for legacy/mock
       shares: number;
     }>;
   }>;
@@ -21,57 +25,63 @@ export interface SSEServerUpdatePayload {
 
 export function useClaimSession(sessionId: string) {
   const [userName, setUserName] = useState<string>("");
+  const [participantId, setParticipantId] = useState<number | null>(null);
   const [isJoined, setIsJoined] = useState<boolean>(false);
   
-  // Lazy state initializers
-  const [items, setItems] = useState<ReceiptItem[]>(() => [
-    {
-      id: "item-1",
-      name: "Nasi Goreng Seafood Special",
-      price: 45000,
-      quantity: 2,
-      claims: [{ name: "Alice", shares: 1 }],
-    },
-    {
-      id: "item-2",
-      name: "Chicken Cordon Bleu",
-      price: 65000,
-      quantity: 1,
-      claims: [],
-    },
-    {
-      id: "item-3",
-      name: "Garlic Bread",
-      price: 25000,
-      quantity: 1,
-      claims: [
-        { name: "Alice", shares: 0.5 },
-        { name: "Bob", shares: 0.5 },
-      ],
-    },
-    {
-      id: "item-4",
-      name: "Ice Sweet Tea",
-      price: 15000,
-      quantity: 3,
-      claims: [{ name: "Bob", shares: 1 }],
-    },
-    {
-      id: "item-5",
-      name: "Es Jeruk Peras",
-      price: 18000,
-      quantity: 2,
-      claims: [],
-    },
-  ]);
-  const [tax, setTax] = useState<number>(16800);
-  const [serviceCharge, setServiceCharge] = useState<number>(8400);
+  const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [tax, setTax] = useState<number>(0);
+  const [serviceCharge, setServiceCharge] = useState<number>(0);
 
-  // SSE EventSource Connection
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
+  const mapBackendState = useCallback((data: SSEServerUpdatePayload) => {
+    if (Array.isArray(data.items)) {
+      const updatedItems = data.items.map((item, idx: number) => ({
+        id: item.id || `item-${idx}`,
+        name: item.name || "Unnamed Item",
+        price: typeof item.price === "number" ? item.price : 0,
+        quantity: typeof item.quantity === "number" ? item.quantity : 1,
+        claims: Array.isArray(item.claims)
+          ? item.claims.map((claim) => ({
+              name: claim.participant?.name || claim.name || "Unknown",
+              shares: typeof claim?.shares === "number" ? claim.shares : 0,
+            })).filter(c => c.shares > 0)
+          : [],
+      }));
+      setItems(updatedItems);
+    }
+    if (typeof data.tax === "number") {
+      setTax(data.tax);
+    }
+    const sCharge = data.serviceCharge ?? data.service_charge;
+    if (typeof sCharge === "number") {
+      setServiceCharge(sCharge);
+    }
+  }, []);
+
+  // Task 1: Fetch Initial Session State
   useEffect(() => {
     if (!sessionId) return;
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+    const fetchInitialState = async () => {
+      try {
+        const response = await fetch(`${backendUrl}/session/${sessionId}`);
+        if (response.ok) {
+          const data = await response.json();
+          mapBackendState(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch initial session state:", err);
+      }
+    };
+
+    fetchInitialState();
+  }, [sessionId, backendUrl, mapBackendState]);
+
+  // Task 2: Update SSE Payload Parser
+  useEffect(() => {
+    if (!sessionId) return;
+
     const sseUrl = `${backendUrl}/stream?sessionId=${sessionId}`;
 
     let eventSource: EventSource;
@@ -79,35 +89,12 @@ export function useClaimSession(sessionId: string) {
       eventSource = new EventSource(sseUrl);
 
       eventSource.onmessage = (event) => {
-        const rawData = event.data;
         try {
-          const parsed = JSON.parse(rawData) as SSEServerUpdatePayload;
+          const parsed = JSON.parse(event.data) as SSEServerUpdatePayload;
           if (parsed && typeof parsed === "object") {
-            if (Array.isArray(parsed.items)) {
-              const updatedItems = parsed.items.map((item, idx: number) => ({
-                id: item.id || `item-${idx}`,
-                name: item.name || "Unnamed Item",
-                price: typeof item.price === "number" ? item.price : 0,
-                quantity: typeof item.quantity === "number" ? item.quantity : 1,
-                claims: Array.isArray(item.claims)
-                  ? item.claims.map((claim) => ({
-                      name: typeof claim?.name === "string" ? claim.name.trim() : "Unknown",
-                      shares: typeof claim?.shares === "number" ? claim.shares : 0,
-                    })).filter(c => c.shares > 0)
-                  : [],
-              }));
-              setItems(updatedItems);
-            }
-            if (typeof parsed.tax === "number") {
-              setTax(parsed.tax);
-            }
-            const sCharge = parsed.service_charge ?? parsed.serviceCharge;
-            if (typeof sCharge === "number") {
-              setServiceCharge(sCharge);
-            }
+            mapBackendState(parsed);
           }
         } catch (err) {
-          // JSON parsing failure is expected for non-JSON broadcast messages
           console.debug("SSE non-JSON message:", err);
         }
       };
@@ -124,18 +111,12 @@ export function useClaimSession(sessionId: string) {
         eventSource.close();
       }
     };
-  }, [sessionId]);
+  }, [sessionId, backendUrl, mapBackendState]);
 
-  // Outbound claims syncing to backend
+  // Task 4: Integrate ClaimItem API
   const syncClaimToBackend = useCallback(async (itemId: string, shares: number): Promise<boolean> => {
-    if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
-      return true;
-    }
+    if (!participantId) return false;
 
-    const targetUser = userName.trim();
-    if (!targetUser) return false;
-
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
     const url = `${backendUrl}/session/${sessionId}/claim`;
 
     try {
@@ -145,7 +126,7 @@ export function useClaimSession(sessionId: string) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: targetUser,
+          participantId: participantId,
           itemId: itemId,
           shares: shares,
         }),
@@ -156,20 +137,40 @@ export function useClaimSession(sessionId: string) {
       console.warn("Outbound claim sync failed:", err);
       return false;
     }
-  }, [userName, sessionId]);
+  }, [participantId, sessionId, backendUrl]);
 
-  // Join session handler
-  const joinSession = (name: string) => {
-    if (!name.trim()) return;
-    setUserName(name.trim());
-    setIsJoined(true);
+  // Task 3: Integrate JoinSession API
+  const joinSession = async (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    try {
+      const response = await fetch(`${backendUrl}/session/${sessionId}/join`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: trimmedName }),
+      });
+
+      if (response.ok) {
+        const participant = await response.json();
+        setUserName(trimmedName);
+        setParticipantId(participant.id);
+        setIsJoined(true);
+      } else {
+        console.error("Failed to join session");
+      }
+    } catch (err) {
+      console.error("Error joining session:", err);
+    }
   };
 
   const changeName = () => {
     setIsJoined(false);
   };
 
-  // Claim portion of an item
+  // Claim portion of an item (Optimistic Update)
   const updateClaim = useCallback((itemId: string, increment: number) => {
     const targetUser = userName.trim();
     if (!isJoined || !targetUser) return;
@@ -209,9 +210,6 @@ export function useClaimSession(sessionId: string) {
 
     // Fire outbound sync call asynchronously
     setTimeout(async () => {
-      if (process.env.NEXT_PUBLIC_MOCK_API === "true") {
-        return;
-      }
       const success = await syncClaimToBackend(itemId, updatedShares);
       if (!success) {
         setItems(previousItems);
