@@ -41,6 +41,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 
 	extracted, err := ai.ExtractReceiptData(imageBytes)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "AI extraction failed", slog.Any("error", err))
 		http.Error(w, "AI extraction failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -67,6 +68,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.DB.WithContext(r.Context()).Create(&session).Error; err != nil {
+		slog.ErrorContext(r.Context(), "Failed to save session", slog.Any("error", err))
 		http.Error(w, "Failed to save session", http.StatusInternalServerError)
 		return
 	}
