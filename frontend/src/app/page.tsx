@@ -9,6 +9,8 @@ export default function Home() {
   const router = useRouter();
   const [sessionId, setSessionId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [payerName, setPayerName] = useState("");
+  const [payerBank, setPayerBank] = useState("");
 
   const handleJoinSession = () => {
     if (sessionId.trim()) {
@@ -19,6 +21,12 @@ export default function Home() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!payerName.trim()) {
+        alert("Please enter your name first");
+        e.target.value = "";
+        return;
+      }
+
       try {
         setIsUploading(true);
         const options = {
@@ -30,6 +38,8 @@ export default function Home() {
 
         const formData = new FormData();
         formData.append("receipt", compressedFile);
+        formData.append("payerName", payerName.trim());
+        formData.append("payerBank", payerBank.trim());
 
         const response = await fetch("http://localhost:8080/session", {
           method: "POST",
@@ -38,6 +48,8 @@ export default function Home() {
 
         if (response.ok) {
           const data = await response.json();
+          // Set local storage so the payer is auto-joined
+          localStorage.setItem("meris_username", payerName.trim());
           router.push(`/session/${data.id}`);
         } else {
           console.error("Upload failed");
@@ -100,8 +112,26 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
             
             <div className="flex flex-col items-center gap-10">
-              <div className="w-full">
+              <div className="w-full space-y-6">
                 <h2 className="text-2xl sm:text-3xl font-serif text-foreground mb-6 sm:mb-8 text-center">Start a Session</h2>
+                
+                <div className="space-y-4">
+                  <input 
+                    type="text" 
+                    value={payerName}
+                    onChange={(e) => setPayerName(e.target.value)}
+                    placeholder="Your Name (Payer)" 
+                    className="w-full px-5 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-sm sm:text-base placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
+                  />
+                  <input 
+                    type="text" 
+                    value={payerBank}
+                    onChange={(e) => setPayerBank(e.target.value)}
+                    placeholder="Payment Info (e.g. BCA 1234567890)" 
+                    className="w-full px-5 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-sm sm:text-base placeholder:text-foreground/20 focus:outline-none focus:ring-1 focus:ring-sage/40 transition-all font-sans"
+                  />
+                </div>
+
                 <div className="flex flex-col gap-4">
                   <div 
                     className="relative group/upload cursor-pointer"

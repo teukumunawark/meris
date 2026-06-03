@@ -12,6 +12,7 @@ export interface SSEServerUpdatePayload {
     claims?: Array<{
       participantId?: number;
       participant?: {
+        id?: number;
         name: string;
       };
       name?: string; // Fallback for legacy/mock
@@ -21,6 +22,12 @@ export interface SSEServerUpdatePayload {
   tax?: number;
   service_charge?: number;
   serviceCharge?: number;
+  payerName?: string;
+  payerBank?: string;
+  participants?: Array<{
+    id: number;
+    name: string;
+  }>;
 }
 
 export function useClaimSession(sessionId: string) {
@@ -31,6 +38,8 @@ export function useClaimSession(sessionId: string) {
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [tax, setTax] = useState<number>(0);
   const [serviceCharge, setServiceCharge] = useState<number>(0);
+  const [payerName, setPayerName] = useState<string>("");
+  const [payerBank, setPayerBank] = useState<string>("");
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -57,7 +66,22 @@ export function useClaimSession(sessionId: string) {
     if (typeof sCharge === "number") {
       setServiceCharge(sCharge);
     }
-  }, []);
+    if (data.payerName) setPayerName(data.payerName);
+    if (data.payerBank) setPayerBank(data.payerBank);
+
+    // Auto-join if user name from local storage exists in participant list
+    if (!isJoined) {
+      const storedName = localStorage.getItem("meris_username");
+      if (storedName && Array.isArray(data.participants)) {
+        const found = data.participants.find(p => p.name.trim().toLowerCase() === storedName.trim().toLowerCase());
+        if (found) {
+          setUserName(found.name);
+          setParticipantId(found.id);
+          setIsJoined(true);
+        }
+      }
+    }
+  }, [isJoined]);
 
   // Task 1: Fetch Initial Session State
   useEffect(() => {
@@ -224,6 +248,8 @@ export function useClaimSession(sessionId: string) {
     items,
     tax,
     serviceCharge,
+    payerName,
+    payerBank,
     joinSession,
     changeName,
     updateClaim,

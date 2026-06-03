@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"meris-backend/internal/ai"
 	"meris-backend/internal/models"
@@ -28,6 +29,9 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	payerName := r.FormValue("payerName")
+	payerBank := r.FormValue("payerBank")
+
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
 		http.Error(w, "Failed to read image", http.StatusInternalServerError)
@@ -43,6 +47,8 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := uuid.New().String()
 	session := models.Session{
 		ID:            sessionID,
+		PayerName:     payerName,
+		PayerBank:     payerBank,
 		Tax:           extracted.Tax,
 		ServiceCharge: extracted.ServiceCharge,
 		GrandTotal:    extracted.GrandTotal,
@@ -62,6 +68,18 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	if err := h.DB.Create(&session).Error; err != nil {
 		http.Error(w, "Failed to save session", http.StatusInternalServerError)
 		return
+	}
+
+	// Auto-join the payer as the first participant
+	if payerName != "" {
+		participant := models.Participant{
+			SessionID: sessionID,
+			Name:      payerName,
+		}
+		if err := h.DB.Create(&participant).Error; err != nil {
+			// Non-critical error, log and continue
+			log.Printf("Failed to auto-join payer: %v", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -29,6 +29,8 @@ export default function ClaimSessionPage({ params }: PageProps) {
     items,
     tax,
     serviceCharge,
+    payerName,
+    payerBank,
     joinSession,
     changeName,
     updateClaim,
@@ -358,18 +360,13 @@ export default function ClaimSessionPage({ params }: PageProps) {
                
                <div className="space-y-6 sm:space-y-8">
                  <div className="text-center space-y-1 sm:space-y-2">
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Bank</p>
-                   <p className="font-serif text-foreground text-xl sm:text-2xl tracking-tight font-light">Bank Central Asia (BCA)</p>
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Transfer To</p>
+                   <p className="font-serif text-foreground text-xl sm:text-2xl tracking-tight font-light">{payerBank || "Not specified"}</p>
                  </div>
                  
-                 <div className="glass-panel rounded-glass p-4 sm:p-6 text-center border-white/5 bg-white/[0.03]">
-                   <p className="font-mono text-lg sm:text-xl md:text-2xl text-sage tracking-[0.1em] sm:tracking-[0.2em] font-bold text-glow-sage select-all">872-0941-224</p>
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20 mt-3 sm:mt-4">Account Number</p>
-                 </div>
-
                  <div className="text-center space-y-1 sm:space-y-2">
-                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Name</p>
-                   <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">Munawar</p>
+                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-foreground/20">Account Owner (Payer)</p>
+                   <p className="font-sans text-foreground text-lg sm:text-xl tracking-tight font-normal">{payerName || "Anonymous Payer"}</p>
                  </div>
                </div>
             </div>

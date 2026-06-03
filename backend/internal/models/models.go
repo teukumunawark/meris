@@ -6,11 +6,14 @@ import (
 
 type Session struct {
 	ID            string    `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	PayerName     string    `json:"payerName"`
+	PayerBank     string    `json:"payerBank"`
 	Tax           float64   `json:"tax"`
 	ServiceCharge float64   `json:"serviceCharge"`
 	GrandTotal    float64   `json:"grandTotal"`
 	CreatedAt     time.Time `json:"createdAt"`
 	Items         []Item    `gorm:"foreignKey:SessionID" json:"items"`
+	Participants  []Participant `gorm:"foreignKey:SessionID" json:"participants"`
 }
 
 type Participant struct {
