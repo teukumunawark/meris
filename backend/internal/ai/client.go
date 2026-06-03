@@ -109,6 +109,10 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("AI API returned status %d: %s", resp.StatusCode, string(body))
+	}
 	
 	// Parse OpenAI-style response
 	var completion struct {
@@ -117,13 +121,20 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	}
 	if err := json.Unmarshal(body, &completion); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse AI response: %v | body: %s", err, string(body))
+	}
+
+	if completion.Error != nil {
+		return nil, fmt.Errorf("AI Error: %s", completion.Error.Message)
 	}
 
 	if len(completion.Choices) == 0 {
-		return nil, fmt.Errorf("no choices returned from AI")
+		return nil, fmt.Errorf("no choices returned from AI. Full body: %s", string(body))
 	}
 
 	return ParseReceipt([]byte(completion.Choices[0].Message.Content))
