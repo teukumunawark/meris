@@ -1,9 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, Variants } from "framer-motion";
 import imageCompression from "browser-image-compression";
+
+interface RecentSession {
+  id: string;
+  payerName: string;
+  grandTotal: number;
+  joinedAt: number;
+}
 
 export default function Home() {
   const router = useRouter();
@@ -12,6 +20,22 @@ export default function Home() {
   const [payerName, setPayerName] = useState("");
   const [payerBank, setPayerBank] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("meris_recent_sessions");
+      if (stored) {
+        try {
+          const list = JSON.parse(stored) as RecentSession[];
+          const now = Date.now();
+          const valid = list.filter(s => now - s.joinedAt < 7 * 24 * 60 * 60 * 1000);
+          setRecentSessions(valid);
+          localStorage.setItem("meris_recent_sessions", JSON.stringify(valid));
+        } catch (e) {}
+      }
+    }
+  }, []);
 
   const handleJoinSession = () => {
     if (sessionId.trim()) {
@@ -51,6 +75,16 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           localStorage.setItem("meris_username", payerName.trim());
+          if (data.payerToken) {
+            localStorage.setItem(
+              `meris_session_${data.id}_participant`,
+              JSON.stringify({
+                id: data.payerId,
+                name: payerName.trim(),
+                token: data.payerToken,
+              })
+            );
+          }
           router.push(`/session/${data.id}`);
         } else {
           const text = await response.text();
@@ -275,6 +309,27 @@ export default function Home() {
 
               </div>
             </div>
+
+            {recentSessions.length > 0 && (
+              <div className="glass-panel p-6 sm:p-8 rounded-glass mt-6 text-left">
+                <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-foreground/30 mb-4">Recent Sessions</h3>
+                <ul className="space-y-3">
+                  {recentSessions.map((session) => (
+                    <li key={session.id} className="flex justify-between items-center py-2 border-b border-white/5">
+                      <div className="flex flex-col">
+                        <Link href={`/session/${session.id}`} className="font-mono text-xs text-sage hover:underline">
+                          {session.id}
+                        </Link>
+                        <span className="text-[10px] text-foreground/40 font-sans">Payer: {session.payerName || "Anonymous"}</span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-foreground/60">
+                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(session.grandTotal)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             
             <div className="mt-8 text-center lg:text-right">
               <p className="text-[9px] text-foreground/15 uppercase tracking-widest font-bold">

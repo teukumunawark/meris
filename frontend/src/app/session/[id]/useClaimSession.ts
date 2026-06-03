@@ -33,7 +33,9 @@ export interface SSEServerUpdatePayload {
 export function useClaimSession(sessionId: string) {
   const [userName, setUserName] = useState<string>("");
   const [participantId, setParticipantId] = useState<number | null>(null);
+  const [participantToken, setParticipantToken] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [tax, setTax] = useState<number>(0);
@@ -42,6 +44,25 @@ export function useClaimSession(sessionId: string) {
   const [payerBank, setPayerBank] = useState<string>("");
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionId) {
+      const stored = localStorage.getItem(`meris_session_${sessionId}_participant`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.id && parsed.name && parsed.token) {
+            setUserName(parsed.name);
+            setParticipantId(parsed.id);
+            setParticipantToken(parsed.token);
+            setIsJoined(true);
+          }
+        } catch (e) {
+          localStorage.removeItem(`meris_session_${sessionId}_participant`);
+        }
+      }
+    }
+  }, [sessionId]);
 
   const mapBackendState = useCallback((data: SSEServerUpdatePayload) => {
     if (Array.isArray(data.items)) {
@@ -66,22 +87,29 @@ export function useClaimSession(sessionId: string) {
     if (typeof sCharge === "number") {
       setServiceCharge(sCharge);
     }
-    if (data.payerName) setPayerName(data.payerName);
-    if (data.payerBank) setPayerBank(data.payerBank);
+    if (data.payerName) {
+      setPayerName(data.payerName);
+      const totalSub = Array.isArray(data.items) ? data.items.reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0) : 0;
+      const computedGrand = totalSub + (data.tax || 0) + (data.serviceCharge ?? data.service_charge ?? 0);
 
-    // Auto-join if user name from local storage exists in participant list
-    if (!isJoined) {
-      const storedName = localStorage.getItem("meris_username");
-      if (storedName && Array.isArray(data.participants)) {
-        const found = data.participants.find(p => p.name.trim().toLowerCase() === storedName.trim().toLowerCase());
-        if (found) {
-          setUserName(found.name);
-          setParticipantId(found.id);
-          setIsJoined(true);
-        }
+      const stored = localStorage.getItem("meris_recent_sessions");
+      let list: Array<{ id: string; payerName: string; grandTotal: number; joinedAt: number }> = [];
+      if (stored) {
+        try {
+          list = JSON.parse(stored);
+        } catch (e) {}
       }
+      list = list.filter(item => item.id !== sessionId);
+      list.unshift({
+        id: sessionId,
+        payerName: data.payerName,
+        grandTotal: computedGrand,
+        joinedAt: Date.now(),
+      });
+      localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
     }
-  }, [isJoined]);
+    if (data.payerBank) setPayerBank(data.payerBank);
+  }, [sessionId]);
 
   // Task 1: Fetch Initial Session State
   useEffect(() => {
@@ -137,9 +165,8 @@ export function useClaimSession(sessionId: string) {
     };
   }, [sessionId, backendUrl, mapBackendState]);
 
-  // Task 4: Integrate ClaimItem API
   const syncClaimToBackend = useCallback(async (itemId: string, shares: number): Promise<boolean> => {
-    if (!participantId) return false;
+    if (!participantId || !participantToken) return false;
 
     const url = `${backendUrl}/session/${sessionId}/claim`;
 
@@ -153,6 +180,7 @@ export function useClaimSession(sessionId: string) {
           participantId: participantId,
           itemId: itemId,
           shares: shares,
+          token: participantToken,
         }),
       });
 
@@ -161,12 +189,23 @@ export function useClaimSession(sessionId: string) {
       console.warn("Outbound claim sync failed:", err);
       return false;
     }
-  }, [participantId, sessionId, backendUrl]);
+  }, [participantId, participantToken, sessionId, backendUrl]);
 
-  // Task 3: Integrate JoinSession API
   const joinSession = async (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
+    setJoinError(null);
+
+    const stored = localStorage.getItem(`meris_session_${sessionId}_participant`);
+    let cachedToken = "";
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.name.toLowerCase() === trimmedName.toLowerCase()) {
+          cachedToken = parsed.token;
+        }
+      } catch (e) {}
+    }
 
     try {
       const response = await fetch(`${backendUrl}/session/${sessionId}/join`, {
@@ -174,19 +213,30 @@ export function useClaimSession(sessionId: string) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: trimmedName }),
+        body: JSON.stringify({ name: trimmedName, token: cachedToken }),
       });
 
       if (response.ok) {
         const participant = await response.json();
         setUserName(trimmedName);
         setParticipantId(participant.id);
+        setParticipantToken(participant.token);
         setIsJoined(true);
+        localStorage.setItem(
+          `meris_session_${sessionId}_participant`,
+          JSON.stringify({
+            id: participant.id,
+            name: trimmedName,
+            token: participant.token,
+          })
+        );
+      } else if (response.status === 409) {
+        setJoinError("This name is already taken. Please choose another name to join.");
       } else {
-        console.error("Failed to join session");
+        setJoinError("Failed to join session. Please try again later.");
       }
     } catch (err) {
-      console.error("Error joining session:", err);
+      setJoinError("Network error. Unable to connect to the server.");
     }
   };
 
@@ -278,5 +328,6 @@ export function useClaimSession(sessionId: string) {
     changeName,
     updateClaim,
     renameItem,
+    joinError,
   };
 }

@@ -35,6 +35,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
     changeName,
     updateClaim,
     renameItem,
+    joinError,
   } = useClaimSession(sessionId);
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -197,26 +198,31 @@ export default function ClaimSessionPage({ params }: PageProps) {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 w-full md:max-w-lg relative z-10">
-              <input
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Guest Name"
-                maxLength={20}
-                className="flex-1 min-w-0 px-4 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-base sm:text-lg placeholder:text-foreground/20 focus:outline-none focus:ring-2 focus:ring-sage/40 transition-all font-sans"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") joinSession(userName);
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => joinSession(userName)}
-                style={{ backgroundColor: '#8ba895' }}
-                className="flex-shrink-0 px-5 py-3 sm:px-8 sm:py-4 rounded-glass-sm text-background font-bold text-sm sm:text-base uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap text-center"
-              >
-                Join & Claim
-              </button>
+            <div className="flex flex-col gap-2 w-full md:max-w-lg relative z-10">
+              <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 w-full">
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Guest Name"
+                  maxLength={20}
+                  className="flex-1 min-w-0 px-4 py-3 sm:px-6 sm:py-4 rounded-glass-sm bg-white/[0.03] border border-white/10 text-foreground text-base sm:text-lg placeholder:text-foreground/20 focus:outline-none focus:ring-2 focus:ring-sage/40 transition-all font-sans"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") joinSession(userName);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => joinSession(userName)}
+                  style={{ backgroundColor: '#8ba895' }}
+                  className="flex-shrink-0 px-5 py-3 sm:px-8 sm:py-4 rounded-glass-sm text-background font-bold text-sm sm:text-base uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap text-center"
+                >
+                  Join & Claim
+                </button>
+              </div>
+              {joinError && (
+                <p className="text-rose-400 text-xs font-sans mt-2 text-left">{joinError}</p>
+              )}
             </div>
           </section>
         ) : (
