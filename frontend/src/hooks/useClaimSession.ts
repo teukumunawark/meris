@@ -15,7 +15,7 @@ export interface SSEServerUpdatePayload {
         id?: number;
         name: string;
       };
-      name?: string; // Fallback for legacy/mock
+      name?: string;
       shares: number;
     }>;
   }>;
@@ -135,7 +135,6 @@ export function useClaimSession(sessionId: string) {
     }
   }, [participants, isJoined, participantId, justJoined, sessionId]);
 
-  // Task 1: Fetch Initial Session State
   useEffect(() => {
     if (!sessionId) return;
 
@@ -154,7 +153,6 @@ export function useClaimSession(sessionId: string) {
     fetchInitialState();
   }, [sessionId, backendUrl, mapBackendState]);
 
-  // Task 2: Update SSE Payload Parser
   useEffect(() => {
     if (!sessionId) return;
 
@@ -270,7 +268,6 @@ export function useClaimSession(sessionId: string) {
     setJustJoined(false);
   };
 
-  // Claim portion of an item (Optimistic Update)
   const updateClaim = useCallback((itemId: string, increment: number) => {
     const targetUser = userName.trim();
     if (!isJoined || !targetUser) return;
@@ -308,7 +305,6 @@ export function useClaimSession(sessionId: string) {
       });
     });
 
-    // Fire outbound sync call asynchronously
     setTimeout(async () => {
       const success = await syncClaimToBackend(itemId, updatedShares);
       if (!success) {

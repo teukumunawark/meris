@@ -21,7 +21,6 @@ export default function ClaimSessionPage({ params }: PageProps) {
     setMounted(true);
   }, []);
 
-  // Use Custom Hook for state, SSE sync, claim handlers
   const {
     userName,
     setUserName,
@@ -60,7 +59,6 @@ export default function ClaimSessionPage({ params }: PageProps) {
     }
   };
 
-  // UI Helpers
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -88,7 +86,6 @@ export default function ClaimSessionPage({ params }: PageProps) {
     return colors[index];
   };
 
-  // Overall calculations
   const totalSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const grandTotal = totalSubtotal + tax + serviceCharge;
 
@@ -101,7 +98,6 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
 
-  // Calculate current user's total share
   const currentUserTotal = React.useMemo(() => {
     if (!isJoined || !userName) return 0;
     const participantNames = participants.map((p) => p.name);

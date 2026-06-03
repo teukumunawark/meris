@@ -77,16 +77,21 @@ func main() {
 		port = "8080"
 	}
 
+	bindAddr := os.Getenv("BIND_ADDRESS")
+	if bindAddr == "" {
+		bindAddr = "127.0.0.1"
+	}
+
 	server := &http.Server{
-		Addr:              ":" + port,
+		Addr:              bindAddr + ":" + port,
 		Handler:           handlerWithLogging,
-		ReadHeaderTimeout: 5 * time.Second,  // Protects against Slowloris attacks
-		ReadTimeout:       15 * time.Second, // Max time reading entire request (body included)
-		WriteTimeout:      0,                // Streaming support (SSE) requires 0 timeout
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      0,
 		IdleTimeout:       120 * time.Second,
 	}
 
-	slog.Info("Starting Meris Backend on port " + port + "...")
+	slog.Info("Starting Meris Backend on " + bindAddr + ":" + port + "...")
 	if err := server.ListenAndServe(); err != nil {
 		slog.Error("Server failed to start", "error", err)
 		os.Exit(1)

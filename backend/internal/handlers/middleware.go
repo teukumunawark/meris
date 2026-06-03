@@ -12,14 +12,12 @@ func CORS(next http.Handler) http.Handler {
 
 		allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
 		if allowedOriginsStr == "" {
-			// Fallback to local default for development
 			allowedOriginsStr = "http://localhost:3000"
 		}
 
 		allowedOrigins := strings.Split(allowedOriginsStr, ",")
 		isAllowed := false
 
-		// Check if request origin is in the allowed list
 		for _, allowed := range allowedOrigins {
 			trimmedAllowed := strings.TrimSpace(allowed)
 			if trimmedAllowed == "*" || trimmedAllowed == origin {
@@ -38,7 +36,6 @@ func CORS(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		// Handle preflight OPTIONS request
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusNoContent)
 			return

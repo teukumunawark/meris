@@ -6,18 +6,17 @@ import (
 
 func TestCalculateProportional(t *testing.T) {
 	subtotal := 100000.0
-	tax := 11000.0    // 11% tax
-	service := 5000.0 // 5% service charge
+	tax := 11000.0
+	service := 5000.0
 
-	// Person A claims 60k, Person B claims 40k
 	personASubtotal := 60000.0
 	personBSubtotal := 40000.0
 
 	calcA := CalculateShare(personASubtotal, subtotal, tax, service)
 	calcB := CalculateShare(personBSubtotal, subtotal, tax, service)
 
-	expectedA := 60000.0 + (60000.0/100000.0)*(11000.0+5000.0) // 60k + 9.6k = 69600
-	expectedB := 40000.0 + (40000.0/100000.0)*(11000.0+5000.0) // 40k + 6.4k = 46400
+	expectedA := 60000.0 + (60000.0/100000.0)*(11000.0+5000.0)
+	expectedB := 40000.0 + (40000.0/100000.0)*(11000.0+5000.0)
 
 	if calcA != expectedA {
 		t.Errorf("Expected A to be %f, got %f", expectedA, calcA)

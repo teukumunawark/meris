@@ -1,10 +1,5 @@
-import { ParticipantClaim, ReceiptItem, ParticipantBreakdown } from "@/types";
+import {ParticipantBreakdown, ReceiptItem} from "@/types";
 
-/**
- * Calculates individual proportional share breakdown for each participant.
- * Uses a remainder-distribution strategy to ensure the sum of all breakdowns
- * exactly matches the receipt's grand total (avoiding rounding errors).
- */
 export function calculateParticipantBreakdowns(
   participants: string[],
   items: ReceiptItem[],
@@ -14,7 +9,6 @@ export function calculateParticipantBreakdowns(
 ): ParticipantBreakdown[] {
   if (participants.length === 0) return [];
 
-  // 1. Calculate base subtotal for everyone
   const rawBreakdowns = participants.map((name) => {
     const personSubtotal = items.reduce((sum, item) => {
       const userClaim = item.claims.find((c) => c.name === name);
@@ -42,11 +36,9 @@ export function calculateParticipantBreakdowns(
     };
   });
 
-  // 2. Proportional distribution with rounding
   let remainingTax = tax;
   let remainingService = serviceCharge;
 
-  // Identify the person with the largest subtotal to receive the rounding remainder
   const largestSpenderIndex = rawBreakdowns.reduce(
     (maxIdx, p, idx, arr) => (p.subtotal > arr[maxIdx].subtotal ? idx : maxIdx),
     0
@@ -59,7 +51,6 @@ export function calculateParticipantBreakdowns(
     let pService = 0;
 
     if (idx === largestSpenderIndex) {
-      // This person will be handled at the end to take the remainder
       return { ...p, proportion };
     } else {
       pTax = Math.round(proportion * tax);
@@ -76,7 +67,6 @@ export function calculateParticipantBreakdowns(
     }
   });
 
-  // 3. Assign remainder to the largest spender
   const spender = rawBreakdowns[largestSpenderIndex];
   const spenderTax = Math.max(0, remainingTax);
   const spenderService = Math.max(0, remainingService);

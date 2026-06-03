@@ -39,7 +39,6 @@ func getClientIP(r *http.Request) string {
 	return ip
 }
 
-// Lua script to atomically implement Sliding Window Log (ZSET)
 const rateLimitLua = `
 local key = KEYS[1]
 local now = tonumber(ARGV[1])
@@ -88,7 +87,6 @@ func RateLimiter(keyPrefix string, limit int, window time.Duration) func(http.Ha
 			}
 
 			now := time.Now().Unix()
-			// Create a unique member for this request to avoid overwrites in ZSET
 			member := fmt.Sprintf("%d:%d", now, time.Now().UnixNano())
 
 			res, err := redis.Client.Eval(ctx, rateLimitLua, []string{key}, now, int64(window.Seconds()), limit, member).Result()
@@ -119,7 +117,6 @@ func RateLimiter(keyPrefix string, limit int, window time.Duration) func(http.Ha
 				remaining = 0
 			}
 
-			// Expose limit and remaining headers
 			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
 			w.Header().Set("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
 

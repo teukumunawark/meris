@@ -27,12 +27,10 @@ func NewSessionHandler(hub *sse.Hub, db *gorm.DB) *SessionHandler {
 }
 
 func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
-	// Limit request body size to 5MB to prevent resource exhaustion (DoS)
 	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
 
 	file, _, err := r.FormFile("receipt")
 	if err != nil {
-		// Detect if failure is due to size limit exceeded
 		if err.Error() == "http: request body too large" || strings.Contains(err.Error(), "too large") {
 			http.Error(w, "Upload size exceeded the 5MB limit", http.StatusRequestEntityTooLarge)
 			return
@@ -52,7 +50,6 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate content type using Magic Bytes to prevent malicious file uploads
 	contentType := http.DetectContentType(imageBytes)
 	if !strings.HasPrefix(contentType, "image/") {
 		http.Error(w, "Uploaded file must be a valid image (JPEG, PNG, WEBP, etc.)", http.StatusBadRequest)

@@ -24,7 +24,6 @@ func InitRedis() error {
 
 	Client = redis.NewClient(opt)
 
-	// Ping Redis on startup to ensure availability (strict dependency)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
