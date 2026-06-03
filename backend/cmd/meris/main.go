@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"meris-backend/internal/db"
 	"meris-backend/internal/handlers"
@@ -56,9 +57,12 @@ func main() {
 	hub := sse.NewHub()
 	sessionHandler := handlers.NewSessionHandler(hub, database)
 
+	sessionRateLimiter := middleware.RateLimiter("session", 5, 8*time.Hour)
+	generalRateLimiter := middleware.RateLimiter("general", 100, 1*time.Minute)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthCheckHandler)
-	mux.HandleFunc("POST /session", sessionHandler.CreateSession)
+	mux.Handle("POST /session", sessionRateLimiter(http.HandlerFunc(sessionHandler.CreateSession)))
 	mux.HandleFunc("GET /session/{id}", sessionHandler.GetSession)
 	mux.HandleFunc("POST /session/{id}/join", sessionHandler.JoinSession)
 	mux.HandleFunc("POST /session/{id}/claim", sessionHandler.ClaimItem)
@@ -66,7 +70,7 @@ func main() {
 	mux.HandleFunc("DELETE /session/{id}/participant/{participantId}", sessionHandler.DeleteParticipant)
 	mux.HandleFunc("GET /stream", hub.StreamHandler)
 
-	handlerWithLogging := middleware.RequestLogger(handlers.CORS(mux))
+	handlerWithLogging := middleware.RequestLogger(handlers.CORS(generalRateLimiter(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
