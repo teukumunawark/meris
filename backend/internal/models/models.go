@@ -6,9 +6,10 @@ import (
 
 type Session struct {
 	ID            string    `gorm:"primaryKey;type:varchar(50)" json:"id"`
-	PayerName     string    `json:"payerName"`
-	PayerBank     string    `json:"payerBank"`
-	Tax           float64   `json:"tax"`
+	PayerName        string    `json:"payerName"`
+	PayerBankName    string    `json:"payerBankName"`
+	PayerBankAccount string    `json:"payerBankAccount"`
+	Tax              float64   `json:"tax"`
 	ServiceCharge float64   `json:"serviceCharge"`
 	GrandTotal    float64   `json:"grandTotal"`
 	CreatedAt     time.Time `json:"createdAt"`

@@ -32,7 +32,8 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	payerName := r.FormValue("payerName")
-	payerBank := r.FormValue("payerBank")
+	payerBankName := r.FormValue("payerBankName")
+	payerBankAccount := r.FormValue("payerBankAccount")
 
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
@@ -49,12 +50,13 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 
 	sessionID := uuid.New().String()
 	session := models.Session{
-		ID:            sessionID,
-		PayerName:     payerName,
-		PayerBank:     payerBank,
-		Tax:           extracted.Tax,
-		ServiceCharge: extracted.ServiceCharge,
-		GrandTotal:    extracted.GrandTotal,
+		ID:               sessionID,
+		PayerName:        payerName,
+		PayerBankName:    payerBankName,
+		PayerBankAccount: payerBankAccount,
+		Tax:              extracted.Tax,
+		ServiceCharge:    extracted.ServiceCharge,
+		GrandTotal:       extracted.GrandTotal,
 	}
 
 	for _, it := range extracted.Items {

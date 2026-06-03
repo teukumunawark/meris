@@ -58,13 +58,21 @@ export default function ParticipantBreakdown({
       ) : (
         <ul className="space-y-4 relative z-10" role="list">
           <AnimatePresence mode="popLayout">
-            {breakdowns.map((p, idx) => {
+            {participants.map((part, idx) => {
+              const p = breakdowns.find((b) => b.name === part.name) || {
+                name: part.name,
+                subtotal: 0,
+                tax: 0,
+                serviceCharge: 0,
+                total: 0,
+                claimedItems: [],
+              };
               const isCurrentUser = isJoined && p.name === userName.trim();
               const percentOfReceipt = totalSubtotal > 0 ? Math.round((p.subtotal / totalSubtotal) * 100) : 0;
 
               return (
                 <motion.li
-                  key={p.name}
+                  key={part.id}
                   layout
                   initial={{ opacity: 0, x: 25 }}
                   animate={{ opacity: 1, x: 0 }}
