@@ -10,6 +10,7 @@ import (
 	"meris-backend/internal/handlers"
 	"meris-backend/internal/logger"
 	"meris-backend/internal/middleware"
+	"meris-backend/internal/redis"
 	"meris-backend/internal/sse"
 
 	"github.com/joho/godotenv"
@@ -39,6 +40,11 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		slog.Info("No .env file found, relying on system environment variables")
+	}
+
+	if err := redis.InitRedis(); err != nil {
+		slog.Error("Critical error during Redis initialization", "error", err)
+		os.Exit(1)
 	}
 
 	database, err := db.InitDB()
