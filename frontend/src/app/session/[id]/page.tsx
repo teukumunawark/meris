@@ -214,7 +214,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
             {/* Row 1: Session Code with Copy Action (No pulsing dot) */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[10px] font-mono text-foreground/40 uppercase tracking-wider shrink-0">Session Code:</span>
+                <span className="text-[10px] font-mono text-foreground/40 uppercase tracking-wider shrink-0">Code:</span>
                 <span className="text-sm font-mono font-bold text-sage tracking-wider truncate">{sessionId}</span>
               </div>
               <button
@@ -336,9 +336,8 @@ export default function ClaimSessionPage({ params }: PageProps) {
             <div className="flex items-center justify-between gap-6 text-sm font-sans relative">
               
               {/* Left Side: Session Code details */}
-              <div className="flex items-center gap-3 text-foreground/70">
-                <span className="w-1.5 h-1.5 rounded-full bg-sage/60" />
-                <span className="text-xs font-mono uppercase tracking-wider text-foreground/45">Session Code:</span>
+              <div className="flex items-center gap-2 text-foreground/70">
+                <span className="text-xs font-mono uppercase tracking-wider text-foreground/45">Code:</span>
                 <span className="font-mono font-bold text-sage tracking-wider select-all">{sessionId}</span>
               </div>
 
