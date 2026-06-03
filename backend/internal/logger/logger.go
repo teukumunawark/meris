@@ -53,7 +53,8 @@ func Init(env string, level string) {
 	}
 
 	opts := &slog.HandlerOptions{
-		Level: slogLevel,
+		Level:     slogLevel,
+		AddSource: true,
 	}
 
 	var handler slog.Handler
