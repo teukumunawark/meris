@@ -134,7 +134,7 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
 
-	prompt := "Extract receipt items, prices, quantities, subtotal, tax, and service_charge."
+	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n3. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent."
 
 	schema := map[string]interface{}{
 		"type": "object",
