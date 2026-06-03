@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -73,9 +75,10 @@ func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
 }
 
 type MiMoRequest struct {
-	Model          string             `json:"model"`
-	Messages       []MiMoMessage      `json:"messages"`
-	ResponseFormat *MiMoResponseFormat `json:"response_format,omitempty"`
+	Model          string              `json:"model"`
+	Messages       []MiMoMessage       `json:"messages"`
+	ResponseFormat *MiMoResponseFormat  `json:"response_format,omitempty"`
+	Temperature    float64             `json:"temperature"`
 }
 
 type MiMoResponseFormat struct {
@@ -105,6 +108,20 @@ type MiMoImageURL struct {
 }
 
 func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
+	var lastErr error
+	for attempt := 1; attempt <= 2; attempt++ {
+		receipt, err := executeExtractionAttempt(imageBytes)
+		if err == nil {
+			return receipt, nil
+		}
+		lastErr = err
+		slog.Warn("AI extraction attempt failed, retrying...", "attempt", attempt, "error", err)
+		time.Sleep(1 * time.Second)
+	}
+	return nil, fmt.Errorf("AI extraction failed after 2 attempts: %w", lastErr)
+}
+
+func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	apiKey := os.Getenv("MIMO_API_KEY")
 	endpoint := os.Getenv("MIMO_ENDPOINT")
 	model := os.Getenv("MIMO_MODEL")
@@ -161,6 +178,7 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 				Schema: schema,
 			},
 		},
+		Temperature: 0.0,
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -190,7 +208,6 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 		return nil, fmt.Errorf("AI API returned status %d: %s", resp.StatusCode, string(body))
 	}
 	
-	// Parse OpenAI-style response
 	var completion struct {
 		Choices []struct {
 			Message struct {
