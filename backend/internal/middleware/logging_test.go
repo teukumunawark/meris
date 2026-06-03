@@ -204,3 +204,58 @@ func TestRequestLogger_DefaultStatusCode(t *testing.T) {
 		t.Errorf("expected second log status %d, got %d", http.StatusOK, records[1].Status)
 	}
 }
+
+type mockFlusherResponseWriter struct {
+	http.ResponseWriter
+	flushed bool
+}
+
+func (m *mockFlusherResponseWriter) Flush() {
+	m.flushed = true
+}
+
+func TestRequestLogger_FlusherAndHeader(t *testing.T) {
+	var buf bytes.Buffer
+	oldWriter := logger.OutputWriter
+	logger.OutputWriter = &buf
+	defer func() {
+		logger.OutputWriter = oldWriter
+	}()
+
+	logger.Init("production", "info")
+
+	mockRec := httptest.NewRecorder()
+	mockWriter := &mockFlusherResponseWriter{
+		ResponseWriter: mockRec,
+	}
+
+	var assertFlushed bool
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			t.Error("expected wrapped writer to implement http.Flusher")
+			return
+		}
+		flusher.Flush()
+		assertFlushed = true
+	})
+
+	mw := middleware.RequestLogger(nextHandler)
+	req := httptest.NewRequest(http.MethodGet, "/sse", nil)
+	req.Header.Set("X-Request-ID", "sse-req-id")
+
+	mw.ServeHTTP(mockWriter, req)
+
+	if !assertFlushed {
+		t.Error("expected handler to run and detect http.Flusher")
+	}
+
+	if !mockWriter.flushed {
+		t.Error("expected underlying Flush to have been called")
+	}
+
+	if gotHeader := mockRec.Header().Get("X-Request-ID"); gotHeader != "sse-req-id" {
+		t.Errorf("expected X-Request-ID header to be 'sse-req-id', got '%s'", gotHeader)
+	}
+}
+

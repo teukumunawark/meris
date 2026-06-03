@@ -46,12 +46,21 @@ func (rw *responseWriter) Status() int {
 	return rw.status
 }
 
+func (rw *responseWriter) Flush() {
+	if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqID := r.Header.Get("X-Request-ID")
 		if reqID == "" {
 			reqID = uuid.NewString()
 		}
+
+		w.Header().Set("X-Request-ID", reqID)
 
 		ctx := context.WithValue(r.Context(), logger.RequestIDKey, reqID)
 		wrappedWriter := newResponseWriter(w)
