@@ -157,7 +157,7 @@ export default function Home() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="flex min-h-max flex-col justify-center gap-12 pt-10 pb-12 lg:sticky lg:top-0 lg:col-span-6 lg:min-h-screen lg:gap-16 lg:py-20"
+          className="flex min-h-max flex-col justify-center gap-12 pt-10 pb-6 lg:sticky lg:top-0 lg:col-span-6 lg:min-h-screen lg:gap-16 lg:py-12"
         >
           <div className="space-y-6">
             <motion.div variants={itemVariants} className="space-y-6">
@@ -205,7 +205,7 @@ export default function Home() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="flex min-h-max flex-col justify-center pt-6 pb-12 lg:col-span-6 lg:pt-14 lg:pb-24"
+          className="flex min-h-max flex-col justify-center pt-6 pb-6 lg:col-span-6 lg:pt-14 lg:pb-12"
         >
           <motion.div variants={itemVariants} className="mx-auto w-full max-w-lg lg:ml-auto">
             <div className="glass-panel rounded-glass group relative overflow-hidden p-8 sm:p-10">
@@ -407,7 +407,7 @@ export default function Home() {
 
       </div>
 
-      <footer className="bg-background/50 relative z-10 w-full border-t border-white/5 py-8 text-center backdrop-blur-xs">
+      <footer className="bg-background/50 relative z-10 w-full border-t border-white/5 py-3 sm:py-5 text-center backdrop-blur-xs">
         <p className="text-foreground/10 text-[9px] font-bold tracking-[0.4em] uppercase">
           Meris &copy; 2026
         </p>

@@ -128,7 +128,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
   }
 
   return (
-    <div className={`bg-background text-foreground relative min-h-screen overflow-x-hidden font-sans antialiased ${isJoined ? 'pb-32 lg:pb-20' : 'pb-20'}`}>
+    <div className={`bg-background text-foreground relative min-h-screen overflow-x-hidden font-sans antialiased ${isJoined ? 'pb-24 lg:pb-6' : 'pb-6'}`}>
       {/* Background Ambience */}
       <div className="bg-orb-sage pointer-events-none fixed top-[-10%] right-[-10%] h-[60%] w-[60%] rounded-full opacity-20 blur-[120px]" />
       <div className="bg-orb-slate pointer-events-none fixed bottom-[-10%] left-[-10%] h-[60%] w-[60%] rounded-full opacity-10 blur-[120px]" />
@@ -200,7 +200,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
       </header>
 
       {/* Main Layout */}
-      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-8 sm:gap-16 sm:px-10 sm:pt-8 sm:pb-16">
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-4 sm:gap-12 sm:px-10 sm:pt-8 sm:pb-8">
         
         {/* Mobile Only: Header Title & Integrated Card (Untouched for Mobile) */}
         <section className="flex flex-col gap-4 md:hidden">
@@ -472,7 +472,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
           <div className="space-y-8 sm:space-y-16 lg:col-span-4">
             
             {/* Bill Summary */}
-            <div className="glass-panel rounded-glass space-y-6 border-white/5 bg-white/1 p-6 sm:space-y-10 sm:p-10">
+            <div id="bill-summary" className="glass-panel rounded-glass scroll-mt-20 space-y-6 border-white/5 bg-white/1 p-6 sm:space-y-10 sm:p-10">
               <h2 className="text-foreground border-b border-white/5 pb-4 font-sans text-xl font-normal sm:pb-6 sm:text-2xl">
                 Bill Summary
               </h2>
@@ -567,8 +567,8 @@ export default function ClaimSessionPage({ params }: PageProps) {
       </main>
 
       {/* Footer Branding */}
-      <footer className="mt-24 border-t border-white/5 py-12 opacity-40">
-        <div className="text-foreground/40 mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 text-[10px] font-bold tracking-[0.3em] uppercase sm:flex-row">
+      <footer className="mt-8 sm:mt-12 border-t border-white/5 py-3 sm:py-6 opacity-40">
+        <div className="text-foreground/40 mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 text-[10px] font-bold tracking-[0.3em] uppercase sm:flex-row">
           <p>Meris &copy; 2026</p>
           <p className="font-mono tracking-normal uppercase opacity-50">Session: {sessionId}</p>
         </div>
@@ -582,7 +582,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
           </div>
           <button
             onClick={() => {
-              const breakdownEl = document.getElementById("breakdown-section");
+              const breakdownEl = document.getElementById("bill-summary");
               breakdownEl?.scrollIntoView({ behavior: "smooth" });
             }}
             style={{ backgroundColor: '#8ba895' }}
