@@ -137,28 +137,29 @@ export default function ClaimSessionPage({ params }: PageProps) {
       {/* Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto h-16 sm:h-20 flex items-center justify-between px-4 sm:px-10">
-          <div className="flex items-center gap-3 sm:gap-4">
+          <Link href="/" className="flex items-center gap-3 sm:gap-4 group cursor-pointer select-none">
             <div 
               style={{ backgroundColor: '#8ba895' }}
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base sm:text-lg shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-glass-sm flex items-center justify-center font-mono font-bold text-background text-base sm:text-lg shrink-0 group-hover:scale-105 transition-all duration-300"
             >
               M
             </div>
-            <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase">
+            <span className="font-sans text-lg sm:text-xl text-foreground tracking-tight font-medium uppercase group-hover:text-sage transition-all duration-300">
               Meris
             </span>
-          </div>
+          </Link>
           
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-glass-sm bg-white/[0.03] border border-white/10 hover:bg-white/10 text-[10px] sm:text-xs font-mono tracking-wider text-foreground/70 hover:text-foreground transition-all cursor-pointer"
+              className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2 rounded-full sm:rounded-glass-sm bg-white/[0.03] border border-white/10 hover:bg-white/10 text-foreground/75 hover:text-foreground transition-all duration-300 cursor-pointer active:scale-95 shrink-0"
+              title="Back to Home"
             >
-              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m12 19-7-7 7-7"/>
                 <path d="M19 12H5"/>
               </svg>
-              <span>BACK HOME</span>
+              <span className="hidden sm:inline font-sans text-xs font-semibold tracking-wider uppercase">Back to Home</span>
             </Link>
           </div>
         </div>
