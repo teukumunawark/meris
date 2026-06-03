@@ -79,3 +79,20 @@ func TestParseReceipt_InvalidJSON(t *testing.T) {
 	}
 }
 
+func TestParseReceipt_WithMarkdownBackticks(t *testing.T) {
+	raw := []byte("```json\n{\n\t\"items\": [\n\t\t{\"name\": \"Nasi Goreng\", \"price\": 25000.0, \"quantity\": 2}\n\t],\n\t\"subtotal\": 50000.0,\n\t\"tax\": 5000.0,\n\t\"service_charge\": 2500.0,\n\t\"grand_total\": 57500.0\n}\n```")
+
+	receipt, err := ParseReceipt(raw)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(receipt.Items) != 1 {
+		t.Errorf("Expected 1 item, got %d", len(receipt.Items))
+	}
+
+	if receipt.Subtotal != 50000.0 {
+		t.Errorf("Expected subtotal 50000.0, got %f", receipt.Subtotal)
+	}
+}
+

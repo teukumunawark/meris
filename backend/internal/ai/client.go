@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var (
@@ -30,9 +31,26 @@ func (r *ExtractedReceipt) Validate() error {
 	return nil
 }
 
+func cleanJSON(content []byte) []byte {
+	str := string(content)
+	str = strings.TrimSpace(str)
+	if strings.HasPrefix(str, "```") {
+		str = strings.TrimPrefix(str, "```")
+		if strings.HasPrefix(strings.ToLower(str), "json") {
+			str = str[4:]
+		}
+		if strings.HasSuffix(str, "```") {
+			str = strings.TrimSuffix(str, "```")
+		}
+		str = strings.TrimSpace(str)
+	}
+	return []byte(str)
+}
+
 func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
+	cleaned := cleanJSON(rawJSON)
 	var receipt ExtractedReceipt
-	if err := json.Unmarshal(rawJSON, &receipt); err != nil {
+	if err := json.Unmarshal(cleaned, &receipt); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
 	}
 
