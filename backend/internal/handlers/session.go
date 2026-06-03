@@ -98,9 +98,50 @@ func (h *SessionHandler) ClaimItem(w http.ResponseWriter, r *http.Request) {
 		ParticipantID uint    `json:"participantId"`
 		ItemID        string  `json:"itemId"`
 		Shares        float64 `json:"shares"`
+		Token         string  `json:"token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	tx := h.DB.WithContext(r.Context()).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var participant models.Participant
+	if err := tx.First(&participant, payload.ParticipantID).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Participant not found", http.StatusNotFound)
+		return
+	}
+
+	if participant.Token != payload.Token {
+		tx.Rollback()
+		http.Error(w, "Unauthorized claim verification token", http.StatusUnauthorized)
+		return
+	}
+
+	var item models.Item
+	if err := tx.First(&item, "id = ? AND session_id = ?", payload.ItemID, sessionID).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Item not found", http.StatusNotFound)
+		return
+	}
+
+	var otherShares float64
+	tx.Model(&models.Claim{}).
+		Where("item_id = ? AND participant_id != ?", payload.ItemID, payload.ParticipantID).
+		Select("COALESCE(SUM(shares), 0)").
+		Row().
+		Scan(&otherShares)
+
+	if otherShares+payload.Shares > float64(item.Quantity) {
+		tx.Rollback()
+		http.Error(w, "Item quantity limit exceeded", http.StatusBadRequest)
 		return
 	}
 
@@ -111,18 +152,25 @@ func (h *SessionHandler) ClaimItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var existing models.Claim
-	err := h.DB.WithContext(r.Context()).Where("item_id = ? AND participant_id = ?", claim.ItemID, claim.ParticipantID).First(&existing).Error
+	err := tx.Where("item_id = ? AND participant_id = ?", claim.ItemID, claim.ParticipantID).First(&existing).Error
 	if err == nil {
 		existing.Shares = claim.Shares
-		if err := h.DB.WithContext(r.Context()).Save(&existing).Error; err != nil {
+		if err := tx.Save(&existing).Error; err != nil {
+			tx.Rollback()
 			http.Error(w, "Failed to update claim", http.StatusInternalServerError)
 			return
 		}
 	} else {
-		if err := h.DB.WithContext(r.Context()).Create(&claim).Error; err != nil {
+		if err := tx.Create(&claim).Error; err != nil {
+			tx.Rollback()
 			http.Error(w, "Failed to create claim", http.StatusInternalServerError)
 			return
 		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		http.Error(w, "Transaction commit failed", http.StatusInternalServerError)
+		return
 	}
 
 	go h.broadcastFullState(context.WithoutCancel(r.Context()), sessionID)
