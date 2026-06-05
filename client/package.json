@@ -1,0 +1,35 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "generate-api-types": "openapi-typescript ../contracts/openapi.yaml -o src/shared/api/generated/api.ts"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@vercel/otel": "^2.1.2",
+    "browser-image-compression": "^2.0.2",
+    "framer-motion": "^12.40.0",
+    "next": "16.2.7",
+    "pino": "^10.3.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.7",
+    "eslint-plugin-tailwindcss": "^3.18.3",
+    "openapi-typescript": "^7.13.0",
+    "pino-pretty": "^13.1.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

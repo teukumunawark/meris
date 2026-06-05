@@ -1,0 +1,7 @@
+package: openapi
+input-spec: ../../contracts/openapi.yaml
+generate:
+  - types
+  - chi-server
+  - spec
+output: internal/modules/session/openapi/openapi.gen.go

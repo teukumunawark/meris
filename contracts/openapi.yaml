@@ -1,0 +1,318 @@
+openapi: 3.0.3
+info:
+  title: Meris API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: GetHealth
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      operationId: GetMetrics
+      responses:
+        '200':
+          description: OK
+  /session:
+    post:
+      summary: Create a new split bill session by uploading a receipt
+      operationId: CreateSession
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                receipt:
+                  type: string
+                  format: binary
+                payerName:
+                  type: string
+                payerBankName:
+                  type: string
+                payerBankAccount:
+                  type: string
+              required:
+                - receipt
+      responses:
+        '200':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCreationResponse'
+  /session/{id}:
+    get:
+      summary: Get details of a specific session
+      operationId: GetSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed session data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+  /session/{id}/join:
+    post:
+      summary: Join a session as a participant
+      operationId: JoinSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                token:
+                  type: string
+              required:
+                - name
+      responses:
+        '200':
+          description: Joined successfully (already exists with matching token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '201':
+          description: Joined successfully as a new participant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+  /session/{id}/claim:
+    post:
+      summary: Claim or adjust share of a specific item
+      operationId: ClaimItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                participantId:
+                  type: integer
+                itemId:
+                  type: string
+                shares:
+                  type: number
+                token:
+                  type: string
+              required:
+                - participantId
+                - itemId
+                - shares
+                - token
+      responses:
+        '200':
+          description: Claim registered
+  /session/{id}/item/{itemId}/rename:
+    put:
+      summary: Rename a specific item in the session
+      operationId: RenameItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+      responses:
+        '200':
+          description: Item renamed
+  /session/{id}/participant/{participantId}:
+    delete:
+      summary: Delete a participant from a session
+      operationId: DeleteParticipant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: participantId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Participant deleted
+  /stream:
+    get:
+      summary: SSE global stream endpoint
+      operationId: GetStream
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+components:
+  schemas:
+    SessionCreationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        payerName:
+          type: string
+        payerBankName:
+          type: string
+        payerBankAccount:
+          type: string
+        tax:
+          type: number
+        serviceCharge:
+          type: number
+        grandTotal:
+          type: number
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
+        payerId:
+          type: integer
+        payerToken:
+          type: string
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        payerName:
+          type: string
+        payerBankName:
+          type: string
+        payerBankAccount:
+          type: string
+        tax:
+          type: number
+        serviceCharge:
+          type: number
+        grandTotal:
+          type: number
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        quantity:
+          type: integer
+        claims:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+    Participant:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        name:
+          type: string
+        claims:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+    ParticipantResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        name:
+          type: string
+        token:
+          type: string
+    Claim:
+      type: object
+      properties:
+        id:
+          type: integer
+        itemId:
+          type: string
+        participantId:
+          type: integer
+        shares:
+          type: number
