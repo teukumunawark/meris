@@ -3,15 +3,17 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
-	"meris-backend/internal/store/sqlc"
-	"meris-backend/internal/store/sqlcutil"
 	"meris-backend/internal/platform/ai"
 	"meris-backend/internal/platform/sse"
+	"meris-backend/internal/store/sqlc"
+	"meris-backend/internal/store/sqlcutil"
 )
 
 type Service struct {
@@ -129,6 +131,8 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 			return &existing, nil
 		}
 		return nil, ErrNameConflict
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
 	}
 
 	newToken := uuid.New().String()
@@ -148,6 +152,12 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 
 func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID uint, itemID string, shares float64, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		// Pessimistic lock the session to serialize concurrent mutations
+		_, err := q.GetSessionForUpdate(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
 		p, err := q.GetParticipant(ctx, int64(participantID))
 		if err != nil {
 			return err
@@ -157,7 +167,11 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			return ErrUnauthorized
 		}
 
-		itemInfo, err := sqlc.New(s.repo.pool).GetItemsBySession(ctx, sessionID)
+		if p.SessionID != sessionID {
+			return ErrUnauthorized
+		}
+
+		itemInfo, err := q.GetItemsBySession(ctx, sessionID)
 		if err != nil {
 			return err
 		}
@@ -172,6 +186,24 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 		}
 		if !found {
 			return ErrItemNotFound
+		}
+
+		// If shares is 0 or less, delete the claim if it exists
+		if shares <= 0 {
+			_, err = q.GetClaimByItemAndParticipant(ctx, sqlc.GetClaimByItemAndParticipantParams{
+				ItemID:        itemID,
+				ParticipantID: int64(participantID),
+			})
+			if err == nil {
+				return q.DeleteClaim(ctx, sqlc.DeleteClaimParams{
+					ItemID:        itemID,
+					ParticipantID: int64(participantID),
+				})
+			}
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil
+			}
+			return err
 		}
 
 		otherShares, err := q.GetOtherClaimsSum(ctx, sqlc.GetOtherClaimsSumParams{
@@ -190,6 +222,9 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			ItemID:        itemID,
 			ParticipantID: int64(participantID),
 		})
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
 
 		if err == nil {
 			return q.UpdateClaimShares(ctx, sqlc.UpdateClaimSharesParams{
@@ -230,22 +265,41 @@ func (s *Service) RenameItem(ctx context.Context, sessionID, itemID, newName str
 }
 
 func (s *Service) DeleteParticipant(ctx context.Context, sessionID string, targetParticipantID uint, callerToken string) error {
-	session, err := s.repo.GetQueries().GetSession(ctx, sessionID)
-	if err != nil {
-		return err
-	}
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		// Pessimistic lock the session to serialize concurrent mutations
+		_, err := q.GetSessionForUpdate(ctx, sessionID)
+		if err != nil {
+			return err
+		}
 
-	payer, err := s.repo.GetQueries().GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
-		SessionID: sessionID,
-		Name:      session.PayerName,
-	})
-	if err != nil || payer.Token != callerToken {
-		return ErrUnauthorized
-	}
+		session, err := q.GetSession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
 
-	err = s.repo.GetQueries().DeleteParticipant(ctx, sqlc.DeleteParticipantParams{
-		ID:        int64(targetParticipantID),
-		SessionID: sessionID,
+		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      session.PayerName,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrUnauthorized
+			}
+			return err
+		}
+
+		if payer.Token != callerToken {
+			return ErrUnauthorized
+		}
+
+		if targetParticipantID == uint(payer.ID) {
+			return fmt.Errorf("cannot delete the session owner")
+		}
+
+		return q.DeleteParticipant(ctx, sqlc.DeleteParticipantParams{
+			ID:        int64(targetParticipantID),
+			SessionID: sessionID,
+		})
 	})
 	if err != nil {
 		return err
@@ -266,7 +320,7 @@ func (s *Service) broadcastFullState(ctx context.Context, sessionID string) {
 		return
 	}
 
-	s.hub.Broadcast(string(data))
+	s.hub.Broadcast(sessionID, string(data))
 }
 
 func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (CompiledSession, error) {

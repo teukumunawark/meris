@@ -1,6 +1,6 @@
 package session
 
-import "time"
+
 
 // CompiledClaim is the typed representation of a claim within a compiled session response.
 type CompiledClaim struct {
@@ -65,5 +65,3 @@ type JoinSessionResult struct {
 	Token     string `json:"token"`
 }
 
-// ensure time is imported even if only used in CompiledSession.CreatedAt formatting
-var _ = time.RFC3339

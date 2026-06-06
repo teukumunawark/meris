@@ -9,12 +9,12 @@ import (
 
 type Hub struct {
 	mu      sync.Mutex
-	clients map[chan string]bool
+	clients map[string]map[chan string]bool // Map of sessionID -> client channels
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients: make(map[chan string]bool),
+		clients: make(map[string]map[chan string]bool),
 	}
 }
 
@@ -22,6 +22,12 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	sessionID := r.URL.Query().Get("sessionId")
+	if sessionID == "" {
+		http.Error(w, "Missing sessionId parameter", http.StatusBadRequest)
 		return
 	}
 
@@ -33,12 +39,20 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 	messageChan := make(chan string, 10)
 
 	h.mu.Lock()
-	h.clients[messageChan] = true
+	if h.clients[sessionID] == nil {
+		h.clients[sessionID] = make(map[chan string]bool)
+	}
+	h.clients[sessionID][messageChan] = true
 	h.mu.Unlock()
 
 	defer func() {
 		h.mu.Lock()
-		delete(h.clients, messageChan)
+		if h.clients[sessionID] != nil {
+			delete(h.clients[sessionID], messageChan)
+			if len(h.clients[sessionID]) == 0 {
+				delete(h.clients, sessionID)
+			}
+		}
 		h.mu.Unlock()
 		close(messageChan)
 	}()
@@ -66,13 +80,15 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Hub) Broadcast(message string) {
+func (h *Hub) Broadcast(sessionID string, message string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for clientChan := range h.clients {
-		select {
-		case clientChan <- message:
-		default:
+	if clients, ok := h.clients[sessionID]; ok {
+		for clientChan := range clients {
+			select {
+			case clientChan <- message:
+			default:
+			}
 		}
 	}
 }

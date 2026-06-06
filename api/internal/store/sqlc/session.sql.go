@@ -105,6 +105,20 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 	return err
 }
 
+const deleteClaim = `-- name: DeleteClaim :exec
+DELETE FROM claims WHERE item_id = $1 AND participant_id = $2
+`
+
+type DeleteClaimParams struct {
+	ItemID        string `db:"item_id" json:"item_id"`
+	ParticipantID int64  `db:"participant_id" json:"participant_id"`
+}
+
+func (q *Queries) DeleteClaim(ctx context.Context, arg DeleteClaimParams) error {
+	_, err := q.db.Exec(ctx, deleteClaim, arg.ItemID, arg.ParticipantID)
+	return err
+}
+
 const deleteParticipant = `-- name: DeleteParticipant :exec
 DELETE FROM participants WHERE id = $1 AND session_id = $2
 `
@@ -301,6 +315,26 @@ SELECT id, payer_name, payer_bank_name, payer_bank_account, tax, service_charge,
 
 func (q *Queries) GetSession(ctx context.Context, id string) (Session, error) {
 	row := q.db.QueryRow(ctx, getSession, id)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.PayerName,
+		&i.PayerBankName,
+		&i.PayerBankAccount,
+		&i.Tax,
+		&i.ServiceCharge,
+		&i.GrandTotal,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getSessionForUpdate = `-- name: GetSessionForUpdate :one
+SELECT id, payer_name, payer_bank_name, payer_bank_account, tax, service_charge, grand_total, created_at FROM sessions WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) GetSessionForUpdate(ctx context.Context, id string) (Session, error) {
+	row := q.db.QueryRow(ctx, getSessionForUpdate, id)
 	var i Session
 	err := row.Scan(
 		&i.ID,

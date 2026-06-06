@@ -5,6 +5,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 -- name: GetSession :one
 SELECT * FROM sessions WHERE id = $1;
 
+-- name: GetSessionForUpdate :one
+SELECT * FROM sessions WHERE id = $1 FOR UPDATE;
+
 -- name: CreateItem :exec
 INSERT INTO items (id, session_id, name, price, quantity)
 VALUES ($1, $2, $3, $4, $5);
@@ -41,6 +44,9 @@ UPDATE claims SET shares = $1 WHERE item_id = $2 AND participant_id = $3;
 
 -- name: GetClaimByItemAndParticipant :one
 SELECT * FROM claims WHERE item_id = $1 AND participant_id = $2;
+
+-- name: DeleteClaim :exec
+DELETE FROM claims WHERE item_id = $1 AND participant_id = $2;
 
 -- name: GetClaimsBySession :many
 SELECT c.*, p.name as participant_name

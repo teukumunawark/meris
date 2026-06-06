@@ -2,9 +2,7 @@ package session
 
 import (
 	"context"
-	"errors"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"meris-backend/internal/store/sqlc"
@@ -47,17 +45,17 @@ func (r *Repository) FetchFullSession(ctx context.Context, sessionID string) (*s
 	}
 
 	items, err := q.GetItemsBySession(ctx, sessionID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	participants, err := q.GetParticipantsBySession(ctx, sessionID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	claims, err := q.GetClaimsBySession(ctx, sessionID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
