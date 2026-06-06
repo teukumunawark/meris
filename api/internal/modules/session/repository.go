@@ -3,10 +3,11 @@ package session
 import (
 	"context"
 	"errors"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"meris-backend/internal/modules/session/db"
+	"meris-backend/internal/store/sqlc"
 )
 
 type Repository struct {
@@ -17,14 +18,14 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) WithTx(ctx context.Context, fn func(*db.Queries) error) error {
+func (r *Repository) WithTx(ctx context.Context, fn func(*sqlc.Queries) error) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	q := db.New(tx)
+	q := sqlc.New(tx)
 	if err := fn(q); err != nil {
 		return err
 	}
@@ -32,12 +33,12 @@ func (r *Repository) WithTx(ctx context.Context, fn func(*db.Queries) error) err
 	return tx.Commit(ctx)
 }
 
-func (r *Repository) GetQueries() *db.Queries {
-	return db.New(r.pool)
+func (r *Repository) GetQueries() *sqlc.Queries {
+	return sqlc.New(r.pool)
 }
 
 // FetchFullSession compiles all database rows into a cohesive Go struct matching OpenAPI specs
-func (r *Repository) FetchFullSession(ctx context.Context, sessionID string) (*db.Session, []db.Item, []db.Participant, []db.GetClaimsBySessionRow, error) {
+func (r *Repository) FetchFullSession(ctx context.Context, sessionID string) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, []sqlc.GetClaimsBySessionRow, error) {
 	q := r.GetQueries()
 
 	session, err := q.GetSession(ctx, sessionID)
@@ -62,3 +63,5 @@ func (r *Repository) FetchFullSession(ctx context.Context, sessionID string) (*d
 
 	return &session, items, participants, claims, nil
 }
+
+

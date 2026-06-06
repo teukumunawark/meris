@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
@@ -12,18 +11,12 @@ import (
 
 var RDB *redis.Client
 
-func InitRedis() error {
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		redisURL = "redis://localhost:6379/0"
-	}
-
-	opt, err := redis.ParseURL(redisURL)
-	if err != nil {
-		return fmt.Errorf("failed to parse redis url: %w", err)
-	}
-
-	RDB = redis.NewClient(opt)
+func InitRedis(addr string, password string, db int) error {
+	RDB = redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       db,
+	})
 
 	if err := redisotel.InstrumentTracing(RDB); err != nil {
 		slog.Error("Failed to instrument Redis with OTel", "error", err)

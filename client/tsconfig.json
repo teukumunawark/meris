@@ -19,8 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/types": ["./src/shared/types/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type Hub struct {
@@ -25,9 +26,9 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("X-Accel-Buffering", "no")
 
 	messageChan := make(chan string, 10)
 
@@ -45,6 +46,9 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, ": ok\n\n")
 	flusher.Flush()
 
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case msg, ok := <-messageChan:
@@ -52,6 +56,9 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		case <-ticker.C:
+			fmt.Fprintf(w, ": ping\n\n")
 			flusher.Flush()
 		case <-r.Context().Done():
 			return

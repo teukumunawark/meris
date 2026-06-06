@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/shared/ui/Button";
+import { Input } from "@/shared/ui/Input";
 
 export default function JoinSessionForm() {
   const router = useRouter();
@@ -16,7 +18,7 @@ export default function JoinSessionForm() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3">
-        <input 
+        <Input 
           type="text" 
           value={sessionId}
           onChange={(e) => setSessionId(e.target.value)}
@@ -24,15 +26,11 @@ export default function JoinSessionForm() {
             if (e.key === "Enter") handleJoinSession();
           }}
           placeholder="Enter Session ID" 
-          className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 text-center font-sans text-sm tracking-wider uppercase transition-colors focus:outline-none"
+          className="text-center tracking-wider uppercase"
         />
-        <button 
-          onClick={handleJoinSession}
-          style={{ backgroundColor: "#8ba895" }}
-          className="rounded-glass-sm text-background w-full cursor-pointer py-3.5 font-sans text-xs font-bold tracking-wider uppercase transition-all hover:brightness-105 active:scale-[0.99]"
-        >
+        <Button onClick={handleJoinSession} className="w-full">
           Join Session
-        </button>
+        </Button>
       </div>
     </div>
   );

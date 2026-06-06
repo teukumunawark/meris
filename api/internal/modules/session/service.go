@@ -8,7 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"meris-backend/internal/modules/session/db"
+	"meris-backend/internal/store/sqlc"
+	"meris-backend/internal/store/sqlcutil"
 	"meris-backend/internal/platform/ai"
 	"meris-backend/internal/platform/sse"
 )
@@ -22,7 +23,7 @@ func NewService(repo *Repository, hub *sse.Hub) *Service {
 	return &Service{repo: repo, hub: hub}
 }
 
-func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte, payerName, payerBankName, payerBankAccount string) (*db.Session, []db.Item, []db.Participant, uint, string, error) {
+func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte, payerName, payerBankName, payerBankAccount string) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, uint, string, error) {
 	extracted, err := ai.ExtractReceiptData(imageBytes)
 	if err != nil {
 		return nil, nil, nil, 0, "", fmt.Errorf("AI extraction failed: %w", err)
@@ -30,7 +31,7 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 
 	sessionID := uuid.New().String()
 	now := time.Now()
-	session := db.Session{
+	session := sqlc.Session{
 		ID:               sessionID,
 		PayerName:        payerName,
 		PayerBankName:    payerBankName,
@@ -38,12 +39,12 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 		Tax:              extracted.Tax,
 		ServiceCharge:    extracted.ServiceCharge,
 		GrandTotal:       extracted.GrandTotal,
-		CreatedAt:        now,
+		CreatedAt:        sqlcutil.Timestamptz(now),
 	}
 
-	var items []db.Item
+	var items []sqlc.Item
 	for _, it := range extracted.Items {
-		items = append(items, db.Item{
+		items = append(items, sqlc.Item{
 			ID:        uuid.New().String(),
 			SessionID: sessionID,
 			Name:      it.Name,
@@ -55,8 +56,8 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 	var payerID uint
 	var payerToken string
 
-	err = s.repo.WithTx(ctx, func(q *db.Queries) error {
-		err := q.CreateSession(ctx, db.CreateSessionParams{
+	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		err := q.CreateSession(ctx, sqlc.CreateSessionParams{
 			ID:               session.ID,
 			PayerName:        session.PayerName,
 			PayerBankName:    session.PayerBankName,
@@ -71,7 +72,7 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 		}
 
 		for _, item := range items {
-			err := q.CreateItem(ctx, db.CreateItemParams{
+			err := q.CreateItem(ctx, sqlc.CreateItemParams{
 				ID:        item.ID,
 				SessionID: item.SessionID,
 				Name:      item.Name,
@@ -85,7 +86,7 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 
 		if payerName != "" {
 			payerToken = uuid.New().String()
-			p, err := q.CreateParticipant(ctx, db.CreateParticipantParams{
+			p, err := q.CreateParticipant(ctx, sqlc.CreateParticipantParams{
 				SessionID: sessionID,
 				Name:      payerName,
 				Token:     payerToken,
@@ -103,9 +104,9 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 		return nil, nil, nil, 0, "", err
 	}
 
-	var participants []db.Participant
+	var participants []sqlc.Participant
 	if payerName != "" {
-		participants = append(participants, db.Participant{
+		participants = append(participants, sqlc.Participant{
 			ID:        int64(payerID),
 			SessionID: sessionID,
 			Name:      payerName,
@@ -116,10 +117,10 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 	return &session, items, participants, payerID, payerToken, nil
 }
 
-func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken string) (*db.Participant, error) {
+func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken string) (*sqlc.Participant, error) {
 	q := s.repo.GetQueries()
 
-	existing, err := q.GetParticipantByName(ctx, db.GetParticipantByNameParams{
+	existing, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
 		SessionID: sessionID,
 		Name:      name,
 	})
@@ -131,7 +132,7 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 	}
 
 	newToken := uuid.New().String()
-	p, err := q.CreateParticipant(ctx, db.CreateParticipantParams{
+	p, err := q.CreateParticipant(ctx, sqlc.CreateParticipantParams{
 		SessionID: sessionID,
 		Name:      name,
 		Token:     newToken,
@@ -146,7 +147,7 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 }
 
 func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID uint, itemID string, shares float64, token string) error {
-	err := s.repo.WithTx(ctx, func(q *db.Queries) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		p, err := q.GetParticipant(ctx, int64(participantID))
 		if err != nil {
 			return err
@@ -156,11 +157,11 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			return ErrUnauthorized
 		}
 
-		itemInfo, err := db.New(s.repo.pool).GetItemsBySession(ctx, sessionID)
+		itemInfo, err := sqlc.New(s.repo.pool).GetItemsBySession(ctx, sessionID)
 		if err != nil {
 			return err
 		}
-		var targetItem db.Item
+		var targetItem sqlc.Item
 		found := false
 		for _, it := range itemInfo {
 			if it.ID == itemID {
@@ -173,7 +174,7 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			return ErrItemNotFound
 		}
 
-		otherShares, err := q.GetOtherClaimsSum(ctx, db.GetOtherClaimsSumParams{
+		otherShares, err := q.GetOtherClaimsSum(ctx, sqlc.GetOtherClaimsSumParams{
 			ItemID:        itemID,
 			ParticipantID: int64(participantID),
 		})
@@ -185,20 +186,20 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			return ErrQuantityExceeded
 		}
 
-		_, err = q.GetClaimByItemAndParticipant(ctx, db.GetClaimByItemAndParticipantParams{
+		_, err = q.GetClaimByItemAndParticipant(ctx, sqlc.GetClaimByItemAndParticipantParams{
 			ItemID:        itemID,
 			ParticipantID: int64(participantID),
 		})
 
 		if err == nil {
-			return q.UpdateClaimShares(ctx, db.UpdateClaimSharesParams{
+			return q.UpdateClaimShares(ctx, sqlc.UpdateClaimSharesParams{
 				Shares:        shares,
 				ItemID:        itemID,
 				ParticipantID: int64(participantID),
 			})
 		}
 
-		return q.CreateClaim(ctx, db.CreateClaimParams{
+		return q.CreateClaim(ctx, sqlc.CreateClaimParams{
 			ItemID:        itemID,
 			ParticipantID: int64(participantID),
 			Shares:        shares,
@@ -215,7 +216,7 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 
 func (s *Service) RenameItem(ctx context.Context, sessionID, itemID, newName string) error {
 	q := s.repo.GetQueries()
-	err := q.UpdateItemName(ctx, db.UpdateItemNameParams{
+	err := q.UpdateItemName(ctx, sqlc.UpdateItemNameParams{
 		Name:      newName,
 		ID:        itemID,
 		SessionID: sessionID,
@@ -234,7 +235,7 @@ func (s *Service) DeleteParticipant(ctx context.Context, sessionID string, targe
 		return err
 	}
 
-	payer, err := s.repo.GetQueries().GetParticipantByName(ctx, db.GetParticipantByNameParams{
+	payer, err := s.repo.GetQueries().GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
 		SessionID: sessionID,
 		Name:      session.PayerName,
 	})
@@ -242,7 +243,7 @@ func (s *Service) DeleteParticipant(ctx context.Context, sessionID string, targe
 		return ErrUnauthorized
 	}
 
-	err = s.repo.GetQueries().DeleteParticipant(ctx, db.DeleteParticipantParams{
+	err = s.repo.GetQueries().DeleteParticipant(ctx, sqlc.DeleteParticipantParams{
 		ID:        int64(targetParticipantID),
 		SessionID: sessionID,
 	})
@@ -274,26 +275,54 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		return CompiledSession{}, err
 	}
 
+	// Map participant ID to name
+	participantNameMap := make(map[int64]string)
+	for _, p := range participants {
+		participantNameMap[p.ID] = p.Name
+	}
+
+	// Calculate overall subtotal
+	var totalSubtotal float64
+	for _, it := range items {
+		totalSubtotal += it.Price * float64(it.Quantity)
+	}
+
 	// Build per-item claims index
 	itemClaimsMap := make(map[string][]CompiledClaim)
 	for _, c := range claims {
+		name := participantNameMap[c.ParticipantID]
 		itemClaimsMap[c.ItemID] = append(itemClaimsMap[c.ItemID], CompiledClaim{
 			ID:            c.ID,
 			ItemID:        c.ItemID,
 			ParticipantID: c.ParticipantID,
+			Name:          name,
 			Shares:        c.Shares,
 		})
 	}
 
-	// Build per-participant claims index
+	// Map items by ID for easy lookup
+	itemsMap := make(map[string]sqlc.Item)
+	for _, it := range items {
+		itemsMap[it.ID] = it
+	}
+
+	// Build per-participant claims index and calculate individual subtotal
 	participantClaimsMap := make(map[int64][]CompiledClaim)
+	participantSubtotalMap := make(map[int64]float64)
 	for _, c := range claims {
-		participantClaimsMap[c.ParticipantID] = append(participantClaimsMap[c.ParticipantID], CompiledClaim{
+		name := participantNameMap[c.ParticipantID]
+		compiled := CompiledClaim{
 			ID:            c.ID,
 			ItemID:        c.ItemID,
 			ParticipantID: c.ParticipantID,
+			Name:          name,
 			Shares:        c.Shares,
-		})
+		}
+		participantClaimsMap[c.ParticipantID] = append(participantClaimsMap[c.ParticipantID], compiled)
+
+		if item, ok := itemsMap[c.ItemID]; ok {
+			participantSubtotalMap[c.ParticipantID] += item.Price * c.Shares
+		}
 	}
 
 	compiledItems := make([]CompiledItem, 0, len(items))
@@ -318,11 +347,19 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		if claims == nil {
 			claims = []CompiledClaim{}
 		}
+
+		pSubtotal := participantSubtotalMap[p.ID]
+		breakdown := CalculateShare(pSubtotal, totalSubtotal, session.Tax, session.ServiceCharge)
+
 		compiledParticipants = append(compiledParticipants, CompiledParticipant{
-			ID:        p.ID,
-			SessionID: p.SessionID,
-			Name:      p.Name,
-			Claims:    claims,
+			ID:            p.ID,
+			SessionID:     p.SessionID,
+			Name:          p.Name,
+			TotalOwed:     breakdown.Total,
+			Subtotal:      breakdown.Subtotal,
+			Tax:           breakdown.Tax,
+			ServiceCharge: breakdown.ServiceCharge,
+			Claims:        claims,
 		})
 	}
 
@@ -334,7 +371,7 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		Tax:              session.Tax,
 		ServiceCharge:    session.ServiceCharge,
 		GrandTotal:       session.GrandTotal,
-		CreatedAt:        session.CreatedAt.Format(time.RFC3339),
+		CreatedAt:        sqlcutil.Time(session.CreatedAt).Format(time.RFC3339),
 		Items:            compiledItems,
 		Participants:     compiledParticipants,
 	}, nil

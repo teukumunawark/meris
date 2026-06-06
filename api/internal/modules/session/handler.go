@@ -1,14 +1,14 @@
 package session
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"meris-backend/internal/modules/session/openapi"
+	"meris-backend/internal/platform/httpserver/generated"
+	"meris-backend/internal/platform/httpresponse"
 )
 
 type Handler struct {
@@ -19,29 +19,16 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "OK",
-		"message": "Meris Backend is running",
-	})
-}
-
-func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
-	// Handled by prometheus endpoint directly in main
-}
-
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
 
 	file, _, err := r.FormFile("receipt")
 	if err != nil {
 		if err.Error() == "http: request body too large" || strings.Contains(err.Error(), "too large") {
-			http.Error(w, "Upload size exceeded the 5MB limit", http.StatusRequestEntityTooLarge)
+			httpresponse.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Upload size exceeded the 5MB limit")
 			return
 		}
-		http.Error(w, "Invalid receipt image", http.StatusBadRequest)
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_file", "Invalid receipt image")
 		return
 	}
 	defer file.Close()
@@ -52,13 +39,13 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read image", http.StatusInternalServerError)
+		httpresponse.WriteError(w, http.StatusInternalServerError, "read_failed", "Failed to read image")
 		return
 	}
 
 	contentType := http.DetectContentType(imageBytes)
 	if !strings.HasPrefix(contentType, "image/") {
-		http.Error(w, "Uploaded file must be a valid image", http.StatusBadRequest)
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_content_type", "Uploaded file must be a valid image")
 		return
 	}
 
@@ -70,16 +57,13 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		payerBankAccount,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpresponse.WriteError(w, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
 	resp, err := h.service.GetCompiledSession(r.Context(), session.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpresponse.WriteError(w, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -89,18 +73,17 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		result.PayerToken = &payerToken
 	}
 
-	json.NewEncoder(w).Encode(result)
+	httpresponse.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request, id string) {
 	resp, err := h.service.GetCompiledSession(r.Context(), id)
 	if err != nil {
-		http.Error(w, "Session not found", http.StatusNotFound)
+		httpresponse.WriteError(w, http.StatusNotFound, "session_not_found", "Session not found")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	httpresponse.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string) {
@@ -108,28 +91,26 @@ func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string)
 		Name  string `json:"name"`
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
 
 	p, err := h.service.JoinSession(r.Context(), id, payload.Name, payload.Token)
 	if err != nil {
 		if errors.Is(err, ErrNameConflict) {
-			http.Error(w, err.Error(), http.StatusConflict)
+			httpresponse.WriteError(w, http.StatusConflict, "name_conflict", err.Error())
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":        p.ID,
-		"sessionId": p.SessionID,
-		"name":      p.Name,
-		"token":     p.Token,
+	httpresponse.WriteJSON(w, http.StatusOK, JoinSessionResult{
+		ID:        p.ID,
+		SessionID: p.SessionID,
+		Name:      p.Name,
+		Token:     p.Token,
 	})
 }
 
@@ -140,19 +121,20 @@ func (h *Handler) ClaimItem(w http.ResponseWriter, r *http.Request, id string) {
 		Shares        float64 `json:"shares"`
 		Token         string  `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
 
 	err := h.service.ClaimItem(r.Context(), id, payload.ParticipantID, payload.ItemID, payload.Shares, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
-		} else if errors.Is(err, ErrQuantityExceeded) || errors.Is(err, ErrItemNotFound) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, ErrUnauthorized):
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		case errors.Is(err, ErrQuantityExceeded), errors.Is(err, ErrItemNotFound):
+			httpresponse.WriteError(w, http.StatusBadRequest, "invalid_claim", err.Error())
+		default:
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 		}
 		return
 	}
@@ -164,51 +146,47 @@ func (h *Handler) RenameItem(w http.ResponseWriter, r *http.Request, id string, 
 	var payload struct {
 		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
 
-	if payload.Name == "" {
-		http.Error(w, "Name cannot be empty", http.StatusBadRequest)
+	if strings.TrimSpace(payload.Name) == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_name", "Name cannot be empty")
 		return
 	}
 
 	err := h.service.RenameItem(r.Context(), id, itemId, payload.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params openapi.DeleteParticipantParams) {
+func (h *Handler) DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params generated.DeleteParticipantParams) {
 	callerToken := params.Token
 	if callerToken == "" {
-		http.Error(w, "Missing token parameter", http.StatusBadRequest)
+		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
 		return
 	}
 
 	pID, err := strconv.ParseUint(participantId, 10, 32)
 	if err != nil {
-		http.Error(w, "Invalid participant ID", http.StatusBadRequest)
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_id", "Invalid participant ID")
 		return
 	}
 
 	err = h.service.DeleteParticipant(r.Context(), id, uint(pID), callerToken)
 	if err != nil {
 		if errors.Is(err, ErrUnauthorized) {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) GetStream(w http.ResponseWriter, r *http.Request) {
-	// Stream handler is bound directly to sse hub
 }

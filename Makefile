@@ -10,7 +10,7 @@ dev:
 # Execute code generation pipelines
 generate:
 	@echo "Running backend OpenAPI generation..."
-	oapi-codegen -config api/oapi-codegen.yaml contracts/openapi.yaml
+	cd api && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config oapi-codegen.yaml ../contracts/openapi.yaml
 	@echo "Running backend SQLC generation..."
 	cd api && sqlc generate
 	@echo "Running frontend OpenAPI type generation..."

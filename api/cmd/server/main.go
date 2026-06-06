@@ -9,42 +9,33 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/joho/godotenv"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/riandyrn/otelchi"
 
 	"meris-backend/internal/modules/session"
-	"meris-backend/internal/modules/session/openapi"
+	"meris-backend/internal/platform/config"
 	"meris-backend/internal/platform/database"
+	"meris-backend/internal/platform/httpserver"
+	generated "meris-backend/internal/platform/httpserver/generated"
 	"meris-backend/internal/platform/logger"
-	"meris-backend/internal/platform/middleware"
 	"meris-backend/internal/platform/redis"
 	"meris-backend/internal/platform/sse"
 	"meris-backend/internal/platform/telemetry"
 )
 
 func main() {
-	// Initialize logger
-	logger.Init(os.Getenv("APP_ENV"), os.Getenv("LOG_LEVEL"))
-
-	// Load configuration
-	if err := godotenv.Load(); err != nil {
-		if err := godotenv.Load("../.env"); err != nil {
-			slog.Info("No .env file found, relying on system environment variables")
-		}
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
 	}
 
-	// Create parent cancelable context
+	appLogger := logger.New(cfg.Env)
+	slog.SetDefault(appLogger)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Initialize OpenTelemetry
-	otlpEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if otlpEndpoint == "" {
-		otlpEndpoint = "alloy:4317"
-	}
-	shutdownTele, err := telemetry.Init(ctx, "meris-api", otlpEndpoint)
+	shutdownTele, err := telemetry.Init(ctx, "meris-api", cfg.Telemetry.OTLPEndpoint)
 	if err != nil {
 		slog.Error("Failed to initialize OpenTelemetry", "error", err)
 	} else {
@@ -55,43 +46,42 @@ func main() {
 		}()
 	}
 
-	// Initialize Redis
-	if err := redis.InitRedis(); err != nil {
+	if err := redis.InitRedis(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB); err != nil {
 		slog.Error("Critical error initializing Redis", "error", err)
 		os.Exit(1)
 	}
 
-	// Initialize Database Pool & Run Migrations
-	dbPool, err := database.InitPool(ctx)
+	dbPool, err := database.Open(ctx, cfg.Database)
 	if err != nil {
 		slog.Error("Critical database initialization error", "error", err)
 		os.Exit(1)
 	}
 	defer dbPool.Close()
 
-	// Initialize SSE Hub
+	if err := database.RunMigrations(ctx, dbPool); err != nil {
+		slog.Error("Database migrations failed", "error", err)
+		os.Exit(1)
+	}
+
 	hub := sse.NewHub()
 
-	// Initialize Repository, Service, and HTTP Handler
 	repo := session.NewRepository(dbPool)
-	srv := session.NewService(repo, hub)
-	h := session.NewHandler(srv)
+	svc := session.NewService(repo, hub)
+	sessionHandler := session.NewHandler(svc)
 
-	// Setup Router
-	r := chi.NewRouter()
-
-	// Middlewares
+	r := httpserver.NewRouter()
 	r.Use(otelchi.Middleware("meris-api", otelchi.WithChiRoutes(r)))
-	r.Use(middleware.RequestLogger)
-	r.Use(middleware.CORS)
+	r.Use(httpserver.RequestLogger(appLogger))
+	r.Use(httpserver.CORS(cfg.CORS.AllowedOrigins))
 
-	// Rate limiters
-	sessionRateLimiter := middleware.RateLimiter("session", 5, 8*time.Hour)
+	httpserver.RegisterSystemRoutes(r, hub)
 
-	// Register OpenAPI endpoints
-	openapi.HandlerWithOptions(h, openapi.ChiServerOptions{
+	sessionRateLimiter := httpserver.RateLimiter("session", 5, 8*time.Hour)
+
+	openAPIServer := httpserver.NewOpenAPIServer(sessionHandler)
+	generated.HandlerWithOptions(openAPIServer, generated.ChiServerOptions{
 		BaseRouter: r,
-		Middlewares: []openapi.MiddlewareFunc{
+		Middlewares: []generated.MiddlewareFunc{
 			func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 					if req.URL.Path == "/session" && req.Method == "POST" {
@@ -104,44 +94,19 @@ func main() {
 		},
 	})
 
-	// Add special/auxiliary endpoints manually (metrics and health check)
-	r.Handle("/metrics", promhttp.Handler())
-	r.HandleFunc("/stream", hub.StreamHandler)
+	server := httpserver.New(
+		cfg.HTTP.Addr,
+		5*time.Second, // ReadHeaderTimeout
+		cfg.HTTP.ReadTimeout,
+		cfg.HTTP.WriteTimeout,
+		cfg.HTTP.IdleTimeout,
+		cfg.ShutdownTimeout,
+		appLogger,
+		r,
+	)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	if err := server.Run(ctx); err != nil {
+		slog.Error("Server exited with error", "error", err)
+		os.Exit(1)
 	}
-	bindAddr := os.Getenv("BIND_ADDRESS")
-	if bindAddr == "" {
-		bindAddr = "127.0.0.1"
-	}
-
-	server := &http.Server{
-		Addr:              bindAddr + ":" + port,
-		Handler:           r,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      0,
-		IdleTimeout:       120 * time.Second,
-	}
-
-	// Start server in background
-	go func() {
-		slog.Info("Starting Meris Backend on " + bindAddr + ":" + port + "...")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server failed to start", "error", err)
-			os.Exit(1)
-		}
-	}()
-
-	// Graceful shutdown listener
-	<-ctx.Done()
-	slog.Info("Shutting down HTTP server gracefully...")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		slog.Error("HTTP server shutdown error", "error", err)
-	}
-	slog.Info("Server exit clean.")
 }

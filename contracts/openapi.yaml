@@ -3,29 +3,6 @@ info:
   title: Meris API
   version: 1.0.0
 paths:
-  /health:
-    get:
-      summary: Health check endpoint
-      operationId: GetHealth
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  message:
-                    type: string
-  /metrics:
-    get:
-      summary: Prometheus metrics endpoint
-      operationId: GetMetrics
-      responses:
-        '200':
-          description: OK
   /session:
     post:
       summary: Create a new split bill session by uploading a receipt
@@ -193,17 +170,6 @@ paths:
       responses:
         '200':
           description: Participant deleted
-  /stream:
-    get:
-      summary: SSE global stream endpoint
-      operationId: GetStream
-      responses:
-        '200':
-          description: Event stream
-          content:
-            text/event-stream:
-              schema:
-                type: string
 components:
   schemas:
     SessionCreationResponse:
@@ -290,6 +256,14 @@ components:
           type: string
         name:
           type: string
+        totalOwed:
+          type: number
+        subtotal:
+          type: number
+        tax:
+          type: number
+        serviceCharge:
+          type: number
         claims:
           type: array
           items:
@@ -314,5 +288,7 @@ components:
           type: string
         participantId:
           type: integer
+        name:
+          type: string
         shares:
           type: number

@@ -7,6 +7,7 @@ type CompiledClaim struct {
 	ID            int64   `json:"id"`
 	ItemID        string  `json:"itemId"`
 	ParticipantID int64   `json:"participantId"`
+	Name          string  `json:"name"`
 	Shares        float64 `json:"shares"`
 }
 
@@ -25,7 +26,11 @@ type CompiledParticipant struct {
 	ID        int64           `json:"id"`
 	SessionID string          `json:"sessionId"`
 	Name      string          `json:"name"`
-	Claims    []CompiledClaim `json:"claims"`
+	TotalOwed     float64         `json:"totalOwed"`
+	Subtotal      float64         `json:"subtotal"`
+	Tax           float64         `json:"tax"`
+	ServiceCharge float64         `json:"serviceCharge"`
+	Claims        []CompiledClaim `json:"claims"`
 }
 
 // CompiledSession is the full, denormalized view of a session returned by GetCompiledSession.

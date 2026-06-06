@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Light Mode values (Default) */
+  --background: #f7f8f6;
+  --foreground: #1a1d20;
+  --primary-sage: #4a5d4e;
+  --accent-slate: #64748b;
+  --accent-sand: #78716c;
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-bg-solid: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-highlight: rgba(255, 255, 255, 0.85);
+  --orb-sage-color: rgba(74, 93, 78, 0.08);
+  --orb-slate-color: rgba(100, 116, 139, 0.05);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.1);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
+
+  /* Standard typography sizes (Clean and readable on both mobile and desktop) */
+  --size-xs: 0.75rem;      /* 12px */
+  --size-sm: 0.875rem;     /* 14px */
+  --size-base: 1rem;       /* 16px */
+  --size-lg: 1.125rem;     /* 18px */
+  --size-xl: 1.25rem;      /* 20px */
+  --size-2xl: 1.5rem;      /* 24px */
+}
+
+.dark {
+  /* Dark Mode values */
+  --background: #111418;
+  --foreground: #f0f2f5;
+  --primary-sage: #8ba895;
+  --accent-slate: #475569;
+  --accent-sand: #d4d4d8;
+  --glass-bg: rgba(255, 255, 255, 0.02);
+  --glass-bg-solid: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.04);
+  --orb-sage-color: rgba(139, 168, 149, 0.12);
+  --orb-slate-color: rgba(71, 85, 105, 0.08);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.05);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.1);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-sage: var(--primary-sage);
+  --color-slate-muted: var(--accent-slate);
+  
+  --font-serif: var(--font-fraunces);
+  --font-sans: var(--font-plus-jakarta);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-glass: 0.5rem;
+  --radius-glass-sm: 0.25rem;
+
+  /* Responsive Tailwind font utilities */
+  --text-xs: var(--size-xs);
+  --text-sm: var(--size-sm);
+  --text-base: var(--size-base);
+  --text-lg: var(--size-lg);
+  --text-xl: var(--size-xl);
+  --text-2xl: var(--size-2xl);
+}
+
+
+@layer base {
+  body {
+    @apply bg-background text-foreground selection:bg-sage/30 selection:text-white antialiased font-sans;
+    font-size: var(--size-base);
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+    line-height: 1.2;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)];
+  }
+
+  .glass-panel-hover {
+    @apply hover:bg-[var(--glass-highlight)] hover:border-white/15 transition-all duration-700;
+  }
+
+  .text-glow-sage {
+    text-shadow: none;
+  }
+
+  .bg-orb-sage {
+    background: radial-gradient(circle at center, var(--orb-sage-color) 0%, transparent 70%);
+  }
+
+  .bg-orb-slate {
+    background: radial-gradient(circle at center, var(--orb-slate-color) 0%, transparent 70%);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+

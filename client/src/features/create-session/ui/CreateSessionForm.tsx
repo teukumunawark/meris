@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import imageCompression from "browser-image-compression";
+import { Button } from "@/shared/ui/Button";
+import { Input } from "@/shared/ui/Input";
+import { apiFetch } from "@/shared/api/client";
 
 export default function CreateSessionForm() {
   const router = useRouter();
@@ -38,54 +41,40 @@ export default function CreateSessionForm() {
         formData.append("payerBankName", payerBankName.trim());
         formData.append("payerBankAccount", payerBankAccount.trim());
 
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-        const response = await fetch(`${backendUrl}/session`, {
+        const data = await apiFetch<any>("/session", {
           method: "POST",
           body: formData,
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          localStorage.setItem("meris_username", payerName.trim());
-          if (data.payerToken) {
-            localStorage.setItem(
-              `meris_session_${data.id}_participant`,
-              JSON.stringify({
-                id: data.payerId,
-                name: payerName.trim(),
-                token: data.payerToken,
-              })
-            );
-          }
-          router.push(`/session/${data.id}`);
-        } else {
-          const text = await response.text();
-          console.error("Upload failed:", text);
-          
-          let friendlyMsg = "An unexpected error occurred while processing the receipt. Please try again.";
-          if (response.status === 429) {
-            try {
-              const data = JSON.parse(text);
-              friendlyMsg = data.message || "Too many requests. Please try again later.";
-            } catch {
-              friendlyMsg = "You have exceeded the session creation limit (5 sessions per 8 hours). Please try again later.";
-            }
-          } else if (text.includes("401") || text.includes("Invalid API Key") || text.includes("invalid_key")) {
-            friendlyMsg = "The receipt scanning service is temporarily unavailable. Please try again later.";
-          } else if (text.includes("AI extraction failed")) {
-            friendlyMsg = "We couldn't parse the receipt details. Please make sure the photo is clear and contains readable items.";
-          } else if (text.includes("Failed to save session")) {
-            friendlyMsg = "We couldn't create the split bill session. Please try again later.";
-          } else if (text.includes("Invalid receipt image") || text.includes("Failed to read image")) {
-            friendlyMsg = "The uploaded file is not a valid image. Please choose another photo.";
-          }
-          
-          setErrorMsg(friendlyMsg);
-          setIsUploading(false);
+        localStorage.setItem("meris_username", payerName.trim());
+        if (data.payerToken) {
+          localStorage.setItem(
+            `meris_session_${data.id}_participant`,
+            JSON.stringify({
+              id: data.payerId,
+              name: payerName.trim(),
+              token: data.payerToken,
+            })
+          );
         }
-      } catch (error) {
-        console.error("Error compressing/uploading image:", error);
-        setErrorMsg("Unable to connect to the server. Please check your network connection and try again.");
+        router.push(`/session/${data.id}`);
+      } catch (err: any) {
+        console.error("Upload failed:", err);
+        
+        let friendlyMsg = err.message || "An unexpected error occurred while processing the receipt. Please try again.";
+        const status = err.status;
+
+        if (status === 429) {
+          friendlyMsg = err.data?.message || "You have exceeded the session creation limit (5 sessions per 8 hours). Please try again later.";
+        } else if (status === 401) {
+          friendlyMsg = "The receipt scanning service is temporarily unavailable. Please try again later.";
+        } else if (friendlyMsg.includes("AI extraction failed")) {
+          friendlyMsg = "We couldn't parse the receipt details. Please make sure the photo is clear and contains readable items.";
+        } else if (friendlyMsg.includes("Invalid receipt image") || friendlyMsg.includes("Failed to read image")) {
+          friendlyMsg = "The uploaded file is not a valid image. Please choose another photo.";
+        }
+        
+        setErrorMsg(friendlyMsg);
         setIsUploading(false);
       }
     }
@@ -94,27 +83,27 @@ export default function CreateSessionForm() {
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <input 
+        <Input 
           type="text" 
           value={payerName}
           onChange={(e) => setPayerName(e.target.value)}
           placeholder="Your Name (Payer)" 
-          className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 font-sans text-sm transition-colors focus:outline-none"
+          className="w-full"
         />
         <div className="grid grid-cols-[2.5fr_3.5fr] gap-3">
-          <input 
+          <Input 
             type="text" 
             value={payerBankName}
             onChange={(e) => setPayerBankName(e.target.value)}
             placeholder="Bank (e.g., BCA)" 
-            className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 font-sans text-sm transition-colors focus:outline-none"
+            className="w-full"
           />
-          <input 
+          <Input 
             type="text" 
             value={payerBankAccount}
             onChange={(e) => setPayerBankAccount(e.target.value)}
             placeholder="Account No / Phone" 
-            className="rounded-glass-sm text-foreground placeholder:text-foreground/20 focus:border-sage/40 w-full border border-white/5 bg-white/2 px-4 py-3 font-sans text-sm transition-colors focus:outline-none"
+            className="w-full"
           />
         </div>
       </div>
@@ -132,7 +121,7 @@ export default function CreateSessionForm() {
             onChange={handleFileUpload}
             disabled={isUploading}
           />
-          <div className={`w-full border border-dashed ${isUploading ? "border-sage/50 bg-sage/5" : "group-hover/upload:border-sage/30 group-hover/upload:bg-sage/2 border-white/10 bg-white/1"} rounded-glass-sm flex flex-col items-center gap-3 p-8 transition-all duration-300`}>
+          <div className={`w-full border border-dashed ${isUploading ? "border-sage/50 bg-sage/5" : "group-hover/upload:border-sage/30 group-hover/upload:bg-sage/2 border-[var(--glass-border)] bg-[var(--glass-bg)]"} rounded-glass-sm flex flex-col items-center gap-3 p-8 transition-all duration-300`}>
             <div className={`bg-sage/10 text-sage flex h-12 w-12 items-center justify-center rounded-full ${!isUploading && "group-hover/upload:scale-105"} transition-transform duration-300`}>
               {isUploading ? (
                 <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

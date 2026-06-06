@@ -24,7 +24,7 @@ func Init(ctx context.Context, serviceName, otlpEndpoint string) (func(context.C
 	}
 
 	if otlpEndpoint == "" {
-		otlpEndpoint = "alloy:4317"
+		otlpEndpoint = "localhost:4317"
 	}
 
 	exporter, err := otlptracegrpc.New(ctx,
