@@ -11,6 +11,7 @@ import (
 
 func RegisterSystemRoutes(r chi.Router, hub *sse.Hub) {
 	r.Get("/healthz", healthz)
+	r.Get("/health", healthz)
 	r.Handle("/metrics", promhttp.Handler())
 	if hub != nil {
 		r.HandleFunc("/stream", hub.StreamHandler)
