@@ -107,7 +107,7 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
       </header>
 
       {/* Main Layout */}
-      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-4 sm:gap-12 sm:px-10 sm:pt-8 sm:pb-8">
+      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-4 sm:gap-12 sm:px-10 sm:pt-8 sm:pb-8">
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-8">
             <ClaimBoard />

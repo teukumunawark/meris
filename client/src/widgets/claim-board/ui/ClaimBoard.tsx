@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ItemCard } from "@/entities/item";
 import { useSession } from "@/entities/session";
 import { useJoinSession } from "@/features/join-session";
@@ -11,6 +12,7 @@ import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { Input } from "@/shared/ui/Input";
 import { formatRupiah, getInitials } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
+import { useOnboarding } from "@/shared/hooks";
 
 export default function ClaimBoard() {
   const { sessionId, isJoined, userName, setUserName, items, payerName } = useSession();
@@ -18,6 +20,7 @@ export default function ClaimBoard() {
   const { updateClaim } = useClaimItem();
   const { renameItem } = useRenameItem();
   const { addItem } = useManageItems();
+  const { showJoinHint, showClaimHint, completeJoinHint, completeClaimHint } = useOnboarding();
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [copyCodeSuccess, setCopyCodeSuccess] = useState<boolean>(false);
@@ -26,6 +29,12 @@ export default function ClaimBoard() {
   const [newItemPrice, setNewItemPrice] = useState("");
   const [newItemQty, setNewItemQty] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (isJoined) {
+      completeJoinHint();
+    }
+  }, [isJoined, completeJoinHint]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -73,8 +82,53 @@ export default function ClaimBoard() {
 
   const isPayer = isJoined && userName.trim().toLowerCase() === payerName.trim().toLowerCase();
 
+  const firstUnclaimedItem = items.find(item => item.quantity > item.claims.reduce((s, c) => s + c.shares, 0));
+  const firstUnclaimedId = firstUnclaimedItem?.id;
+
+  const isShowJoinSpotlight = !isJoined && showJoinHint;
+  const isShowClaimSpotlight = isJoined && showClaimHint && firstUnclaimedId !== undefined;
+  const isSpotlightActive = isShowJoinSpotlight || isShowClaimSpotlight;
+
+  const mobileInputRef = React.useRef<HTMLInputElement>(null);
+  const desktopInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isShowJoinSpotlight) {
+      setTimeout(() => {
+        // Try focusing both (the hidden one will be ignored by the browser, or offsetParent check ensures we target the right one)
+        if (mobileInputRef.current && mobileInputRef.current.offsetParent !== null) {
+          mobileInputRef.current.focus();
+        } else if (desktopInputRef.current && desktopInputRef.current.offsetParent !== null) {
+          desktopInputRef.current.focus();
+        } else {
+           // Fallback if offsetParent check fails (e.g. in some headless setups), just try focusing both.
+           mobileInputRef.current?.focus();
+           desktopInputRef.current?.focus();
+        }
+      }, 500);
+    }
+  }, [isShowJoinSpotlight]);
+
   return (
     <div className="space-y-8 sm:space-y-12">
+      {/* Cinematic Spotlight Backdrop */}
+      <AnimatePresence>
+        {isSpotlightActive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            onClick={() => {
+              completeJoinHint();
+              completeClaimHint();
+            }}
+            className="fixed top-0 left-0 w-[100vw] h-[100dvh] z-40 bg-black/60 backdrop-blur-sm cursor-pointer pointer-events-auto"
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Mobile Header Title & Code Card */}
       <section className="flex flex-col gap-4 md:hidden">
         <div className="space-y-3">
@@ -82,7 +136,7 @@ export default function ClaimBoard() {
             Reviewing the <span className="text-sage font-sans font-light">Meris</span>
           </h1>
         </div>
-        <GlassPanel className="space-y-4 p-5">
+        <GlassPanel className={`space-y-4 p-5 transition-all duration-700 ${isShowJoinSpotlight ? 'relative z-50 bg-[var(--glass-bg-solid)]' : ''}`}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <span className="text-foreground/40 shrink-0 font-mono text-[10px] tracking-wider uppercase">Code:</span>
@@ -135,29 +189,43 @@ export default function ClaimBoard() {
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <p className="text-foreground/30 text-[10px] font-bold tracking-wider uppercase">Who are you?</p>
-              <div className="flex items-stretch gap-2">
-                <Input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Guest Name"
-                  maxLength={20}
-                  className="px-3 py-2 text-xs"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") joinSession(userName);
-                  }}
-                />
-                <Button
-                  onClick={() => joinSession(userName)}
-                  className="px-4 py-2 text-xs"
-                >
-                  Join
-                </Button>
+            <div className={`relative flex flex-col gap-4 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
+              {/* Premium Floating Badge Hint */}
+              {isShowJoinSpotlight && (
+                <div className="absolute -top-6 -right-2 z-20 animate-[bounce_2s_infinite]">
+                  <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M19 12l-7 7-7-7"/></svg>
+                    Start Here
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
+                <div className="relative group/join flex items-end gap-3 mt-1">
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Enter Guest Name..."
+                    maxLength={20}
+                    className="w-full bg-transparent font-serif text-2xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/20 focus:border-sage pb-1.5 transition-colors"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") joinSession(userName);
+                    }}
+                    autoFocus={isShowJoinSpotlight}
+                  />
+                  <button
+                    onClick={() => joinSession(userName)}
+                    disabled={!userName.trim()}
+                    className="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition-all hover:bg-sage active:scale-95 disabled:opacity-30 cursor-pointer shadow-md"
+                    aria-label="Join Session"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
               </div>
               {joinError && (
-                <p className="mt-1 font-sans text-[10px] text-rose-400">{joinError}</p>
+                <p className="font-sans text-[10px] text-rose-400">{joinError}</p>
               )}
             </div>
           )}
@@ -165,7 +233,8 @@ export default function ClaimBoard() {
       </section>
 
       {/* Desktop Header Banner */}
-      <GlassPanel className="hidden p-8 md:block">
+      <GlassPanel className={`hidden p-8 md:block transition-all duration-700 ${isShowJoinSpotlight ? 'relative z-50 bg-(--glass-bg-solid)' : ''}`}>
+
         <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-96 w-96 opacity-10 blur-[150px]" />
         
         <div className="relative z-10 flex flex-col gap-6">
@@ -198,14 +267,14 @@ export default function ClaimBoard() {
             </Button>
           </div>
 
-          <div className="h-px w-full bg-[var(--glass-border)]" />
+          <div className="h-px w-full bg-(--glass-border)" />
 
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans text-sm">
             <div className="flex items-center gap-3">
               <span className="text-sage font-mono font-bold tracking-wider select-all">{shortenId(sessionId)}</span>
               <button
                 onClick={handleCopyCode}
-                className="text-foreground/40 hover:text-sage flex items-center gap-1 rounded-sm border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
+                className="text-foreground/40 hover:text-sage flex items-center gap-1 rounded-sm border border-(--glass-border) bg-(--glass-bg) px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                 title="Copy Session Code"
               >
                 {copyCodeSuccess ? (
@@ -227,7 +296,7 @@ export default function ClaimBoard() {
               </button>
             </div>
 
-            <div className="hidden h-4 w-px bg-[var(--glass-border)] md:block" />
+            <div className="hidden h-4 w-px bg-(--glass-border) md:block" />
 
             <div className="flex justify-start md:justify-end min-w-0">
               {isJoined ? (
@@ -250,27 +319,44 @@ export default function ClaimBoard() {
                   </button>
                 </div>
               ) : (
-                <div className="relative flex flex-row items-center gap-3">
-                  <span className="text-foreground/35 text-xs font-bold tracking-wider whitespace-nowrap uppercase">Who are you?</span>
-                  <Input
-                    type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Enter Guest Name"
-                    maxLength={20}
-                    className="w-36 sm:w-48 px-3.5 py-1.5 text-xs"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") joinSession(userName);
-                    }}
-                  />
-                  <Button
-                    onClick={() => joinSession(userName)}
-                    className="px-4 py-1.5 text-xs"
-                  >
-                    Join & Claim
-                  </Button>
+                <div className={`relative flex flex-col items-end gap-1 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
+                  {/* Premium Floating Badge Hint */}
+                  {isShowJoinSpotlight && (
+                    <div className="absolute -top-6 -right-0.5 z-20 animate-[bounce_2s_infinite]">
+                      <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M19 12l-7 7-7-7"/></svg>
+                        Start Here
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex flex-row items-end gap-4 min-w-[320px]">
+                    <div className="flex flex-col gap-1 flex-1">
+                      <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
+                      <input
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="Enter Guest Name..."
+                        maxLength={20}
+                        className="w-full bg-transparent font-serif text-2xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/20 focus:border-sage pb-1.5 transition-colors"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") joinSession(userName);
+                        }}
+                        autoFocus={isShowJoinSpotlight}
+                      />
+                    </div>
+                    <button
+                      onClick={() => joinSession(userName)}
+                      disabled={!userName.trim()}
+                      className="flex shrink-0 h-10 px-6 items-center justify-center rounded-full bg-foreground text-background transition-all hover:bg-sage active:scale-95 disabled:opacity-30 cursor-pointer shadow-md text-[10px] font-bold tracking-[0.2em] uppercase whitespace-nowrap"
+                      aria-label="Join Session"
+                    >
+                      Join
+                      <svg className="ml-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                  </div>
                   {joinError && (
-                    <p className="absolute right-0 -bottom-5.5 font-sans text-[10px] text-rose-400">{joinError}</p>
+                    <p className="absolute right-0 -bottom-5 font-sans text-[10px] text-rose-400 whitespace-nowrap">{joinError}</p>
                   )}
                 </div>
               )}
@@ -319,7 +405,7 @@ export default function ClaimBoard() {
       </section>
 
       {/* Inventory Items List */}
-      <div className="space-y-4 sm:space-y-6">
+      <div className={`space-y-4 sm:space-y-6 transition-all duration-700 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
         <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
           <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Inventory</h2>
           <div className="flex items-center gap-4">
@@ -422,6 +508,9 @@ export default function ClaimBoard() {
                 isJoined={isJoined}
                 userName={userName}
                 isPayer={isPayer}
+                showClaimHint={showClaimHint}
+                isFirstUnclaimed={item.id === firstUnclaimedId}
+                onInteraction={completeClaimHint}
                 onUpdateClaim={updateClaim}
                 onRenameItem={renameItem}
               />
