@@ -190,3 +190,97 @@ func (h *Handler) DeleteParticipant(w http.ResponseWriter, r *http.Request, id s
 
 	w.WriteHeader(http.StatusOK)
 }
+
+func (h *Handler) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string) {
+	var payload struct {
+		PayerBankName    string `json:"payerBankName"`
+		PayerBankAccount string `json:"payerBankAccount"`
+		Token            string `json:"token"`
+	}
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
+	err := h.service.UpdatePaymentInfo(r.Context(), id, payload.PayerBankName, payload.PayerBankAccount, payload.Token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request, id string) {
+	var payload struct {
+		Name     string  `json:"name"`
+		Price    float64 `json:"price"`
+		Quantity int32   `json:"quantity"`
+		Token    string  `json:"token"`
+	}
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
+	err := h.service.AddItem(r.Context(), id, payload.Name, payload.Price, payload.Quantity, payload.Token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request, id string, itemId string) {
+	var payload struct {
+		Name     string  `json:"name"`
+		Price    float64 `json:"price"`
+		Quantity int32   `json:"quantity"`
+		Token    string  `json:"token"`
+	}
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
+	err := h.service.UpdateItem(r.Context(), id, itemId, payload.Name, payload.Price, payload.Quantity, payload.Token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params generated.DeleteItemParams) {
+	token := params.Token
+	if token == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		return
+	}
+
+	err := h.service.DeleteItem(r.Context(), id, itemId, token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

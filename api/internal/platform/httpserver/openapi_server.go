@@ -38,3 +38,19 @@ func (s *OpenAPIServer) RenameItem(w http.ResponseWriter, r *http.Request, id st
 func (s *OpenAPIServer) DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params generated.DeleteParticipantParams) {
 	s.sessionHandler.DeleteParticipant(w, r, id, participantId, params)
 }
+
+func (s *OpenAPIServer) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string) {
+	s.sessionHandler.UpdatePaymentInfo(w, r, id)
+}
+
+func (s *OpenAPIServer) AddItem(w http.ResponseWriter, r *http.Request, id string) {
+	s.sessionHandler.AddItem(w, r, id)
+}
+
+func (s *OpenAPIServer) UpdateItem(w http.ResponseWriter, r *http.Request, id string, itemId string) {
+	s.sessionHandler.UpdateItem(w, r, id, itemId)
+}
+
+func (s *OpenAPIServer) DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params generated.DeleteItemParams) {
+	s.sessionHandler.DeleteItem(w, r, id, itemId, params)
+}

@@ -119,6 +119,20 @@ func (q *Queries) DeleteClaim(ctx context.Context, arg DeleteClaimParams) error 
 	return err
 }
 
+const deleteItem = `-- name: DeleteItem :exec
+DELETE FROM items WHERE id = $1 AND session_id = $2
+`
+
+type DeleteItemParams struct {
+	ID        string `db:"id" json:"id"`
+	SessionID string `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) DeleteItem(ctx context.Context, arg DeleteItemParams) error {
+	_, err := q.db.Exec(ctx, deleteItem, arg.ID, arg.SessionID)
+	return err
+}
+
 const deleteParticipant = `-- name: DeleteParticipant :exec
 DELETE FROM participants WHERE id = $1 AND session_id = $2
 `
@@ -364,6 +378,30 @@ func (q *Queries) UpdateClaimShares(ctx context.Context, arg UpdateClaimSharesPa
 	return err
 }
 
+const updateItem = `-- name: UpdateItem :exec
+UPDATE items SET name = $1, price = $2, quantity = $3 
+WHERE id = $4 AND session_id = $5
+`
+
+type UpdateItemParams struct {
+	Name      string  `db:"name" json:"name"`
+	Price     float64 `db:"price" json:"price"`
+	Quantity  int32   `db:"quantity" json:"quantity"`
+	ID        string  `db:"id" json:"id"`
+	SessionID string  `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
+	_, err := q.db.Exec(ctx, updateItem,
+		arg.Name,
+		arg.Price,
+		arg.Quantity,
+		arg.ID,
+		arg.SessionID,
+	)
+	return err
+}
+
 const updateItemName = `-- name: UpdateItemName :exec
 UPDATE items SET name = $1 WHERE id = $2 AND session_id = $3
 `
@@ -376,5 +414,22 @@ type UpdateItemNameParams struct {
 
 func (q *Queries) UpdateItemName(ctx context.Context, arg UpdateItemNameParams) error {
 	_, err := q.db.Exec(ctx, updateItemName, arg.Name, arg.ID, arg.SessionID)
+	return err
+}
+
+const updateSessionPaymentInfo = `-- name: UpdateSessionPaymentInfo :exec
+UPDATE sessions 
+SET payer_bank_name = $1, payer_bank_account = $2 
+WHERE id = $3
+`
+
+type UpdateSessionPaymentInfoParams struct {
+	PayerBankName    string `db:"payer_bank_name" json:"payer_bank_name"`
+	PayerBankAccount string `db:"payer_bank_account" json:"payer_bank_account"`
+	ID               string `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateSessionPaymentInfo(ctx context.Context, arg UpdateSessionPaymentInfoParams) error {
+	_, err := q.db.Exec(ctx, updateSessionPaymentInfo, arg.PayerBankName, arg.PayerBankAccount, arg.ID)
 	return err
 }

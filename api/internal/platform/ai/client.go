@@ -81,6 +81,7 @@ type MiMoRequest struct {
 	Messages       []MiMoMessage       `json:"messages"`
 	ResponseFormat *MiMoResponseFormat  `json:"response_format,omitempty"`
 	Temperature    float64             `json:"temperature"`
+	Stream         bool                `json:"stream"`
 }
 
 type MiMoResponseFormat struct {
@@ -134,7 +135,8 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
 
-	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n3. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent."
+	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Do NOT use decimal points for thousands separators (e.g., 14.000 on an Indonesian receipt must be output as 14000).\n3. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n4. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent."
+
 
 	schema := map[string]interface{}{
 		"type": "object",
@@ -193,6 +195,7 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("api-key", apiKey)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

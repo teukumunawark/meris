@@ -118,6 +118,99 @@ paths:
       responses:
         '200':
           description: Claim registered
+  /session/{id}/item:
+    post:
+      summary: Add a new item to the session
+      operationId: AddItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                quantity:
+                  type: integer
+                token:
+                  type: string
+              required:
+                - name
+                - price
+                - quantity
+                - token
+      responses:
+        '201':
+          description: Item added
+  /session/{id}/item/{itemId}:
+    put:
+      summary: Update an existing item (price, quantity, name)
+      operationId: UpdateItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                quantity:
+                  type: integer
+                token:
+                  type: string
+              required:
+                - name
+                - price
+                - quantity
+                - token
+      responses:
+        '200':
+          description: Item updated
+    delete:
+      summary: Delete an item from the session
+      operationId: DeleteItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item deleted
   /session/{id}/item/{itemId}/rename:
     put:
       summary: Rename a specific item in the session
@@ -170,6 +263,36 @@ paths:
       responses:
         '200':
           description: Participant deleted
+  /session/{id}/payment-info:
+    put:
+      summary: Update payment information for a session
+      operationId: UpdatePaymentInfo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payerBankName:
+                  type: string
+                payerBankAccount:
+                  type: string
+                token:
+                  type: string
+              required:
+                - payerBankName
+                - payerBankAccount
+                - token
+      responses:
+        '200':
+          description: Payment information updated
 components:
   schemas:
     SessionCreationResponse:

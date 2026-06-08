@@ -18,6 +18,13 @@ SELECT * FROM items WHERE session_id = $1;
 -- name: UpdateItemName :exec
 UPDATE items SET name = $1 WHERE id = $2 AND session_id = $3;
 
+-- name: UpdateItem :exec
+UPDATE items SET name = $1, price = $2, quantity = $3 
+WHERE id = $4 AND session_id = $5;
+
+-- name: DeleteItem :exec
+DELETE FROM items WHERE id = $1 AND session_id = $2;
+
 -- name: CreateParticipant :one
 INSERT INTO participants (session_id, name, token)
 VALUES ($1, $2, $3)
@@ -58,3 +65,8 @@ WHERE p.session_id = $1;
 SELECT COALESCE(SUM(shares), 0.0)::DOUBLE PRECISION
 FROM claims
 WHERE item_id = $1 AND participant_id != $2;
+
+-- name: UpdateSessionPaymentInfo :exec
+UPDATE sessions 
+SET payer_bank_name = $1, payer_bank_account = $2 
+WHERE id = $3;

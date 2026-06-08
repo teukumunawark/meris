@@ -2,8 +2,6 @@ package session
 
 import "errors"
 
-// Domain sentinel errors for the session module.
-// Use errors.Is for comparisons — never string-match these.
 var (
 	// ErrUnauthorized is returned when a token does not match the expected participant.
 	ErrUnauthorized = errors.New("unauthorized")

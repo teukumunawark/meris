@@ -96,7 +96,7 @@ func main() {
 
 	server := httpserver.New(
 		cfg.HTTP.Addr,
-		5*time.Second, // ReadHeaderTimeout
+		5*time.Second,
 		cfg.HTTP.ReadTimeout,
 		cfg.HTTP.WriteTimeout,
 		cfg.HTTP.IdleTimeout,

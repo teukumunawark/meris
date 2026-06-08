@@ -30,7 +30,6 @@ type ChatRequest struct {
 }
 
 func main() {
-	// Retrieve API key from environment variable
 	apiKey := os.Getenv("DEEPSEEK_API_KEY")
 	if apiKey == "" {
 		fmt.Println("Error: DEEPSEEK_API_KEY environment variable is not set.")
@@ -44,7 +43,6 @@ func main() {
 
 	fmt.Printf("Testing model: %s\n", model)
 
-	// Send a dummy 1x1 pixel base64 image as input
 	dummyImageBase64 := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 	payload := ChatRequest{

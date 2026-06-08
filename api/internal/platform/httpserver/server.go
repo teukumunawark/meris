@@ -8,14 +8,12 @@ import (
 	"time"
 )
 
-// Server wraps the standard http.Server with structured lifecycle management.
 type Server struct {
 	httpServer      *http.Server
 	logger          *slog.Logger
 	shutdownTimeout time.Duration
 }
 
-// New creates a new Server instance ready to serve.
 func New(
 	addr string,
 	readHeaderTimeout time.Duration,
@@ -40,7 +38,6 @@ func New(
 	}
 }
 
-// Run starts the server and blocks until ctx is cancelled, then gracefully shuts down.
 func (s *Server) Run(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()

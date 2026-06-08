@@ -152,7 +152,6 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 
 func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID uint, itemID string, shares float64, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
-		// Pessimistic lock the session to serialize concurrent mutations
 		_, err := q.GetSessionForUpdate(ctx, sessionID)
 		if err != nil {
 			return err
@@ -188,7 +187,6 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			return ErrItemNotFound
 		}
 
-		// If shares is 0 or less, delete the claim if it exists
 		if shares <= 0 {
 			_, err = q.GetClaimByItemAndParticipant(ctx, sqlc.GetClaimByItemAndParticipantParams{
 				ItemID:        itemID,
@@ -266,7 +264,6 @@ func (s *Service) RenameItem(ctx context.Context, sessionID, itemID, newName str
 
 func (s *Service) DeleteParticipant(ctx context.Context, sessionID string, targetParticipantID uint, callerToken string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
-		// Pessimistic lock the session to serialize concurrent mutations
 		_, err := q.GetSessionForUpdate(ctx, sessionID)
 		if err != nil {
 			return err
@@ -309,6 +306,165 @@ func (s *Service) DeleteParticipant(ctx context.Context, sessionID string, targe
 	return nil
 }
 
+func (s *Service) UpdatePaymentInfo(ctx context.Context, sessionID string, bankName, bankAccount, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		_, err := q.GetSessionForUpdate(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		session, err := q.GetSession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      session.PayerName,
+		})
+		if err != nil {
+			return err
+		}
+
+		if payer.Token != token {
+			return ErrUnauthorized
+		}
+
+		return q.UpdateSessionPaymentInfo(ctx, sqlc.UpdateSessionPaymentInfoParams{
+			PayerBankName:    bankName,
+			PayerBankAccount: bankAccount,
+			ID:               sessionID,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) AddItem(ctx context.Context, sessionID string, name string, price float64, quantity int32, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		_, err := q.GetSessionForUpdate(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		session, err := q.GetSession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      session.PayerName,
+		})
+		if err != nil {
+			return err
+		}
+
+		if payer.Token != token {
+			return ErrUnauthorized
+		}
+
+		return q.CreateItem(ctx, sqlc.CreateItemParams{
+			ID:        uuid.New().String(),
+			SessionID: sessionID,
+			Name:      name,
+			Price:     price,
+			Quantity:  quantity,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) UpdateItem(ctx context.Context, sessionID string, itemID string, name string, price float64, quantity int32, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		_, err := q.GetSessionForUpdate(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		session, err := q.GetSession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      session.PayerName,
+		})
+		if err != nil {
+			return err
+		}
+
+		if payer.Token != token {
+			return ErrUnauthorized
+		}
+
+		return q.UpdateItem(ctx, sqlc.UpdateItemParams{
+			Name:      name,
+			Price:     price,
+			Quantity:  quantity,
+			ID:        itemID,
+			SessionID: sessionID,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) DeleteItem(ctx context.Context, sessionID string, itemID string, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		_, err := q.GetSessionForUpdate(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		session, err := q.GetSession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      session.PayerName,
+		})
+		if err != nil {
+			return err
+		}
+
+		if payer.Token != token {
+			return ErrUnauthorized
+		}
+
+		return q.DeleteItem(ctx, sqlc.DeleteItemParams{
+			ID:        itemID,
+			SessionID: sessionID,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
 func (s *Service) broadcastFullState(ctx context.Context, sessionID string) {
 	sessionData, err := s.GetCompiledSession(ctx, sessionID)
 	if err != nil {
@@ -329,19 +485,16 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		return CompiledSession{}, err
 	}
 
-	// Map participant ID to name
 	participantNameMap := make(map[int64]string)
 	for _, p := range participants {
 		participantNameMap[p.ID] = p.Name
 	}
 
-	// Calculate overall subtotal
 	var totalSubtotal float64
 	for _, it := range items {
 		totalSubtotal += it.Price * float64(it.Quantity)
 	}
 
-	// Build per-item claims index
 	itemClaimsMap := make(map[string][]CompiledClaim)
 	for _, c := range claims {
 		name := participantNameMap[c.ParticipantID]
@@ -354,13 +507,11 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		})
 	}
 
-	// Map items by ID for easy lookup
 	itemsMap := make(map[string]sqlc.Item)
 	for _, it := range items {
 		itemsMap[it.ID] = it
 	}
 
-	// Build per-participant claims index and calculate individual subtotal
 	participantClaimsMap := make(map[int64][]CompiledClaim)
 	participantSubtotalMap := make(map[int64]float64)
 	for _, c := range claims {

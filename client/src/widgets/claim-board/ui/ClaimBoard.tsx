@@ -10,15 +10,22 @@ import { Button } from "@/shared/ui/Button";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { Input } from "@/shared/ui/Input";
 import { formatRupiah, getInitials } from "@/shared/lib";
+import { useManageItems } from "@/features/manage-items";
 
 export default function ClaimBoard() {
-  const { sessionId, isJoined, userName, setUserName, items } = useSession();
+  const { sessionId, isJoined, userName, setUserName, items, payerName } = useSession();
   const { joinSession, changeName, joinError } = useJoinSession();
   const { updateClaim } = useClaimItem();
   const { renameItem } = useRenameItem();
+  const { addItem } = useManageItems();
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [copyCodeSuccess, setCopyCodeSuccess] = useState<boolean>(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemQty, setNewItemQty] = useState("1");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -41,12 +48,30 @@ export default function ClaimBoard() {
     return `${id.slice(0, 6)}...${id.slice(-6)}`;
   };
 
+  const handleAddItem = async () => {
+    const price = parseFloat(newItemPrice);
+    const qty = parseInt(newItemQty);
+    if (!newItemName.trim() || isNaN(price) || isNaN(qty)) return;
+
+    setIsSaving(true);
+    const success = await addItem(newItemName.trim(), price, qty);
+    if (success) {
+      setIsAdding(false);
+      setNewItemName("");
+      setNewItemPrice("");
+      setNewItemQty("1");
+    }
+    setIsSaving(false);
+  };
+
   const totalSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalClaimedSubtotal = items.reduce((sum, item) => {
     const claimedShares = item.claims.reduce((s, c) => s + c.shares, 0);
     return sum + item.price * claimedShares;
   }, 0);
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
+
+  const isPayer = isJoined && userName.trim().toLowerCase() === payerName.trim().toLowerCase();
 
   return (
     <div className="space-y-8 sm:space-y-12">
@@ -294,24 +319,109 @@ export default function ClaimBoard() {
       </section>
 
       {/* Inventory Items List */}
-      <div className="space-y-6 sm:space-y-12">
-        <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-4 sm:pb-6">
-          <h2 className="text-foreground font-sans text-2xl font-normal tracking-tight sm:text-3xl md:text-4xl">Inventory</h2>
-          <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">{items.length} items</span>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
+          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Inventory</h2>
+          <div className="flex items-center gap-4">
+            {isPayer && (
+              <button
+                onClick={() => setIsAdding(true)}
+                className="text-sage hover:bg-sage/10 flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add Item
+              </button>
+            )}
+            <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">{items.length} items</span>
+          </div>
         </div>
 
-        {items.length === 0 ? (
+        {isAdding && (
+          <GlassPanel className="animate-in fade-in slide-in-from-top-4 p-5 sm:p-8 relative overflow-hidden">
+            <div className="from-sage/10 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-50" />
+            
+            <div className="relative z-10 flex-1 flex flex-col gap-5 sm:gap-8 py-2">
+              <div className="w-full relative group/input">
+                <input
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="New Item Name..."
+                  className="w-full bg-transparent font-sans text-xl sm:text-2xl md:text-3xl font-normal tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-dashed border-foreground/20 focus:border-sage focus:border-solid pb-1.5 transition-all"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
+                <div className="flex items-center gap-3 relative group/input">
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Qty</span>
+                  <input
+                    type="number"
+                    value={newItemQty}
+                    onChange={(e) => setNewItemQty(e.target.value)}
+                    placeholder="1"
+                    className="w-12 bg-transparent font-mono text-lg sm:text-xl text-foreground focus:outline-none border-b border-dashed border-foreground/20 focus:border-sage focus:border-solid pb-1 text-center transition-all"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-3 relative group/input">
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Price</span>
+                  <div className="flex items-center gap-1 border-b border-dashed border-foreground/20 focus-within:border-sage focus-within:border-solid pb-1 transition-all">
+                    <span className="text-foreground/40 font-mono text-lg sm:text-xl">Rp</span>
+                    <input
+                      type="number"
+                      value={newItemPrice}
+                      onChange={(e) => setNewItemPrice(e.target.value)}
+                      placeholder="0"
+                      className="w-24 sm:w-32 bg-transparent font-mono text-lg sm:text-xl text-foreground focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Total</span>
+                  <span className="text-sage text-glow-sage font-mono text-lg sm:text-xl font-bold">
+                    {formatRupiah((parseFloat(newItemPrice) || 0) * (parseInt(newItemQty) || 0))}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button 
+                  onClick={handleAddItem} 
+                  disabled={isSaving}
+                  className="bg-foreground text-background text-[10px] font-bold tracking-[0.2em] uppercase px-6 py-2.5 rounded-full hover:bg-sage hover:text-white transition-all active:scale-95 disabled:opacity-50 shadow-md cursor-pointer"
+                >
+                  {isSaving ? "Adding..." : "Add to Inventory"}
+                </button>
+                <button 
+                  onClick={() => setIsAdding(false)} 
+                  disabled={isSaving}
+                  className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/40 hover:text-foreground transition-colors px-4 py-2 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </GlassPanel>
+        )}
+
+
+        {items.length === 0 && !isAdding ? (
           <GlassPanel className="border-dashed border-[var(--glass-border)] p-12 text-center sm:p-24">
             <p className="text-foreground/20 font-sans text-lg font-normal tracking-wide sm:text-xl">No items have been uploaded yet.</p>
           </GlassPanel>
         ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:gap-8" role="list">
+          <ul className="grid grid-cols-1 gap-2.5 sm:gap-4" role="list">
             {items.map((item) => (
               <ItemCard
                 key={item.id}
                 item={item}
                 isJoined={isJoined}
                 userName={userName}
+                isPayer={isPayer}
                 onUpdateClaim={updateClaim}
                 onRenameItem={renameItem}
               />

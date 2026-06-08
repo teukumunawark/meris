@@ -95,14 +95,14 @@ export default function CreateSessionForm() {
             type="text" 
             value={payerBankName}
             onChange={(e) => setPayerBankName(e.target.value)}
-            placeholder="Bank (e.g., BCA)" 
+            placeholder="Bank (Optional)" 
             className="w-full"
           />
           <Input 
             type="text" 
             value={payerBankAccount}
             onChange={(e) => setPayerBankAccount(e.target.value)}
-            placeholder="Account No / Phone" 
+            placeholder="Account No (Optional)" 
             className="w-full"
           />
         </div>

@@ -8,13 +8,9 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
-// New initializes a logger decorated with the OpenTelemetry logging bridge (otelslog)
-// and a standard JSON/Text handler for console output.
 func New(env string) *slog.Logger {
-	// Create the OTel handler
 	otelHandler := otelslog.NewHandler("meris-api")
 
-	// Create a standard console handler
 	var consoleHandler slog.Handler
 	if env == "local" || env == "" {
 		consoleHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
@@ -22,7 +18,6 @@ func New(env string) *slog.Logger {
 		consoleHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 	}
 
-	// Use a multi-handler to send logs to both OTel and Console
 	return slog.New(&multiHandler{
 		handlers: []slog.Handler{otelHandler, consoleHandler},
 	})

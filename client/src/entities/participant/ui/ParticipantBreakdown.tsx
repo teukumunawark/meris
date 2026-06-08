@@ -39,7 +39,7 @@ export default function ParticipantBreakdown({
       <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-48 w-48 opacity-10 blur-[100px]" />
       
       <div className="relative z-10 flex items-center justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
-        <h2 className="text-foreground font-sans text-xl font-normal sm:text-2xl">Breakdown</h2>
+        <h2 className="text-foreground font-sans text-lg font-normal sm:text-xl">Breakdown</h2>
         <span className="text-foreground/20 text-[9px] font-bold tracking-[0.2em] uppercase sm:text-[10px] sm:tracking-[0.4em]">{participants.length} Active</span>
       </div>
 

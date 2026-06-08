@@ -105,6 +105,27 @@ type ClaimItemJSONBody struct {
 	Token         string  `json:"token"`
 }
 
+// AddItemJSONBody defines parameters for AddItem.
+type AddItemJSONBody struct {
+	Name     string  `json:"name"`
+	Price    float32 `json:"price"`
+	Quantity int     `json:"quantity"`
+	Token    string  `json:"token"`
+}
+
+// DeleteItemParams defines parameters for DeleteItem.
+type DeleteItemParams struct {
+	Token string `form:"token" json:"token"`
+}
+
+// UpdateItemJSONBody defines parameters for UpdateItem.
+type UpdateItemJSONBody struct {
+	Name     string  `json:"name"`
+	Price    float32 `json:"price"`
+	Quantity int     `json:"quantity"`
+	Token    string  `json:"token"`
+}
+
 // RenameItemJSONBody defines parameters for RenameItem.
 type RenameItemJSONBody struct {
 	Name string `json:"name"`
@@ -121,17 +142,33 @@ type DeleteParticipantParams struct {
 	Token string `form:"token" json:"token"`
 }
 
+// UpdatePaymentInfoJSONBody defines parameters for UpdatePaymentInfo.
+type UpdatePaymentInfoJSONBody struct {
+	PayerBankAccount string `json:"payerBankAccount"`
+	PayerBankName    string `json:"payerBankName"`
+	Token            string `json:"token"`
+}
+
 // CreateSessionMultipartRequestBody defines body for CreateSession for multipart/form-data ContentType.
 type CreateSessionMultipartRequestBody CreateSessionMultipartBody
 
 // ClaimItemJSONRequestBody defines body for ClaimItem for application/json ContentType.
 type ClaimItemJSONRequestBody ClaimItemJSONBody
 
+// AddItemJSONRequestBody defines body for AddItem for application/json ContentType.
+type AddItemJSONRequestBody AddItemJSONBody
+
+// UpdateItemJSONRequestBody defines body for UpdateItem for application/json ContentType.
+type UpdateItemJSONRequestBody UpdateItemJSONBody
+
 // RenameItemJSONRequestBody defines body for RenameItem for application/json ContentType.
 type RenameItemJSONRequestBody RenameItemJSONBody
 
 // JoinSessionJSONRequestBody defines body for JoinSession for application/json ContentType.
 type JoinSessionJSONRequestBody JoinSessionJSONBody
+
+// UpdatePaymentInfoJSONRequestBody defines body for UpdatePaymentInfo for application/json ContentType.
+type UpdatePaymentInfoJSONRequestBody UpdatePaymentInfoJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -144,6 +181,15 @@ type ServerInterface interface {
 	// Claim or adjust share of a specific item
 	// (POST /session/{id}/claim)
 	ClaimItem(w http.ResponseWriter, r *http.Request, id string)
+	// Add a new item to the session
+	// (POST /session/{id}/item)
+	AddItem(w http.ResponseWriter, r *http.Request, id string)
+	// Delete an item from the session
+	// (DELETE /session/{id}/item/{itemId})
+	DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params DeleteItemParams)
+	// Update an existing item (price, quantity, name)
+	// (PUT /session/{id}/item/{itemId})
+	UpdateItem(w http.ResponseWriter, r *http.Request, id string, itemId string)
 	// Rename a specific item in the session
 	// (PUT /session/{id}/item/{itemId}/rename)
 	RenameItem(w http.ResponseWriter, r *http.Request, id string, itemId string)
@@ -153,6 +199,9 @@ type ServerInterface interface {
 	// Delete a participant from a session
 	// (DELETE /session/{id}/participant/{participantId})
 	DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params DeleteParticipantParams)
+	// Update payment information for a session
+	// (PUT /session/{id}/payment-info)
+	UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -177,6 +226,24 @@ func (_ Unimplemented) ClaimItem(w http.ResponseWriter, r *http.Request, id stri
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Add a new item to the session
+// (POST /session/{id}/item)
+func (_ Unimplemented) AddItem(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete an item from the session
+// (DELETE /session/{id}/item/{itemId})
+func (_ Unimplemented) DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params DeleteItemParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update an existing item (price, quantity, name)
+// (PUT /session/{id}/item/{itemId})
+func (_ Unimplemented) UpdateItem(w http.ResponseWriter, r *http.Request, id string, itemId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Rename a specific item in the session
 // (PUT /session/{id}/item/{itemId}/rename)
 func (_ Unimplemented) RenameItem(w http.ResponseWriter, r *http.Request, id string, itemId string) {
@@ -192,6 +259,12 @@ func (_ Unimplemented) JoinSession(w http.ResponseWriter, r *http.Request, id st
 // Delete a participant from a session
 // (DELETE /session/{id}/participant/{participantId})
 func (_ Unimplemented) DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params DeleteParticipantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update payment information for a session
+// (PUT /session/{id}/payment-info)
+func (_ Unimplemented) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -261,6 +334,118 @@ func (siw *ServerInterfaceWrapper) ClaimItem(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ClaimItem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddItem operation middleware
+func (siw *ServerInterfaceWrapper) AddItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddItem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteItem operation middleware
+func (siw *ServerInterfaceWrapper) DeleteItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteItemParams
+
+	// ------------- Required query parameter "token" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "token", r.URL.Query(), &params.Token, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "token"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteItem(w, r, id, itemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateItem operation middleware
+func (siw *ServerInterfaceWrapper) UpdateItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateItem(w, r, id, itemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -373,6 +558,32 @@ func (siw *ServerInterfaceWrapper) DeleteParticipant(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteParticipant(w, r, id, participantId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePaymentInfo operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePaymentInfo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -505,6 +716,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/session/{id}/claim", wrapper.ClaimItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/session/{id}/item", wrapper.AddItem)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/session/{id}/item/{itemId}", wrapper.DeleteItem)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/session/{id}/item/{itemId}", wrapper.UpdateItem)
+	})
+	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/session/{id}/item/{itemId}/rename", wrapper.RenameItem)
 	})
 	r.Group(func(r chi.Router) {
@@ -512,6 +732,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/session/{id}/participant/{participantId}", wrapper.DeleteParticipant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/session/{id}/payment-info", wrapper.UpdatePaymentInfo)
 	})
 
 	return r
@@ -522,22 +745,25 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"VcBkvP2wiQUzujh2dLFe/xMAAP//",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

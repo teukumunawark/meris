@@ -35,7 +35,6 @@ func (r *Repository) GetQueries() *sqlc.Queries {
 	return sqlc.New(r.pool)
 }
 
-// FetchFullSession compiles all database rows into a cohesive Go struct matching OpenAPI specs
 func (r *Repository) FetchFullSession(ctx context.Context, sessionID string) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, []sqlc.GetClaimsBySessionRow, error) {
 	q := r.GetQueries()
 
