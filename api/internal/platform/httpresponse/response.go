@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	"meris-backend/internal/apperrors"
+	"meris-backend/internal/platform/i18n"
+
+	i18nPkg "github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 type ErrorBody struct {
@@ -37,3 +42,40 @@ func DecodeJSON(r *http.Request, target any) error {
 
 	return nil
 }
+
+func WriteLocalizedError(w http.ResponseWriter, r *http.Request, err error) {
+	localizer := i18n.GetLocalizer(r.Context())
+
+	var appErr *apperrors.AppError
+	if errors.As(err, &appErr) {
+		message := ""
+		if localizer != nil {
+			msg, locErr := localizer.Localize(&i18nPkg.LocalizeConfig{
+				MessageID:    appErr.Code,
+				TemplateData: appErr.Params,
+			})
+			if locErr == nil {
+				message = msg
+			}
+		}
+		if message == "" {
+			message = appErr.Error()
+		}
+
+		WriteError(w, appErr.HTTPStatus, appErr.Code, message)
+		return
+	}
+
+	// Fallback for generic unexpected errors
+	genericMsg := "An unexpected error occurred."
+	if localizer != nil {
+		msg, locErr := localizer.Localize(&i18nPkg.LocalizeConfig{
+			MessageID: "errors.internal_error",
+		})
+		if locErr == nil {
+			genericMsg = msg
+		}
+	}
+	WriteError(w, http.StatusInternalServerError, "errors.internal_error", genericMsg)
+}
+
