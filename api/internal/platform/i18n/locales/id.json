@@ -1,0 +1,20 @@
+{
+  "errors.unauthorized": {
+    "other": "Otorisasi gagal: token tidak sesuai dengan partisipan yang diharapkan."
+  },
+  "errors.name_conflict": {
+    "other": "Konflik: nama partisipan '{{.name}}' sudah terpakai di sesi ini."
+  },
+  "errors.quantity_exceeded": {
+    "other": "Permintaan tidak valid: klaim patungan melebihi kuantitas barang yang tersedia."
+  },
+  "errors.item_not_found": {
+    "other": "Tidak ditemukan: barang dengan ID '{{.itemId}}' tidak ditemukan."
+  },
+  "errors.session_not_found": {
+    "other": "Tidak ditemukan: sesi dengan ID '{{.sessionId}}' tidak ditemukan."
+  },
+  "errors.internal_error": {
+    "other": "Terjadi kesalahan internal. Silakan coba beberapa saat lagi."
+  }
+}
