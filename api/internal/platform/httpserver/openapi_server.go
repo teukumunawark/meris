@@ -55,18 +55,22 @@ func (s *OpenAPIServer) DeleteItem(w http.ResponseWriter, r *http.Request, id st
 	s.sessionHandler.DeleteItem(w, r, id, itemId, params)
 }
 
+// AddBill delegates to sessionHandler to extract receipt and add a new bill stop.
 func (s *OpenAPIServer) AddBill(w http.ResponseWriter, r *http.Request, id string) {
 	s.sessionHandler.AddBill(w, r, id)
 }
 
+// DeleteBill delegates to sessionHandler to remove a bill stop.
 func (s *OpenAPIServer) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
 	s.sessionHandler.DeleteBill(w, r, id, billId, params)
 }
 
+// UpdateBill delegates to sessionHandler to update metadata of an existing bill.
 func (s *OpenAPIServer) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
 	s.sessionHandler.UpdateBill(w, r, id, billId)
 }
 
+// UpdateParticipantBankInfo delegates to sessionHandler to update bank details for a participant.
 func (s *OpenAPIServer) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
 	s.sessionHandler.UpdateParticipantBankInfo(w, r, id, participantId)
 }

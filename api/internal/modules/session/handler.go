@@ -295,18 +295,122 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, id string, 
 }
 
 func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
+
+	file, _, err := r.FormFile("receipt")
+	if err != nil {
+		if err.Error() == "http: request body too large" || strings.Contains(err.Error(), "too large") {
+			httpresponse.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Upload size exceeded the 5MB limit")
+			return
+		}
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_file", "Invalid receipt image")
+		return
+	}
+	defer file.Close()
+
+	payerName := r.FormValue("payerName")
+	billName := r.FormValue("name")
+	token := r.FormValue("token")
+
+	imageBytes, err := io.ReadAll(file)
+	if err != nil {
+		httpresponse.WriteError(w, http.StatusInternalServerError, "read_failed", "Failed to read image")
+		return
+	}
+
+	contentType := http.DetectContentType(imageBytes)
+	if !strings.HasPrefix(contentType, "image/") {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_content_type", "Uploaded file must be a valid image")
+		return
+	}
+
+	err = h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *Handler) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
-	w.WriteHeader(http.StatusNotImplemented)
+	token := params.Token
+	if token == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		return
+	}
+
+	err := h.service.DeleteBill(r.Context(), id, billId, token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	var payload struct {
+		PayerName     string  `json:"payerName"`
+		Name          string  `json:"name"`
+		Tax           float64 `json:"tax"`
+		ServiceCharge float64 `json:"serviceCharge"`
+		GrandTotal    float64 `json:"grandTotal"`
+		Token         string  `json:"token"`
+	}
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
+	err := h.service.UpdateBill(r.Context(), id, billId, payload.Name, payload.PayerName, payload.Tax, payload.ServiceCharge, payload.GrandTotal, payload.Token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	pID, err := strconv.ParseInt(participantId, 10, 64)
+	if err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_id", "Invalid participant ID")
+		return
+	}
+
+	var payload struct {
+		BankName    string `json:"bankName"`
+		BankAccount string `json:"bankAccount"`
+		Token       string `json:"token"`
+	}
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
+	err = h.service.UpdateParticipantBankInfo(r.Context(), id, pID, payload.BankName, payload.BankAccount, payload.Token)
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+		} else {
+			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 

@@ -29,12 +29,16 @@ func SimplifyDebts(balances map[string]float64) []Transfer {
 		}
 	}
 
-	// Sort descending using modern slices package
 	slices.SortFunc(debtors, func(a, b DebtNodeInt) int {
 		if b.Balance > a.Balance {
 			return 1
 		} else if b.Balance < a.Balance {
 			return -1
+		}
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
 		}
 		return 0
 	})
@@ -43,6 +47,11 @@ func SimplifyDebts(balances map[string]float64) []Transfer {
 			return 1
 		} else if b.Balance < a.Balance {
 			return -1
+		}
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
 		}
 		return 0
 	})

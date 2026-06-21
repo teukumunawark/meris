@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"meris-backend/internal/platform/ai"
 	"meris-backend/internal/platform/sse"
@@ -33,57 +34,43 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 
 	sessionID := uuid.New().String()
 	now := time.Now()
-	session := sqlc.Session{
-		ID:               sessionID,
-		PayerName:        payerName,
-		PayerBankName:    payerBankName,
-		PayerBankAccount: payerBankAccount,
-		Tax:              extracted.Tax,
-		ServiceCharge:    extracted.ServiceCharge,
-		GrandTotal:       extracted.GrandTotal,
-		CreatedAt:        sqlcutil.Timestamptz(now),
-	}
-
-	var items []sqlc.Item
-	for _, it := range extracted.Items {
-		items = append(items, sqlc.Item{
-			ID:        uuid.New().String(),
-			SessionID: sessionID,
-			Name:      it.Name,
-			Price:     it.Price,
-			Quantity:  int32(it.Quantity),
-		})
-	}
 
 	var payerID uint
 	var payerToken string
 
 	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		err := q.CreateSession(ctx, sqlc.CreateSessionParams{
-			ID:               session.ID,
-			PayerName:        session.PayerName,
-			PayerBankName:    session.PayerBankName,
-			PayerBankAccount: session.PayerBankAccount,
-			Tax:              session.Tax,
-			ServiceCharge:    session.ServiceCharge,
-			GrandTotal:       session.GrandTotal,
-			CreatedAt:        session.CreatedAt,
+			ID:               sessionID,
+			PayerName:        payerName,
+			PayerBankName:    payerBankName,
+			PayerBankAccount: payerBankAccount,
+			Tax:              extracted.Tax,
+			ServiceCharge:    extracted.ServiceCharge,
+			GrandTotal:       extracted.GrandTotal,
+			CreatedAt:        sqlcutil.Timestamptz(now),
 		})
 		if err != nil {
 			return err
 		}
 
-		for _, item := range items {
-			err := q.CreateItem(ctx, sqlc.CreateItemParams{
-				ID:        item.ID,
-				SessionID: item.SessionID,
-				Name:      item.Name,
-				Price:     item.Price,
-				Quantity:  item.Quantity,
-			})
-			if err != nil {
-				return err
-			}
+		billName := "Initial Stop"
+
+		err = q.CreateBill(ctx, sqlc.CreateBillParams{
+			ID:            sessionID, // Default bill ID is the session ID
+			SessionID:     sessionID,
+			PayerName:     payerName,
+			Name:          billName,
+			Tax:           extracted.Tax,
+			ServiceCharge: extracted.ServiceCharge,
+			GrandTotal:    extracted.GrandTotal,
+			CreatedAt:     sqlcutil.Timestamptz(now),
+		})
+		if err != nil {
+			return err
+		}
+
+		if err := s.saveItemsRecursive(ctx, q, sessionID, sessionID, nil, extracted.Items); err != nil {
+			return err
 		}
 
 		if payerName != "" {
@@ -106,17 +93,47 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 		return nil, nil, nil, 0, "", err
 	}
 
-	var participants []sqlc.Participant
-	if payerName != "" {
-		participants = append(participants, sqlc.Participant{
-			ID:        int64(payerID),
-			SessionID: sessionID,
-			Name:      payerName,
-			Token:     payerToken,
-		})
+	// We return a simplified session object as it's mostly used for ID
+	createdSession := &sqlc.Session{
+		ID:               sessionID,
+		PayerName:        payerName,
+		PayerBankName:    payerBankName,
+		PayerBankAccount: payerBankAccount,
+		Tax:              extracted.Tax,
+		ServiceCharge:    extracted.ServiceCharge,
+		GrandTotal:       extracted.GrandTotal,
+		CreatedAt:        sqlcutil.Timestamptz(now),
 	}
 
-	return &session, items, participants, payerID, payerToken, nil
+	return createdSession, nil, nil, payerID, payerToken, nil
+}
+
+func (s *Service) saveItemsRecursive(ctx context.Context, q *sqlc.Queries, sessionID string, billID string, parentID *string, extractedItems []ai.ExtractedItem) error {
+	for _, it := range extractedItems {
+		itemID := uuid.New().String()
+		var pID pgtype.Text
+		if parentID != nil {
+			pID = sqlcutil.String(*parentID)
+		}
+		err := q.CreateItem(ctx, sqlc.CreateItemParams{
+			ID:        itemID,
+			SessionID: sessionID,
+			BillID:    billID,
+			ParentID:  pID,
+			Name:      it.Name,
+			Price:     it.Price,
+			Quantity:  int32(it.Quantity),
+		})
+		if err != nil {
+			return err
+		}
+		if len(it.SubItems) > 0 {
+			if err := s.saveItemsRecursive(ctx, q, sessionID, billID, &itemID, it.SubItems); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken string) (*sqlc.Participant, error) {
@@ -130,7 +147,7 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 		if clientToken != "" && existing.Token == clientToken {
 			return &existing, nil
 		}
-		return nil, ErrNameConflict
+		return nil, NewNameConflictError(name)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
@@ -184,7 +201,7 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 			}
 		}
 		if !found {
-			return ErrItemNotFound
+			return NewItemNotFoundError(itemID)
 		}
 
 		if shares <= 0 {
@@ -213,7 +230,7 @@ func (s *Service) ClaimItem(ctx context.Context, sessionID string, participantID
 		}
 
 		if otherShares+shares > float64(targetItem.Quantity) {
-			return ErrQuantityExceeded
+			return NewQuantityExceededError()
 		}
 
 		_, err = q.GetClaimByItemAndParticipant(ctx, sqlc.GetClaimByItemAndParticipantParams{
@@ -485,14 +502,14 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		return CompiledSession{}, err
 	}
 
+	dbBills, err := s.repo.GetQueries().GetBillsBySession(ctx, sessionID)
+	if err != nil {
+		return CompiledSession{}, err
+	}
+
 	participantNameMap := make(map[int64]string)
 	for _, p := range participants {
 		participantNameMap[p.ID] = p.Name
-	}
-
-	var totalSubtotal float64
-	for _, it := range items {
-		totalSubtotal += it.Price * float64(it.Quantity)
 	}
 
 	itemClaimsMap := make(map[string][]CompiledClaim)
@@ -507,13 +524,7 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		})
 	}
 
-	itemsMap := make(map[string]sqlc.Item)
-	for _, it := range items {
-		itemsMap[it.ID] = it
-	}
-
 	participantClaimsMap := make(map[int64][]CompiledClaim)
-	participantSubtotalMap := make(map[int64]float64)
 	for _, c := range claims {
 		name := participantNameMap[c.ParticipantID]
 		compiled := CompiledClaim{
@@ -524,9 +535,71 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 			Shares:        c.Shares,
 		}
 		participantClaimsMap[c.ParticipantID] = append(participantClaimsMap[c.ParticipantID], compiled)
+	}
 
-		if item, ok := itemsMap[c.ItemID]; ok {
-			participantSubtotalMap[c.ParticipantID] += item.Price * c.Shares
+	pSubtotalMap := make(map[int64]float64)
+	pTaxMap := make(map[int64]float64)
+	pServiceChargeMap := make(map[int64]float64)
+	pTotalOwedMap := make(map[int64]float64)
+	pTotalPaidMap := make(map[int64]float64)
+
+	for _, p := range participants {
+		pSubtotalMap[p.ID] = 0.0
+		pTaxMap[p.ID] = 0.0
+		pServiceChargeMap[p.ID] = 0.0
+		pTotalOwedMap[p.ID] = 0.0
+		pTotalPaidMap[p.ID] = 0.0
+	}
+
+	itemsMap := make(map[string]sqlc.Item)
+	billItemsMap := make(map[string][]sqlc.Item)
+	for _, it := range items {
+		itemsMap[it.ID] = it
+		billItemsMap[it.BillID] = append(billItemsMap[it.BillID], it)
+	}
+
+	var sessionTax float64
+	var sessionServiceCharge float64
+	var sessionGrandTotal float64
+
+	for _, bill := range dbBills {
+		sessionTax += bill.Tax
+		sessionServiceCharge += bill.ServiceCharge
+		sessionGrandTotal += bill.GrandTotal
+
+		billItems := billItemsMap[bill.ID]
+		var billSubtotal float64
+		for _, it := range billItems {
+			billSubtotal += it.Price * float64(it.Quantity)
+		}
+
+		pBillSubtotalMap := make(map[int64]float64)
+		for _, it := range billItems {
+			itemClaims := itemClaimsMap[it.ID]
+			for _, claim := range itemClaims {
+				pBillSubtotalMap[claim.ParticipantID] += it.Price * claim.Shares
+			}
+		}
+
+		for _, p := range participants {
+			pBillSubtotal := pBillSubtotalMap[p.ID]
+			var proportion float64
+			if billSubtotal > 0 {
+				proportion = pBillSubtotal / billSubtotal
+			}
+
+			pConsumedTax := proportion * bill.Tax
+			pConsumedServiceCharge := proportion * bill.ServiceCharge
+			pConsumedGrandTotal := pBillSubtotal + pConsumedTax + pConsumedServiceCharge
+
+			pSubtotalMap[p.ID] += pBillSubtotal
+			pTaxMap[p.ID] += pConsumedTax
+			pServiceChargeMap[p.ID] += pConsumedServiceCharge
+			pTotalOwedMap[p.ID] += pConsumedGrandTotal
+
+			if bill.PayerName == p.Name {
+				pTotalPaidMap[p.ID] += bill.GrandTotal
+			}
 		}
 	}
 
@@ -539,6 +612,7 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		compiledItems = append(compiledItems, CompiledItem{
 			ID:        it.ID,
 			SessionID: it.SessionID,
+			ParentID:  sqlcutil.TextPtr(it.ParentID),
 			Name:      it.Name,
 			Price:     it.Price,
 			Quantity:  it.Quantity,
@@ -553,31 +627,224 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 			claims = []CompiledClaim{}
 		}
 
-		pSubtotal := participantSubtotalMap[p.ID]
-		breakdown := CalculateShare(pSubtotal, totalSubtotal, session.Tax, session.ServiceCharge)
-
 		compiledParticipants = append(compiledParticipants, CompiledParticipant{
 			ID:            p.ID,
 			SessionID:     p.SessionID,
 			Name:          p.Name,
-			TotalOwed:     breakdown.Total,
-			Subtotal:      breakdown.Subtotal,
-			Tax:           breakdown.Tax,
-			ServiceCharge: breakdown.ServiceCharge,
+			TotalOwed:     pTotalOwedMap[p.ID],
+			Subtotal:      pSubtotalMap[p.ID],
+			Tax:           pTaxMap[p.ID],
+			ServiceCharge: pServiceChargeMap[p.ID],
+			BankName:      p.BankName,
+			BankAccount:   p.BankAccount,
 			Claims:        claims,
 		})
 	}
+
+	balances := make(map[string]float64)
+	for _, p := range participants {
+		balances[p.Name] = pTotalPaidMap[p.ID] - pTotalOwedMap[p.ID]
+	}
+	transfers := SimplifyDebts(balances)
 
 	return CompiledSession{
 		ID:               session.ID,
 		PayerName:        session.PayerName,
 		PayerBankName:    session.PayerBankName,
 		PayerBankAccount: session.PayerBankAccount,
-		Tax:              session.Tax,
-		ServiceCharge:    session.ServiceCharge,
-		GrandTotal:       session.GrandTotal,
+		Tax:              sessionTax,
+		ServiceCharge:    sessionServiceCharge,
+		GrandTotal:       sessionGrandTotal,
 		CreatedAt:        sqlcutil.Time(session.CreatedAt).Format(time.RFC3339),
 		Items:            compiledItems,
 		Participants:     compiledParticipants,
+		Bills:            dbBills,
+		Transfers:        transfers,
 	}, nil
+}
+
+func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageBytes []byte, payerName string, billName string, token string) error {
+	extracted, err := ai.ExtractReceiptData(imageBytes)
+	if err != nil {
+		return fmt.Errorf("AI extraction failed: %w", err)
+	}
+
+	if billName == "" {
+		billName = fmt.Sprintf("Stop %s", time.Now().Format("2006-01-02 15:04:05"))
+	}
+
+	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		participants, err := q.GetParticipantsBySession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		var authorizedParticipant *sqlc.Participant
+		for _, p := range participants {
+			if p.Token == token {
+				authorizedParticipant = &p
+				break
+			}
+		}
+
+		if authorizedParticipant == nil {
+			return ErrUnauthorized
+		}
+
+		if payerName == "" {
+			payerName = authorizedParticipant.Name
+		}
+
+		billID := uuid.New().String()
+		now := time.Now()
+
+		err = q.CreateBill(ctx, sqlc.CreateBillParams{
+			ID:            billID,
+			SessionID:     sessionID,
+			PayerName:     payerName,
+			Name:          billName,
+			Tax:           extracted.Tax,
+			ServiceCharge: extracted.ServiceCharge,
+			GrandTotal:    extracted.GrandTotal,
+			CreatedAt:     sqlcutil.Timestamptz(now),
+		})
+		if err != nil {
+			return err
+		}
+
+		if err := s.saveItemsRecursive(ctx, q, sessionID, billID, nil, extracted.Items); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID string, name string, payerName string, tax float64, serviceCharge float64, grandTotal float64, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		participants, err := q.GetParticipantsBySession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		var authorizedParticipant *sqlc.Participant
+		for _, p := range participants {
+			if p.Token == token {
+				authorizedParticipant = &p
+				break
+			}
+		}
+
+		if authorizedParticipant == nil {
+			return ErrUnauthorized
+		}
+
+		return q.UpdateBill(ctx, sqlc.UpdateBillParams{
+			ID:            billID,
+			SessionID:     sessionID,
+			PayerName:     payerName,
+			Name:          name,
+			Tax:           tax,
+			ServiceCharge: serviceCharge,
+			GrandTotal:    grandTotal,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) DeleteBill(ctx context.Context, sessionID string, billID string, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		bills, err := q.GetBillsBySession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		var targetBill *sqlc.Bill
+		for _, b := range bills {
+			if b.ID == billID {
+				targetBill = &b
+				break
+			}
+		}
+		if targetBill == nil {
+			return errors.New("bill not found")
+		}
+
+		participants, err := q.GetParticipantsBySession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		var caller *sqlc.Participant
+		for _, p := range participants {
+			if p.Token == token {
+				caller = &p
+				break
+			}
+		}
+		if caller == nil {
+			return ErrUnauthorized
+		}
+
+		session, err := q.GetSession(ctx, sessionID)
+		if err != nil {
+			return err
+		}
+
+		if caller.Name != targetBill.PayerName && caller.Name != session.PayerName {
+			return ErrUnauthorized
+		}
+
+		return q.DeleteBill(ctx, sqlc.DeleteBillParams{
+			ID:        billID,
+			SessionID: sessionID,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) UpdateParticipantBankInfo(ctx context.Context, sessionID string, participantID int64, bankName string, bankAccount string, token string) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		p, err := q.GetParticipant(ctx, participantID)
+		if err != nil {
+			return err
+		}
+
+		if p.Token != token || p.SessionID != sessionID {
+			return ErrUnauthorized
+		}
+
+		return q.UpdateParticipantBankInfo(ctx, sqlc.UpdateParticipantBankInfoParams{
+			BankName:    bankName,
+			BankAccount: bankAccount,
+			ID:          participantID,
+			SessionID:   sessionID,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
 }
