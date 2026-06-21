@@ -9,11 +9,11 @@ SELECT * FROM sessions WHERE id = $1;
 SELECT * FROM sessions WHERE id = $1 FOR UPDATE;
 
 -- name: CreateItem :exec
-INSERT INTO items (id, session_id, name, price, quantity)
-VALUES ($1, $2, $3, $4, $5);
+INSERT INTO items (id, session_id, bill_id, parent_id, name, price, quantity)
+VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: GetItemsBySession :many
-SELECT * FROM items WHERE session_id = $1;
+SELECT * FROM items WHERE session_id = $1 ORDER BY id ASC;
 
 -- name: UpdateItemName :exec
 UPDATE items SET name = $1 WHERE id = $2 AND session_id = $3;
@@ -70,3 +70,24 @@ WHERE item_id = $1 AND participant_id != $2;
 UPDATE sessions 
 SET payer_bank_name = $1, payer_bank_account = $2 
 WHERE id = $3;
+
+-- name: CreateBill :exec
+INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, grand_total, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+
+-- name: GetBillsBySession :many
+SELECT * FROM bills WHERE session_id = $1 ORDER BY created_at ASC;
+
+-- name: UpdateBill :exec
+UPDATE bills
+SET payer_name = $1, name = $2, tax = $3, service_charge = $4, grand_total = $5
+WHERE id = $6 AND session_id = $7;
+
+-- name: DeleteBill :exec
+DELETE FROM bills WHERE id = $1 AND session_id = $2;
+
+-- name: UpdateParticipantBankInfo :exec
+UPDATE participants
+SET bank_name = $1, bank_account = $2
+WHERE id = $3 AND session_id = $4;
+

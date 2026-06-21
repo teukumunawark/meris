@@ -8,6 +8,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Bill struct {
+	ID            string             `db:"id" json:"id"`
+	SessionID     string             `db:"session_id" json:"session_id"`
+	PayerName     string             `db:"payer_name" json:"payer_name"`
+	Name          string             `db:"name" json:"name"`
+	Tax           float64            `db:"tax" json:"tax"`
+	ServiceCharge float64            `db:"service_charge" json:"service_charge"`
+	GrandTotal    float64            `db:"grand_total" json:"grand_total"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
 type Claim struct {
 	ID            int64   `db:"id" json:"id"`
 	ItemID        string  `db:"item_id" json:"item_id"`
@@ -16,18 +27,22 @@ type Claim struct {
 }
 
 type Item struct {
-	ID        string  `db:"id" json:"id"`
-	SessionID string  `db:"session_id" json:"session_id"`
-	Name      string  `db:"name" json:"name"`
-	Price     float64 `db:"price" json:"price"`
-	Quantity  int32   `db:"quantity" json:"quantity"`
+	ID        string      `db:"id" json:"id"`
+	SessionID string      `db:"session_id" json:"session_id"`
+	Name      string      `db:"name" json:"name"`
+	Price     float64     `db:"price" json:"price"`
+	Quantity  int32       `db:"quantity" json:"quantity"`
+	ParentID  pgtype.Text `db:"parent_id" json:"parent_id"`
+	BillID    string      `db:"bill_id" json:"bill_id"`
 }
 
 type Participant struct {
-	ID        int64  `db:"id" json:"id"`
-	SessionID string `db:"session_id" json:"session_id"`
-	Name      string `db:"name" json:"name"`
-	Token     string `db:"token" json:"token"`
+	ID          int64  `db:"id" json:"id"`
+	SessionID   string `db:"session_id" json:"session_id"`
+	Name        string `db:"name" json:"name"`
+	Token       string `db:"token" json:"token"`
+	BankName    string `db:"bank_name" json:"bank_name"`
+	BankAccount string `db:"bank_account" json:"bank_account"`
 }
 
 type Session struct {

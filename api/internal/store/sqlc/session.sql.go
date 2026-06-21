@@ -11,6 +11,36 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createBill = `-- name: CreateBill :exec
+INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, grand_total, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type CreateBillParams struct {
+	ID            string             `db:"id" json:"id"`
+	SessionID     string             `db:"session_id" json:"session_id"`
+	PayerName     string             `db:"payer_name" json:"payer_name"`
+	Name          string             `db:"name" json:"name"`
+	Tax           float64            `db:"tax" json:"tax"`
+	ServiceCharge float64            `db:"service_charge" json:"service_charge"`
+	GrandTotal    float64            `db:"grand_total" json:"grand_total"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) error {
+	_, err := q.db.Exec(ctx, createBill,
+		arg.ID,
+		arg.SessionID,
+		arg.PayerName,
+		arg.Name,
+		arg.Tax,
+		arg.ServiceCharge,
+		arg.GrandTotal,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const createClaim = `-- name: CreateClaim :exec
 INSERT INTO claims (item_id, participant_id, shares)
 VALUES ($1, $2, $3)
@@ -28,22 +58,26 @@ func (q *Queries) CreateClaim(ctx context.Context, arg CreateClaimParams) error 
 }
 
 const createItem = `-- name: CreateItem :exec
-INSERT INTO items (id, session_id, name, price, quantity)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO items (id, session_id, bill_id, parent_id, name, price, quantity)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateItemParams struct {
-	ID        string  `db:"id" json:"id"`
-	SessionID string  `db:"session_id" json:"session_id"`
-	Name      string  `db:"name" json:"name"`
-	Price     float64 `db:"price" json:"price"`
-	Quantity  int32   `db:"quantity" json:"quantity"`
+	ID        string      `db:"id" json:"id"`
+	SessionID string      `db:"session_id" json:"session_id"`
+	BillID    string      `db:"bill_id" json:"bill_id"`
+	ParentID  pgtype.Text `db:"parent_id" json:"parent_id"`
+	Name      string      `db:"name" json:"name"`
+	Price     float64     `db:"price" json:"price"`
+	Quantity  int32       `db:"quantity" json:"quantity"`
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) error {
 	_, err := q.db.Exec(ctx, createItem,
 		arg.ID,
 		arg.SessionID,
+		arg.BillID,
+		arg.ParentID,
 		arg.Name,
 		arg.Price,
 		arg.Quantity,
@@ -54,7 +88,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) error {
 const createParticipant = `-- name: CreateParticipant :one
 INSERT INTO participants (session_id, name, token)
 VALUES ($1, $2, $3)
-RETURNING id, session_id, name, token
+RETURNING id, session_id, name, token, bank_name, bank_account
 `
 
 type CreateParticipantParams struct {
@@ -71,6 +105,8 @@ func (q *Queries) CreateParticipant(ctx context.Context, arg CreateParticipantPa
 		&i.SessionID,
 		&i.Name,
 		&i.Token,
+		&i.BankName,
+		&i.BankAccount,
 	)
 	return i, err
 }
@@ -102,6 +138,20 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 		arg.GrandTotal,
 		arg.CreatedAt,
 	)
+	return err
+}
+
+const deleteBill = `-- name: DeleteBill :exec
+DELETE FROM bills WHERE id = $1 AND session_id = $2
+`
+
+type DeleteBillParams struct {
+	ID        string `db:"id" json:"id"`
+	SessionID string `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) DeleteBill(ctx context.Context, arg DeleteBillParams) error {
+	_, err := q.db.Exec(ctx, deleteBill, arg.ID, arg.SessionID)
 	return err
 }
 
@@ -145,6 +195,39 @@ type DeleteParticipantParams struct {
 func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantParams) error {
 	_, err := q.db.Exec(ctx, deleteParticipant, arg.ID, arg.SessionID)
 	return err
+}
+
+const getBillsBySession = `-- name: GetBillsBySession :many
+SELECT id, session_id, payer_name, name, tax, service_charge, grand_total, created_at FROM bills WHERE session_id = $1 ORDER BY created_at ASC
+`
+
+func (q *Queries) GetBillsBySession(ctx context.Context, sessionID string) ([]Bill, error) {
+	rows, err := q.db.Query(ctx, getBillsBySession, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Bill
+	for rows.Next() {
+		var i Bill
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.PayerName,
+			&i.Name,
+			&i.Tax,
+			&i.ServiceCharge,
+			&i.GrandTotal,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getClaimByItemAndParticipant = `-- name: GetClaimByItemAndParticipant :one
@@ -210,7 +293,7 @@ func (q *Queries) GetClaimsBySession(ctx context.Context, sessionID string) ([]G
 }
 
 const getItemsBySession = `-- name: GetItemsBySession :many
-SELECT id, session_id, name, price, quantity FROM items WHERE session_id = $1
+SELECT id, session_id, name, price, quantity, parent_id, bill_id FROM items WHERE session_id = $1 ORDER BY id ASC
 `
 
 func (q *Queries) GetItemsBySession(ctx context.Context, sessionID string) ([]Item, error) {
@@ -228,6 +311,8 @@ func (q *Queries) GetItemsBySession(ctx context.Context, sessionID string) ([]It
 			&i.Name,
 			&i.Price,
 			&i.Quantity,
+			&i.ParentID,
+			&i.BillID,
 		); err != nil {
 			return nil, err
 		}
@@ -258,7 +343,7 @@ func (q *Queries) GetOtherClaimsSum(ctx context.Context, arg GetOtherClaimsSumPa
 }
 
 const getParticipant = `-- name: GetParticipant :one
-SELECT id, session_id, name, token FROM participants WHERE id = $1
+SELECT id, session_id, name, token, bank_name, bank_account FROM participants WHERE id = $1
 `
 
 func (q *Queries) GetParticipant(ctx context.Context, id int64) (Participant, error) {
@@ -269,12 +354,14 @@ func (q *Queries) GetParticipant(ctx context.Context, id int64) (Participant, er
 		&i.SessionID,
 		&i.Name,
 		&i.Token,
+		&i.BankName,
+		&i.BankAccount,
 	)
 	return i, err
 }
 
 const getParticipantByName = `-- name: GetParticipantByName :one
-SELECT id, session_id, name, token FROM participants WHERE session_id = $1 AND name = $2
+SELECT id, session_id, name, token, bank_name, bank_account FROM participants WHERE session_id = $1 AND name = $2
 `
 
 type GetParticipantByNameParams struct {
@@ -290,12 +377,14 @@ func (q *Queries) GetParticipantByName(ctx context.Context, arg GetParticipantBy
 		&i.SessionID,
 		&i.Name,
 		&i.Token,
+		&i.BankName,
+		&i.BankAccount,
 	)
 	return i, err
 }
 
 const getParticipantsBySession = `-- name: GetParticipantsBySession :many
-SELECT id, session_id, name, token FROM participants WHERE session_id = $1
+SELECT id, session_id, name, token, bank_name, bank_account FROM participants WHERE session_id = $1
 `
 
 func (q *Queries) GetParticipantsBySession(ctx context.Context, sessionID string) ([]Participant, error) {
@@ -312,6 +401,8 @@ func (q *Queries) GetParticipantsBySession(ctx context.Context, sessionID string
 			&i.SessionID,
 			&i.Name,
 			&i.Token,
+			&i.BankName,
+			&i.BankAccount,
 		); err != nil {
 			return nil, err
 		}
@@ -361,6 +452,35 @@ func (q *Queries) GetSessionForUpdate(ctx context.Context, id string) (Session, 
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const updateBill = `-- name: UpdateBill :exec
+UPDATE bills
+SET payer_name = $1, name = $2, tax = $3, service_charge = $4, grand_total = $5
+WHERE id = $6 AND session_id = $7
+`
+
+type UpdateBillParams struct {
+	PayerName     string  `db:"payer_name" json:"payer_name"`
+	Name          string  `db:"name" json:"name"`
+	Tax           float64 `db:"tax" json:"tax"`
+	ServiceCharge float64 `db:"service_charge" json:"service_charge"`
+	GrandTotal    float64 `db:"grand_total" json:"grand_total"`
+	ID            string  `db:"id" json:"id"`
+	SessionID     string  `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) error {
+	_, err := q.db.Exec(ctx, updateBill,
+		arg.PayerName,
+		arg.Name,
+		arg.Tax,
+		arg.ServiceCharge,
+		arg.GrandTotal,
+		arg.ID,
+		arg.SessionID,
+	)
+	return err
 }
 
 const updateClaimShares = `-- name: UpdateClaimShares :exec
@@ -414,6 +534,29 @@ type UpdateItemNameParams struct {
 
 func (q *Queries) UpdateItemName(ctx context.Context, arg UpdateItemNameParams) error {
 	_, err := q.db.Exec(ctx, updateItemName, arg.Name, arg.ID, arg.SessionID)
+	return err
+}
+
+const updateParticipantBankInfo = `-- name: UpdateParticipantBankInfo :exec
+UPDATE participants
+SET bank_name = $1, bank_account = $2
+WHERE id = $3 AND session_id = $4
+`
+
+type UpdateParticipantBankInfoParams struct {
+	BankName    string `db:"bank_name" json:"bank_name"`
+	BankAccount string `db:"bank_account" json:"bank_account"`
+	ID          int64  `db:"id" json:"id"`
+	SessionID   string `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) UpdateParticipantBankInfo(ctx context.Context, arg UpdateParticipantBankInfoParams) error {
+	_, err := q.db.Exec(ctx, updateParticipantBankInfo,
+		arg.BankName,
+		arg.BankAccount,
+		arg.ID,
+		arg.SessionID,
+	)
 	return err
 }
 
