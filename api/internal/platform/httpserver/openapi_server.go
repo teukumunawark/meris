@@ -15,19 +15,19 @@ func NewOpenAPIServer(sessionHandler *session.Handler) *OpenAPIServer {
 	return &OpenAPIServer{sessionHandler: sessionHandler}
 }
 
-func (s *OpenAPIServer) CreateSession(w http.ResponseWriter, r *http.Request) {
+func (s *OpenAPIServer) CreateSession(w http.ResponseWriter, r *http.Request, params generated.CreateSessionParams) {
 	s.sessionHandler.CreateSession(w, r)
 }
 
-func (s *OpenAPIServer) GetSession(w http.ResponseWriter, r *http.Request, id string) {
+func (s *OpenAPIServer) GetSession(w http.ResponseWriter, r *http.Request, id string, params generated.GetSessionParams) {
 	s.sessionHandler.GetSession(w, r, id)
 }
 
-func (s *OpenAPIServer) JoinSession(w http.ResponseWriter, r *http.Request, id string) {
+func (s *OpenAPIServer) JoinSession(w http.ResponseWriter, r *http.Request, id string, params generated.JoinSessionParams) {
 	s.sessionHandler.JoinSession(w, r, id)
 }
 
-func (s *OpenAPIServer) ClaimItem(w http.ResponseWriter, r *http.Request, id string) {
+func (s *OpenAPIServer) ClaimItem(w http.ResponseWriter, r *http.Request, id string, params generated.ClaimItemParams) {
 	s.sessionHandler.ClaimItem(w, r, id)
 }
 
@@ -54,3 +54,20 @@ func (s *OpenAPIServer) UpdateItem(w http.ResponseWriter, r *http.Request, id st
 func (s *OpenAPIServer) DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params generated.DeleteItemParams) {
 	s.sessionHandler.DeleteItem(w, r, id, itemId, params)
 }
+
+func (s *OpenAPIServer) AddBill(w http.ResponseWriter, r *http.Request, id string) {
+	s.sessionHandler.AddBill(w, r, id)
+}
+
+func (s *OpenAPIServer) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
+	s.sessionHandler.DeleteBill(w, r, id, billId, params)
+}
+
+func (s *OpenAPIServer) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
+	s.sessionHandler.UpdateBill(w, r, id, billId)
+}
+
+func (s *OpenAPIServer) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
+	s.sessionHandler.UpdateParticipantBankInfo(w, r, id, participantId)
+}
+

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"meris-backend/internal/apperrors"
 	"meris-backend/internal/platform/httpserver/generated"
 	"meris-backend/internal/platform/httpresponse"
 )
@@ -79,7 +80,7 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request, id string) {
 	resp, err := h.service.GetCompiledSession(r.Context(), id)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusNotFound, "session_not_found", "Session not found")
+		httpresponse.WriteLocalizedError(w, r, NewSessionNotFoundError(id))
 		return
 	}
 
@@ -98,10 +99,11 @@ func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string)
 
 	p, err := h.service.JoinSession(r.Context(), id, payload.Name, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrNameConflict) {
-			httpresponse.WriteError(w, http.StatusConflict, "name_conflict", err.Error())
+		var appErr *apperrors.AppError
+		if errors.As(err, &appErr) && appErr.Code == "errors.name_conflict" {
+			httpresponse.WriteLocalizedError(w, r, NewNameConflictError(payload.Name))
 		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+			httpresponse.WriteLocalizedError(w, r, err)
 		}
 		return
 	}
@@ -128,13 +130,20 @@ func (h *Handler) ClaimItem(w http.ResponseWriter, r *http.Request, id string) {
 
 	err := h.service.ClaimItem(r.Context(), id, payload.ParticipantID, payload.ItemID, payload.Shares, payload.Token)
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrUnauthorized):
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		case errors.Is(err, ErrQuantityExceeded), errors.Is(err, ErrItemNotFound):
-			httpresponse.WriteError(w, http.StatusBadRequest, "invalid_claim", err.Error())
-		default:
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		var appErr *apperrors.AppError
+		if errors.As(err, &appErr) {
+			switch appErr.Code {
+			case "errors.unauthorized":
+				httpresponse.WriteLocalizedError(w, r, ErrUnauthorized)
+			case "errors.quantity_exceeded":
+				httpresponse.WriteLocalizedError(w, r, NewQuantityExceededError())
+			case "errors.item_not_found":
+				httpresponse.WriteLocalizedError(w, r, NewItemNotFoundError(payload.ItemID))
+			default:
+				httpresponse.WriteLocalizedError(w, r, err)
+			}
+		} else {
+			httpresponse.WriteLocalizedError(w, r, err)
 		}
 		return
 	}
@@ -284,3 +293,20 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, id string, 
 
 	w.WriteHeader(http.StatusOK)
 }
+
+func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+func (h *Handler) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+func (h *Handler) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+

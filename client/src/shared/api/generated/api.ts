@@ -72,6 +72,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/session/{id}/item": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a new item to the session */
+        post: operations["AddItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/{id}/item/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update an existing item (price, quantity, name) */
+        put: operations["UpdateItem"];
+        post?: never;
+        /** Delete an item from the session */
+        delete: operations["DeleteItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/session/{id}/item/{itemId}/rename": {
         parameters: {
             query?: never;
@@ -106,6 +141,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/session/{id}/payment-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update payment information for a session */
+        put: operations["UpdatePaymentInfo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/{id}/bill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a new bill to the session */
+        post: operations["AddBill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/{id}/bill/{billId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update an existing bill */
+        put: operations["UpdateBill"];
+        post?: never;
+        /** Delete a bill from the session */
+        delete: operations["DeleteBill"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/{id}/participant/{participantId}/bank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update bank details for a participant */
+        put: operations["UpdateParticipantBankInfo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -123,6 +227,8 @@ export interface components {
             participants?: components["schemas"]["Participant"][];
             payerId?: number;
             payerToken?: string;
+            bills?: components["schemas"]["Bill"][];
+            transfers?: components["schemas"]["Transfer"][];
         };
         Session: {
             id?: string;
@@ -135,10 +241,13 @@ export interface components {
             createdAt?: string;
             items?: components["schemas"]["Item"][];
             participants?: components["schemas"]["Participant"][];
+            bills?: components["schemas"]["Bill"][];
+            transfers?: components["schemas"]["Transfer"][];
         };
         Item: {
             id?: string;
             sessionId?: string;
+            billId?: string;
             name?: string;
             price?: number;
             quantity?: number;
@@ -148,6 +257,8 @@ export interface components {
             id?: number;
             sessionId?: string;
             name?: string;
+            bankName?: string;
+            bankAccount?: string;
             totalOwed?: number;
             subtotal?: number;
             tax?: number;
@@ -164,7 +275,28 @@ export interface components {
             id?: number;
             itemId?: string;
             participantId?: number;
+            name?: string;
             shares?: number;
+        };
+        Error: {
+            /** @description Internal error code/translation key (e.g. 'errors.unauthorized') */
+            error: string;
+            /** @description Localized human-readable error message */
+            message: string;
+        };
+        Bill: {
+            id: string;
+            payerName: string;
+            name: string;
+            tax: number;
+            serviceCharge: number;
+            grandTotal: number;
+            createdAt: string;
+        };
+        Transfer: {
+            from: string;
+            to: string;
+            amount: number;
         };
     };
     responses: never;
@@ -178,7 +310,10 @@ export interface operations {
     CreateSession: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Preferred language for error messages (e.g., 'id', 'en') */
+                "Accept-Language"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -203,12 +338,33 @@ export interface operations {
                     "application/json": components["schemas"]["SessionCreationResponse"];
                 };
             };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     GetSession: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Preferred language for error messages */
+                "Accept-Language"?: string;
+            };
             path: {
                 id: string;
             };
@@ -225,12 +381,24 @@ export interface operations {
                     "application/json": components["schemas"]["Session"];
                 };
             };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     JoinSession: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Preferred language for error messages */
+                "Accept-Language"?: string;
+            };
             path: {
                 id: string;
             };
@@ -263,12 +431,33 @@ export interface operations {
                     "application/json": components["schemas"]["ParticipantResponse"];
                 };
             };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Name already taken in this session */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     ClaimItem: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Preferred language for error messages */
+                "Accept-Language"?: string;
+            };
             path: {
                 id: string;
             };
@@ -286,6 +475,115 @@ export interface operations {
         };
         responses: {
             /** @description Claim registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid claim (e.g. quantity exceeded) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized (invalid token) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Item or Participant not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    AddItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    price: number;
+                    quantity: number;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Item added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    price: number;
+                    quantity: number;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Item updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DeleteItem: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Item deleted */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -336,6 +634,149 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Participant deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdatePaymentInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    payerBankName: string;
+                    payerBankAccount: string;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payment information updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AddBill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    payerName: string;
+                    name: string;
+                    tax: number;
+                    serviceCharge: number;
+                    grandTotal: number;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Bill added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateBill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                billId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    payerName: string;
+                    name: string;
+                    tax: number;
+                    serviceCharge: number;
+                    grandTotal: number;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Bill updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DeleteBill: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+                billId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bill deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateParticipantBankInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                participantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    bankName: string;
+                    bankAccount: string;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Bank info updated */
             200: {
                 headers: {
                     [name: string]: unknown;

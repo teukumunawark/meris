@@ -20,6 +20,17 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Bill defines model for Bill.
+type Bill struct {
+	CreatedAt     string  `json:"createdAt"`
+	GrandTotal    float32 `json:"grandTotal"`
+	Id            string  `json:"id"`
+	Name          string  `json:"name"`
+	PayerName     string  `json:"payerName"`
+	ServiceCharge float32 `json:"serviceCharge"`
+	Tax           float32 `json:"tax"`
+}
+
 // Claim defines model for Claim.
 type Claim struct {
 	Id            *int     `json:"id,omitempty"`
@@ -29,8 +40,18 @@ type Claim struct {
 	Shares        *float32 `json:"shares,omitempty"`
 }
 
+// Error defines model for Error.
+type Error struct {
+	// Error Internal error code/translation key (e.g. 'errors.unauthorized')
+	Error string `json:"error"`
+
+	// Message Localized human-readable error message
+	Message string `json:"message"`
+}
+
 // Item defines model for Item.
 type Item struct {
+	BillId    *string  `json:"billId,omitempty"`
 	Claims    *[]Claim `json:"claims,omitempty"`
 	Id        *string  `json:"id,omitempty"`
 	Name      *string  `json:"name,omitempty"`
@@ -41,6 +62,8 @@ type Item struct {
 
 // Participant defines model for Participant.
 type Participant struct {
+	BankAccount   *string  `json:"bankAccount,omitempty"`
+	BankName      *string  `json:"bankName,omitempty"`
 	Claims        *[]Claim `json:"claims,omitempty"`
 	Id            *int     `json:"id,omitempty"`
 	Name          *string  `json:"name,omitempty"`
@@ -61,6 +84,7 @@ type ParticipantResponse struct {
 
 // Session defines model for Session.
 type Session struct {
+	Bills            *[]Bill        `json:"bills,omitempty"`
 	CreatedAt        *string        `json:"createdAt,omitempty"`
 	GrandTotal       *float32       `json:"grandTotal,omitempty"`
 	Id               *string        `json:"id,omitempty"`
@@ -71,10 +95,12 @@ type Session struct {
 	PayerName        *string        `json:"payerName,omitempty"`
 	ServiceCharge    *float32       `json:"serviceCharge,omitempty"`
 	Tax              *float32       `json:"tax,omitempty"`
+	Transfers        *[]Transfer    `json:"transfers,omitempty"`
 }
 
 // SessionCreationResponse defines model for SessionCreationResponse.
 type SessionCreationResponse struct {
+	Bills            *[]Bill        `json:"bills,omitempty"`
 	CreatedAt        *string        `json:"createdAt,omitempty"`
 	GrandTotal       *float32       `json:"grandTotal,omitempty"`
 	Id               *string        `json:"id,omitempty"`
@@ -87,6 +113,14 @@ type SessionCreationResponse struct {
 	PayerToken       *string        `json:"payerToken,omitempty"`
 	ServiceCharge    *float32       `json:"serviceCharge,omitempty"`
 	Tax              *float32       `json:"tax,omitempty"`
+	Transfers        *[]Transfer    `json:"transfers,omitempty"`
+}
+
+// Transfer defines model for Transfer.
+type Transfer struct {
+	Amount float32 `json:"amount"`
+	From   string  `json:"from"`
+	To     string  `json:"to"`
 }
 
 // CreateSessionMultipartBody defines parameters for CreateSession.
@@ -97,12 +131,55 @@ type CreateSessionMultipartBody struct {
 	Receipt          openapi_types.File `json:"receipt"`
 }
 
+// CreateSessionParams defines parameters for CreateSession.
+type CreateSessionParams struct {
+	// AcceptLanguage Preferred language for error messages (e.g., 'id', 'en')
+	AcceptLanguage *string `json:"Accept-Language,omitempty"`
+}
+
+// GetSessionParams defines parameters for GetSession.
+type GetSessionParams struct {
+	// AcceptLanguage Preferred language for error messages
+	AcceptLanguage *string `json:"Accept-Language,omitempty"`
+}
+
+// AddBillJSONBody defines parameters for AddBill.
+type AddBillJSONBody struct {
+	GrandTotal    float32 `json:"grandTotal"`
+	Name          string  `json:"name"`
+	PayerName     string  `json:"payerName"`
+	ServiceCharge float32 `json:"serviceCharge"`
+	Tax           float32 `json:"tax"`
+	Token         string  `json:"token"`
+}
+
+// DeleteBillParams defines parameters for DeleteBill.
+type DeleteBillParams struct {
+	Token string `form:"token" json:"token"`
+}
+
+// UpdateBillJSONBody defines parameters for UpdateBill.
+type UpdateBillJSONBody struct {
+	GrandTotal    float32 `json:"grandTotal"`
+	Name          string  `json:"name"`
+	PayerName     string  `json:"payerName"`
+	ServiceCharge float32 `json:"serviceCharge"`
+	Tax           float32 `json:"tax"`
+	Token         string  `json:"token"`
+}
+
 // ClaimItemJSONBody defines parameters for ClaimItem.
 type ClaimItemJSONBody struct {
 	ItemId        string  `json:"itemId"`
 	ParticipantId int     `json:"participantId"`
 	Shares        float32 `json:"shares"`
 	Token         string  `json:"token"`
+}
+
+// ClaimItemParams defines parameters for ClaimItem.
+type ClaimItemParams struct {
+	// AcceptLanguage Preferred language for error messages
+	AcceptLanguage *string `json:"Accept-Language,omitempty"`
 }
 
 // AddItemJSONBody defines parameters for AddItem.
@@ -137,9 +214,22 @@ type JoinSessionJSONBody struct {
 	Token *string `json:"token,omitempty"`
 }
 
+// JoinSessionParams defines parameters for JoinSession.
+type JoinSessionParams struct {
+	// AcceptLanguage Preferred language for error messages
+	AcceptLanguage *string `json:"Accept-Language,omitempty"`
+}
+
 // DeleteParticipantParams defines parameters for DeleteParticipant.
 type DeleteParticipantParams struct {
 	Token string `form:"token" json:"token"`
+}
+
+// UpdateParticipantBankInfoJSONBody defines parameters for UpdateParticipantBankInfo.
+type UpdateParticipantBankInfoJSONBody struct {
+	BankAccount string `json:"bankAccount"`
+	BankName    string `json:"bankName"`
+	Token       string `json:"token"`
 }
 
 // UpdatePaymentInfoJSONBody defines parameters for UpdatePaymentInfo.
@@ -151,6 +241,12 @@ type UpdatePaymentInfoJSONBody struct {
 
 // CreateSessionMultipartRequestBody defines body for CreateSession for multipart/form-data ContentType.
 type CreateSessionMultipartRequestBody CreateSessionMultipartBody
+
+// AddBillJSONRequestBody defines body for AddBill for application/json ContentType.
+type AddBillJSONRequestBody AddBillJSONBody
+
+// UpdateBillJSONRequestBody defines body for UpdateBill for application/json ContentType.
+type UpdateBillJSONRequestBody UpdateBillJSONBody
 
 // ClaimItemJSONRequestBody defines body for ClaimItem for application/json ContentType.
 type ClaimItemJSONRequestBody ClaimItemJSONBody
@@ -167,6 +263,9 @@ type RenameItemJSONRequestBody RenameItemJSONBody
 // JoinSessionJSONRequestBody defines body for JoinSession for application/json ContentType.
 type JoinSessionJSONRequestBody JoinSessionJSONBody
 
+// UpdateParticipantBankInfoJSONRequestBody defines body for UpdateParticipantBankInfo for application/json ContentType.
+type UpdateParticipantBankInfoJSONRequestBody UpdateParticipantBankInfoJSONBody
+
 // UpdatePaymentInfoJSONRequestBody defines body for UpdatePaymentInfo for application/json ContentType.
 type UpdatePaymentInfoJSONRequestBody UpdatePaymentInfoJSONBody
 
@@ -174,13 +273,22 @@ type UpdatePaymentInfoJSONRequestBody UpdatePaymentInfoJSONBody
 type ServerInterface interface {
 	// Create a new split bill session by uploading a receipt
 	// (POST /session)
-	CreateSession(w http.ResponseWriter, r *http.Request)
+	CreateSession(w http.ResponseWriter, r *http.Request, params CreateSessionParams)
 	// Get details of a specific session
 	// (GET /session/{id})
-	GetSession(w http.ResponseWriter, r *http.Request, id string)
+	GetSession(w http.ResponseWriter, r *http.Request, id string, params GetSessionParams)
+	// Add a new bill to the session
+	// (POST /session/{id}/bill)
+	AddBill(w http.ResponseWriter, r *http.Request, id string)
+	// Delete a bill from the session
+	// (DELETE /session/{id}/bill/{billId})
+	DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params DeleteBillParams)
+	// Update an existing bill
+	// (PUT /session/{id}/bill/{billId})
+	UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string)
 	// Claim or adjust share of a specific item
 	// (POST /session/{id}/claim)
-	ClaimItem(w http.ResponseWriter, r *http.Request, id string)
+	ClaimItem(w http.ResponseWriter, r *http.Request, id string, params ClaimItemParams)
 	// Add a new item to the session
 	// (POST /session/{id}/item)
 	AddItem(w http.ResponseWriter, r *http.Request, id string)
@@ -195,10 +303,13 @@ type ServerInterface interface {
 	RenameItem(w http.ResponseWriter, r *http.Request, id string, itemId string)
 	// Join a session as a participant
 	// (POST /session/{id}/join)
-	JoinSession(w http.ResponseWriter, r *http.Request, id string)
+	JoinSession(w http.ResponseWriter, r *http.Request, id string, params JoinSessionParams)
 	// Delete a participant from a session
 	// (DELETE /session/{id}/participant/{participantId})
 	DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params DeleteParticipantParams)
+	// Update bank details for a participant
+	// (PUT /session/{id}/participant/{participantId}/bank)
+	UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string)
 	// Update payment information for a session
 	// (PUT /session/{id}/payment-info)
 	UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string)
@@ -210,19 +321,37 @@ type Unimplemented struct{}
 
 // Create a new split bill session by uploading a receipt
 // (POST /session)
-func (_ Unimplemented) CreateSession(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) CreateSession(w http.ResponseWriter, r *http.Request, params CreateSessionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get details of a specific session
 // (GET /session/{id})
-func (_ Unimplemented) GetSession(w http.ResponseWriter, r *http.Request, id string) {
+func (_ Unimplemented) GetSession(w http.ResponseWriter, r *http.Request, id string, params GetSessionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a new bill to the session
+// (POST /session/{id}/bill)
+func (_ Unimplemented) AddBill(w http.ResponseWriter, r *http.Request, id string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a bill from the session
+// (DELETE /session/{id}/bill/{billId})
+func (_ Unimplemented) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params DeleteBillParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update an existing bill
+// (PUT /session/{id}/bill/{billId})
+func (_ Unimplemented) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Claim or adjust share of a specific item
 // (POST /session/{id}/claim)
-func (_ Unimplemented) ClaimItem(w http.ResponseWriter, r *http.Request, id string) {
+func (_ Unimplemented) ClaimItem(w http.ResponseWriter, r *http.Request, id string, params ClaimItemParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -252,13 +381,19 @@ func (_ Unimplemented) RenameItem(w http.ResponseWriter, r *http.Request, id str
 
 // Join a session as a participant
 // (POST /session/{id}/join)
-func (_ Unimplemented) JoinSession(w http.ResponseWriter, r *http.Request, id string) {
+func (_ Unimplemented) JoinSession(w http.ResponseWriter, r *http.Request, id string, params JoinSessionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete a participant from a session
 // (DELETE /session/{id}/participant/{participantId})
 func (_ Unimplemented) DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params DeleteParticipantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update bank details for a participant
+// (PUT /session/{id}/participant/{participantId}/bank)
+func (_ Unimplemented) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -280,8 +415,35 @@ type MiddlewareFunc func(http.Handler) http.Handler
 // CreateSession operation middleware
 func (siw *ServerInterfaceWrapper) CreateSession(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateSessionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateSession(w, r)
+		siw.Handler.CreateSession(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -306,8 +468,144 @@ func (siw *ServerInterfaceWrapper) GetSession(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSessionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetSession(w, r, id)
+		siw.Handler.GetSession(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddBill operation middleware
+func (siw *ServerInterfaceWrapper) AddBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddBill(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBill operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "billId" -------------
+	var billId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "billId", chi.URLParam(r, "billId"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "billId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteBillParams
+
+	// ------------- Required query parameter "token" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "token", r.URL.Query(), &params.Token, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "token"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBill(w, r, id, billId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateBill operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "billId" -------------
+	var billId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "billId", chi.URLParam(r, "billId"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "billId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateBill(w, r, id, billId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -332,8 +630,32 @@ func (siw *ServerInterfaceWrapper) ClaimItem(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ClaimItemParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ClaimItem(w, r, id)
+		siw.Handler.ClaimItem(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -505,8 +827,32 @@ func (siw *ServerInterfaceWrapper) JoinSession(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params JoinSessionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.JoinSession(w, r, id)
+		siw.Handler.JoinSession(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -558,6 +904,41 @@ func (siw *ServerInterfaceWrapper) DeleteParticipant(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteParticipant(w, r, id, participantId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateParticipantBankInfo operation middleware
+func (siw *ServerInterfaceWrapper) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "participantId" -------------
+	var participantId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "participantId", chi.URLParam(r, "participantId"), &participantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "participantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateParticipantBankInfo(w, r, id, participantId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -713,6 +1094,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/session/{id}", wrapper.GetSession)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/session/{id}/bill", wrapper.AddBill)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/session/{id}/bill/{billId}", wrapper.DeleteBill)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/session/{id}/bill/{billId}", wrapper.UpdateBill)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/session/{id}/claim", wrapper.ClaimItem)
 	})
 	r.Group(func(r chi.Router) {
@@ -734,6 +1124,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/session/{id}/participant/{participantId}", wrapper.DeleteParticipant)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/session/{id}/participant/{participantId}/bank", wrapper.UpdateParticipantBankInfo)
+	})
+	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/session/{id}/payment-info", wrapper.UpdatePaymentInfo)
 	})
 
@@ -745,25 +1138,34 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7FhBb9s4E/0rBL/v0AJqlG5vvqUpUGSB7Qbd7qnogRbHNlOJZMhRU8Pwf18MKdmyTClOY6dZbC+GIZLD",
-	"mffeDIdc8cJU1mjQ6PlkxX2xgEqEv5elUBX9sc5YcKggfFaSfnFpgU+40ghzcHydcYVQXXXHPDql5zSk",
-	"RQXJASscqkJZofFqwKxfCBc3bsZ0XU1paJ21X8z0BgqkyVcICY8LCiT6jhD//N/BjE/4//Jt9HkTeh7j",
-	"3poXzolliPCh0TlVQMLzjN/WQqPC5UDI4L0yOglmKurrLYpPFHzH2cHoPbhvqoDLhXDzNApjcWbc11M0",
-	"KMrkUhTf099pxZ93IA8UTAe6j+Ct0R4OV/xI6GOBofkK+kBq/4qWErQ6EAjyApNbzJ3Q8tMgegNC3gjk",
-	"IKWEXEsIpZPThxvrSjhpcwnurdBfL4rC1BoHikkz6cNwuVmC+/Djgk2rboS3S2JJGT2srV88/iiPQwfG",
-	"OMlh9NNABh5TA/RJ6ZkJkxWWNPYHOOXZxfUVz/g3cDGz+euz87NzMm0saGEVn/A3Z+dnbzh5i4uAee47",
-	"hcD4ABzJKKiLkOBBatDWi4w7uK3B41sjwylTGI0QAa/qEhWxm8+Mq15JgWJ78u8r9Elyz0EBygbb5JRA",
-	"PuFTpYVb8ixRJyk45ajKf94s/ZKkYDsTXQ3hQ0zFENtv5+c9cIS1pSoCrPmNj4BvkRmT/lDKBzck+MIp",
-	"i5HxZiprkj+E5OuqonBbJplgGu6Yt6VCNlVlyRoJsOmS1bY0Qio9Z4K18ZORVib5Ssk1OTyHhFTeA251",
-	"YoUTFSA4zyefV1yRfyQ73p5vVGX6OGYdTPrsfDk9xilM3wEKVYLcwBR0vYvse0AmwzzPzIwJ5i0UaqaK",
-	"dtE+iHmx6YLTaUfDoYSeCsqhNB5HsdfBDPfmj2nBR3uZbo7ubrK5K2xMt4YekcO7agi0MAdz5RHcfoqF",
-	"YeOYkDe1Rxbc6ElChXNxTw+qvWIk5XAh5bMXw9HvKweKIOzb7tKx+TjyX++TTwwwIeUe7RdSNmWVWGRo",
-	"GC5gJPdpVr6KYl3HfUpA2Kf9Xfh+KuaztJE2hx5u6LaGcLA2liL8R6jxCRoiYn0iIl5M6EjEzJlql4qM",
-	"2zqRXn9bKf4FOP9K1UPrdNBIHVjtayRyTRqB78ojNTtBLC+CVxlrncoYefvyvvTNHbRoJqX1MQz/56WV",
-	"EsJx2Y489NmO8PfPX6b0PSX6xqiRS9HvRulTt7onzfOH5OvPvgCl3tISjTpxQm16XRTg/awuyyV7IUoH",
-	"Qi5jqnt2p3DBKoHFgtI+gPCS4GiO+5/trvBNG2G7zx07eqZlpObmMhJW9GfvKrkzmq92GuYDWo/uu8uT",
-	"la9+V/9cG5EOOPf0I12KYlciRmqPFcsKNL5qn3lGWpbrOPWKZj7nQnSkx56Dr4VdQ4nnwaP3Gw0PjChz",
-	"VcBkvP2wiQUzujh2dLFe/xMAAP//",
+	"7Frfb9s2EP5XCG5AEkCJ0h97mN+SdigydF3RtU9FH87iyWYskSpJtfWC/O8DScmWLEp2UtlN1z41NX/c",
+	"8e67jx9J3dBE5oUUKIymkxuqkznm4P685Flm/y2ULFAZju7XRCEYZBfG/scsC6QTqo3iYkZvIzpTINhb",
+	"aSBrNIsyn6KyzZwFRwnIMdhQwBLVq75WjeoTT/DZHNQMg/YMfAn8fhtRhR9LrpDRyXvrVNNS5Y4fvGmk",
+	"tcKoEYwPUW1FTq8xMdb6swx43o1gKwhcGJxVwTGYX905QMrwhBcgzFXPtHoOyhvuhqHj8h9KSdV1Geuf",
+	"GepE8cJwKeiEXgmDSkBGXDtJJMPYKBA6A9uDLHBJjvFsdkaOXA99VgoozVwq/i+yoxMadVeUo9bg09k2",
+	"9lImkNlxZF7mIE4VAoNphpXxelxnyo1s+6Ws7YQSd2UwkLcpz7Ke/CQ20z65Bv0fvypM6YT+Eq/rK66K",
+	"K/bAWMcflILlvepD8SSM/I8lCMPNsgcTqDWXIriaECxer2EWiAuIxUWSyFKEOcG299bwXiLXWKm4P3kM",
+	"BSmiupyaXp4L805E3Yi/PyPbsRwbcX+DupBC4+58MrD0oYUZuUCxIy7+8TOFa2X3rLqdJpDUfew1K4d2",
+	"8swxQcCzBu/uPlmzioJzLlFdbimmVadXh90zI+qIPUW1+3rfViO6ix3A0jObcy5FP95/YuvbYqtPaAwD",
+	"z7W+7eGWh4zLVe8OECHfCOXaqVTJvIddw9TalChusOsa1Ta6KsUO4iL103GT2ba/UHFNLl5f0Yh+QuWp",
+	"mT46Oz87t7ZlgQIKTif0ydn52ROnes3cLSXWDSaX2i3KLtWVok04dXWJNeE7lEKOxsX9/aZWe60wRaWQ",
+	"kQzErIQZklSqtlLTXhpG5Iizo4gcoXCCkNvxcwSGqpbiE3qRJFiY05fVZFaWu1x6lZhCmRk6oSgC6u+D",
+	"jy1qcymZk0OJFAZ93vIyM9zWW5xKlZ8yMLA+BHUTfhCGVpggL9zc1imwK5tyAWq5VdvWQ8NoWfc0qkT3",
+	"g6dYt7bH5+cbwYGiyHjiEBBfa4+NdWSGCqyPyp0bbaRUXUlFxzYATx//Ppon/jwTsPsGDJKM59wQ/JIg",
+	"Mm/7txGj0Gt7dWyypIdVWbhk6jLPbaLrciNABH4musi4IXbfI1WdkumSlEUmgXExI0DqzNtJ6lqObzi7",
+	"tU7OMFDPL9D0FrOrQcsN6wp0h+Q2gppF2MHlvRhhX+W/X5iHUvwcDfAM2SpfjlosuM+f7h9gdVEJaUgq",
+	"S8E2wPUCDWHOQ01kSoDoAhOe8qR2t4ujeFrfBgV3hwvGnNDaA5QGCXw4eG323qLpxMEFdf9Bq0nq97uZ",
+	"8pPfbyN41L18scklwBxLtqB0wVhFUo6ejCRmjltgFN/4q5RbbydDg11EPXe/7wtUUXCS6obnPhN9LNFt",
+	"0NVMPvx3hnmXqAJp8BHbTISPFwGfBysh25mIaFEGCvddweA7CPNPEjg0CfShr3SA2USfhxEBQfAL18aK",
+	"ErdhdAkgWV2Kh48ZttmdjP/3qmQMOA+8GXzN08AdcNk0snrDWE09OgYdPojCGdcGVXVgOIxo/wQZZ8Th",
+	"t3rVqC/ZV0eIE+/Oo/27867xkEKOeeWcC/bJwXSmrVMiFWlcPvVqTp84qQiw61Ib4gCyoT65uxHrUAav",
+	"n2P6pOe++GK0Mh39AWfH8qy2Cm+lMefo+tAhYVgf2ixu14e2V3zjaWQHfbjHnSI0Sc1uD1UfujQM60Ph",
+	"E3FHgfjg4/yzVHfdQR1GdlZxDizHzqtotd9FxHp7sq18Y4V1NIPQeuOaf3hohYAwbrZ9Hjaz7cO/uf8S",
+	"LrZQ9LXkA+8Ef0oufpiLxb0Szl2I41vf+Ic+VAgIRgsOZESXSYJap2WWLckxZAqBLT3naPKZmznJwSRz",
+	"yz9rRft4RFn9Fe6CrvRM0X5x/VYXu9byAd5LXjmqqDJlYIHCEwXXLaZYs4uNneWWymMXtlbIOrzSaI1v",
+	"WgfLHYRg8/37YJvJ5un3ocrC5vlsy+1hY0leI8LATjCQsXgKYtG783uh0XDrEsTiSqTye8jdaMz/VR/O",
+	"7bg7rOaIWubGvxsEsSBcpHJYWlofVk9Pdp/eTgrLHIU5rT91GIST67ovGI2W9pG+IrjLzfHlGgUd66ND",
+	"ocqDQ4PK/ZfAg6AoAgM8NtbUc3v7XwAAAP//",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

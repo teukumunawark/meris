@@ -7,6 +7,13 @@ paths:
     post:
       summary: Create a new split bill session by uploading a receipt
       operationId: CreateSession
+      parameters:
+        - name: Accept-Language
+          in: header
+          description: Preferred language for error messages (e.g., 'id', 'en')
+          schema:
+            type: string
+            default: en
       requestBody:
         required: true
         content:
@@ -32,6 +39,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionCreationResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /session/{id}:
     get:
       summary: Get details of a specific session
@@ -42,6 +61,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: Accept-Language
+          in: header
+          description: Preferred language for error messages
+          schema:
+            type: string
+            default: en
       responses:
         '200':
           description: Detailed session data
@@ -49,6 +74,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /session/{id}/join:
     post:
       summary: Join a session as a participant
@@ -59,6 +90,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: Accept-Language
+          in: header
+          description: Preferred language for error messages
+          schema:
+            type: string
+            default: en
       requestBody:
         required: true
         content:
@@ -85,6 +122,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ParticipantResponse'
+        '409':
+          description: Name already taken in this session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /session/{id}/claim:
     post:
       summary: Claim or adjust share of a specific item
@@ -95,6 +144,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: Accept-Language
+          in: header
+          description: Preferred language for error messages
+          schema:
+            type: string
+            default: en
       requestBody:
         required: true
         content:
@@ -118,6 +173,24 @@ paths:
       responses:
         '200':
           description: Claim registered
+        '400':
+          description: Invalid claim (e.g. quantity exceeded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized (invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item or Participant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /session/{id}/item:
     post:
       summary: Add a new item to the session
@@ -293,6 +366,146 @@ paths:
       responses:
         '200':
           description: Payment information updated
+  /session/{id}/bill:
+    post:
+      summary: Add a new bill to the session
+      operationId: AddBill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payerName:
+                  type: string
+                name:
+                  type: string
+                tax:
+                  type: number
+                serviceCharge:
+                  type: number
+                grandTotal:
+                  type: number
+                token:
+                  type: string
+              required:
+                - payerName
+                - name
+                - tax
+                - serviceCharge
+                - grandTotal
+                - token
+      responses:
+        '201':
+          description: Bill added
+  /session/{id}/bill/{billId}:
+    put:
+      summary: Update an existing bill
+      operationId: UpdateBill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payerName:
+                  type: string
+                name:
+                  type: string
+                tax:
+                  type: number
+                serviceCharge:
+                  type: number
+                grandTotal:
+                  type: number
+                token:
+                  type: string
+              required:
+                - payerName
+                - name
+                - tax
+                - serviceCharge
+                - grandTotal
+                - token
+      responses:
+        '200':
+          description: Bill updated
+    delete:
+      summary: Delete a bill from the session
+      operationId: DeleteBill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bill deleted
+  /session/{id}/participant/{participantId}/bank:
+    put:
+      summary: Update bank details for a participant
+      operationId: UpdateParticipantBankInfo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: participantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bankName:
+                  type: string
+                bankAccount:
+                  type: string
+                token:
+                  type: string
+              required:
+                - bankName
+                - bankAccount
+                - token
+      responses:
+        '200':
+          description: Bank info updated
 components:
   schemas:
     SessionCreationResponse:
@@ -326,6 +539,14 @@ components:
           type: integer
         payerToken:
           type: string
+        bills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bill'
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transfer'
     Session:
       type: object
       properties:
@@ -353,12 +574,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Participant'
+        bills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bill'
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transfer'
     Item:
       type: object
       properties:
         id:
           type: string
         sessionId:
+          type: string
+        billId:
           type: string
         name:
           type: string
@@ -378,6 +609,10 @@ components:
         sessionId:
           type: string
         name:
+          type: string
+        bankName:
+          type: string
+        bankAccount:
           type: string
         totalOwed:
           type: number
@@ -415,3 +650,53 @@ components:
           type: string
         shares:
           type: number
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Internal error code/translation key (e.g. 'errors.unauthorized')
+        message:
+          type: string
+          description: Localized human-readable error message
+      required:
+        - error
+        - message
+    Bill:
+      type: object
+      properties:
+        id:
+          type: string
+        payerName:
+          type: string
+        name:
+          type: string
+        tax:
+          type: number
+        serviceCharge:
+          type: number
+        grandTotal:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - payerName
+        - name
+        - tax
+        - serviceCharge
+        - grandTotal
+        - createdAt
+    Transfer:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        amount:
+          type: number
+      required:
+        - from
+        - to
+        - amount
