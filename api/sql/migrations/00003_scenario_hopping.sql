@@ -10,7 +10,11 @@ CREATE TABLE bills (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_bills_session_id ON bills(session_id);
+
 ALTER TABLE items ADD COLUMN bill_id VARCHAR(50) REFERENCES bills(id) ON DELETE CASCADE;
+
+CREATE INDEX idx_items_bill_id ON items(bill_id);
 
 -- Add bank details to participants
 ALTER TABLE participants ADD COLUMN bank_name TEXT NOT NULL DEFAULT '';
@@ -36,5 +40,7 @@ WHERE p.session_id = s.id AND p.name = s.payer_name;
 -- +goose Down
 ALTER TABLE participants DROP COLUMN bank_name;
 ALTER TABLE participants DROP COLUMN bank_account;
+DROP INDEX IF EXISTS idx_items_bill_id;
 ALTER TABLE items DROP COLUMN bill_id;
+DROP INDEX IF EXISTS idx_bills_session_id;
 DROP TABLE bills;

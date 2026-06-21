@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -66,9 +65,9 @@ func main() {
 	}
 
 	if err != nil {
-		slog.Error(fmt.Sprintf("Goose command %s failed", command), "error", err)
+		slog.Error("Goose command failed", "command", command, "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info(fmt.Sprintf("Goose command %s completed successfully.", command))
+	slog.Info("Goose command completed successfully", "command", command)
 }
