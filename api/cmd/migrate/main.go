@@ -42,6 +42,7 @@ func main() {
 	defer dbPool.Close()
 
 	goose.SetBaseFS(migrations.FS)
+	goose.SetLogger(&database.GooseLogger{Log: appLogger})
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		slog.Error("Failed to set goose dialect", "error", err)
