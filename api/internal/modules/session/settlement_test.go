@@ -40,13 +40,37 @@ func TestSimplifyDebts(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			name: "Cent-level debts",
+			balances: map[string]float64{
+				"Alice": 0.01,
+				"Bob":   -0.01,
+			},
+			expected: []Transfer{
+				{From: "Bob", To: "Alice", Amount: 0.01},
+			},
+		},
+		{
+			name: "Remainder accumulation (Multi-party)",
+			balances: map[string]float64{
+				"Alice":   0.03,
+				"Bob":     0.03,
+				"Charlie": -0.02,
+				"David":   -0.04,
+			},
+			expected: []Transfer{
+				{From: "David", To: "Alice", Amount: 0.03},
+				{From: "David", To: "Bob", Amount: 0.01},
+				{From: "Charlie", To: "Bob", Amount: 0.02},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := SimplifyDebts(tt.balances)
 			if len(got) != len(tt.expected) {
-				t.Errorf("SimplifyDebts() got len %d, want %d", len(got), len(tt.expected))
+				t.Errorf("SimplifyDebts() got len %d, want %d (got %v, want %v)", len(got), len(tt.expected), got, tt.expected)
 				return
 			}
 			for i := range got {

@@ -2,7 +2,7 @@ package session
 
 import (
 	"math"
-	"sort"
+	"slices"
 )
 
 type Transfer struct {
@@ -11,26 +11,41 @@ type Transfer struct {
 	Amount float64 `json:"amount"`
 }
 
-type DebtNode struct {
+type DebtNodeInt struct {
 	Name    string
-	Balance float64
+	Balance int64
 }
 
 func SimplifyDebts(balances map[string]float64) []Transfer {
-	var debtors []DebtNode
-	var creditors []DebtNode
+	var debtors []DebtNodeInt
+	var creditors []DebtNodeInt
 
 	for name, bal := range balances {
-		bal = math.Round(bal*100) / 100
-		if bal < -0.01 {
-			debtors = append(debtors, DebtNode{Name: name, Balance: -bal})
-		} else if bal > 0.01 {
-			creditors = append(creditors, DebtNode{Name: name, Balance: bal})
+		balCents := int64(math.Round(bal * 100))
+		if balCents < 0 {
+			debtors = append(debtors, DebtNodeInt{Name: name, Balance: -balCents})
+		} else if balCents > 0 {
+			creditors = append(creditors, DebtNodeInt{Name: name, Balance: balCents})
 		}
 	}
 
-	sort.Slice(debtors, func(i, j int) bool { return debtors[i].Balance > debtors[j].Balance })
-	sort.Slice(creditors, func(i, j int) bool { return creditors[i].Balance > creditors[j].Balance })
+	// Sort descending using modern slices package
+	slices.SortFunc(debtors, func(a, b DebtNodeInt) int {
+		if b.Balance > a.Balance {
+			return 1
+		} else if b.Balance < a.Balance {
+			return -1
+		}
+		return 0
+	})
+	slices.SortFunc(creditors, func(a, b DebtNodeInt) int {
+		if b.Balance > a.Balance {
+			return 1
+		} else if b.Balance < a.Balance {
+			return -1
+		}
+		return 0
+	})
 
 	var transfers []Transfer
 	dIdx, cIdx := 0, 0
@@ -39,22 +54,26 @@ func SimplifyDebts(balances map[string]float64) []Transfer {
 		debtor := &debtors[dIdx]
 		creditor := &creditors[cIdx]
 
-		settledAmount := math.Min(debtor.Balance, creditor.Balance)
-		if settledAmount > 0.01 {
+		settledAmount := debtor.Balance
+		if creditor.Balance < settledAmount {
+			settledAmount = creditor.Balance
+		}
+
+		if settledAmount > 0 {
 			transfers = append(transfers, Transfer{
 				From:   debtor.Name,
 				To:     creditor.Name,
-				Amount: settledAmount,
+				Amount: float64(settledAmount) / 100.0,
 			})
 		}
 
 		debtor.Balance -= settledAmount
 		creditor.Balance -= settledAmount
 
-		if debtor.Balance <= 0.01 {
+		if debtor.Balance == 0 {
 			dIdx++
 		}
-		if creditor.Balance <= 0.01 {
+		if creditor.Balance == 0 {
 			cIdx++
 		}
 	}
