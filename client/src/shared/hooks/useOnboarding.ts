@@ -17,7 +17,7 @@ export function useOnboarding() {
         setTimeout(() => setShowJoinHint(true), 1000);
       }
       if (!hasSeenClaim) {
-        setShowClaimHint(true);
+        setTimeout(() => setShowClaimHint(true), 1000);
       }
     }
   }, []);

@@ -13,6 +13,10 @@ export async function apiFetch<T>(
     requestHeaders.set("Accept", "application/json");
   }
 
+  if (typeof window !== "undefined" && !requestHeaders.has("Accept-Language")) {
+    requestHeaders.set("Accept-Language", navigator.language);
+  }
+
   if (body !== undefined && !(body instanceof FormData) && !requestHeaders.has("Content-Type")) {
     requestHeaders.set("Content-Type", "application/json");
   }

@@ -79,13 +79,13 @@ func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
 type MiMoRequest struct {
 	Model          string              `json:"model"`
 	Messages       []MiMoMessage       `json:"messages"`
-	ResponseFormat *MiMoResponseFormat  `json:"response_format,omitempty"`
+	ResponseFormat *MiMoResponseFormat `json:"response_format,omitempty"`
 	Temperature    float64             `json:"temperature"`
 	Stream         bool                `json:"stream"`
 }
 
 type MiMoResponseFormat struct {
-	Type       string              `json:"type"`
+	Type       string                `json:"type"`
 	JSONSchema *MiMoJSONSchemaConfig `json:"json_schema,omitempty"`
 }
 
@@ -101,8 +101,8 @@ type MiMoMessage struct {
 }
 
 type MiMoContent struct {
-	Type     string         `json:"type"`
-	Text     string         `json:"text,omitempty"`
+	Type     string        `json:"type"`
+	Text     string        `json:"text,omitempty"`
 	ImageURL *MiMoImageURL `json:"image_url,omitempty"`
 }
 
@@ -127,6 +127,10 @@ func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
 func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	apiKey := os.Getenv("MIMO_API_KEY")
 	endpoint := os.Getenv("MIMO_ENDPOINT")
+	if endpoint == "" {
+		return nil, errors.New("MIMO_ENDPOINT environment variable is not set")
+	}
+
 	model := os.Getenv("MIMO_MODEL")
 	if model == "" {
 		model = "mimo-v2.5"
@@ -135,13 +139,15 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
 
-	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Do NOT use decimal points for thousands separators (e.g., 14.000 on an Indonesian receipt must be output as 14000).\n3. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n4. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent."
+	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Do NOT use decimal points for thousands separators (e.g., 14.000 on an Indonesian receipt must be output as 14000).\n3. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n4. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent.\n5. Detect packages and their sub-items. If an item has sub-items listed below it (often indented or with '-' prefix), nest them under 'sub_items'. Sub-items should have a price of 0 if their cost is included in the parent package.\n6. Extract the merchant or store name from the receipt header if visible (e.g. restaurant name, cafe name, shop name). Output it as merchant_name. If not detectable, omit the field."
 
-
-	schema := map[string]interface{}{
+	itemSchema := map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"items": map[string]interface{}{
+			"name":     map[string]interface{}{"type": "string"},
+			"price":    map[string]interface{}{"type": "number"},
+			"quantity": map[string]interface{}{"type": "integer"},
+			"sub_items": map[string]interface{}{
 				"type": "array",
 				"items": map[string]interface{}{
 					"type": "object",
@@ -154,11 +160,25 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 					"additionalProperties": false,
 				},
 			},
+		},
+		"required":             []string{"name", "price", "quantity"},
+		"additionalProperties": false,
+	}
+
+	schema := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"merchant_name": map[string]interface{}{"type": "string"},
+			"items": map[string]interface{}{
+				"type":  "array",
+				"items": itemSchema,
+			},
 			"subtotal":       map[string]interface{}{"type": "number"},
 			"tax":            map[string]interface{}{"type": "number"},
 			"service_charge": map[string]interface{}{"type": "number"},
 			"grand_total":    map[string]interface{}{"type": "number"},
 		},
+		// merchant_name intentionally omitted from required — it's optional.
 		"required":             []string{"items", "subtotal", "tax", "service_charge", "grand_total"},
 		"additionalProperties": false,
 	}
@@ -183,6 +203,7 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 			},
 		},
 		Temperature: 0.0,
+		Stream:      false,
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -194,7 +215,6 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("api-key", apiKey)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
 	client := &http.Client{}

@@ -11,6 +11,7 @@ import { useManageItems } from "@/features/manage-items";
 
 interface ItemCardProps {
   item: ReceiptItem;
+  depth?: number;
   isJoined: boolean;
   userName: string;
   isPayer?: boolean;
@@ -23,6 +24,7 @@ interface ItemCardProps {
 
 export default function ItemCard({
   item,
+  depth = 0,
   isJoined,
   userName,
   isPayer = false,
@@ -35,6 +37,9 @@ export default function ItemCard({
   const targetUser = userName.trim();
   const userClaim = item.claims.find((c) => c.name === targetUser);
   const userClaimAmt = isJoined ? (userClaim?.shares ?? 0) : 0;
+
+  const isSubItem = !!item.parentId;
+  const isZeroPriceSubItem = isSubItem && item.price === 0;
 
   const { updateItem, deleteItem } = useManageItems();
 
@@ -78,17 +83,21 @@ export default function ItemCard({
     onUpdateClaim(item.id, increment);
   };
 
+  // Indentation logic based on depth
+  const indentationClass = depth > 0 ? (depth === 1 ? "ml-4 sm:ml-8" : depth === 2 ? "ml-8 sm:ml-16" : "ml-12 sm:ml-24") : "";
+  const borderPaddingClass = depth > 0 ? "pl-6 sm:pl-10 border-l-2 border-sage/10" : "";
+
   return (
     <motion.li
       layout
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={showClaimHint && isFirstUnclaimed && isJoined ? "relative z-[101]" : "relative z-0"}
+      className={`${showClaimHint && isFirstUnclaimed && isJoined ? "relative z-[101]" : "relative z-0"} ${indentationClass}`}
     >
       <GlassPanel 
         className={`group relative p-5 sm:p-8 transition-all duration-700 ${
           userClaimAmt > 0 ? "border-sage/40 bg-sage/4" : ""
-        } ${showClaimHint && isFirstUnclaimed && isJoined ? "ring-1 ring-sage/30 shadow-[0_0_40px_rgba(var(--sage-rgb),0.15)] bg-background" : ""}`}
+        } ${showClaimHint && isFirstUnclaimed && isJoined ? "ring-1 ring-sage/30 shadow-[0_0_40px_rgba(var(--sage-rgb),0.15)] bg-background" : ""} ${borderPaddingClass}`}
       >
         <div className="from-sage/3 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-0 transition-opacity duration-1000 group-hover:opacity-100" />
         
@@ -173,6 +182,11 @@ export default function ItemCard({
                   <h3 className="text-foreground truncate font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">
                     {item.name}
                   </h3>
+                  {isSubItem && (
+                    <span className="rounded-full bg-sage/10 px-2.5 py-1 text-[8px] font-bold uppercase tracking-widest text-sage sm:text-[9px] border border-sage/20">
+                      Sub-menu
+                    </span>
+                  )}
                   {isJoined && (
                     <div className="flex gap-1 shrink-0">
                       <button
@@ -251,58 +265,60 @@ export default function ItemCard({
                 Always stacked vertically: "Available" label+count on top, stepper below.
                 On mobile: full-width with border-top separator.
                 On md+: fixed-width column right-aligned. */}
-            <div className="flex flex-row items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-5 md:flex-col md:items-end md:border-none md:pt-0 md:gap-3 shrink-0">
+            {!isZeroPriceSubItem && (
+              <div className="flex flex-row items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-5 md:flex-col md:items-end md:border-none md:pt-0 md:gap-3 shrink-0">
 
-              {/* Available count */}
-              <div className="flex flex-col gap-0.5 md:text-right">
-                <span className="text-foreground/20 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Available</span>
-                <span className="text-foreground/40 font-mono text-xs font-bold sm:text-sm">
-                  {remainingQty} <span className="text-foreground/20 font-sans text-[10px] sm:text-xs">of</span> {item.quantity}
-                </span>
-              </div>
+                {/* Available count */}
+                <div className="flex flex-col gap-0.5 md:text-right">
+                  <span className="text-foreground/20 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Available</span>
+                  <span className="text-foreground/40 font-mono text-xs font-bold sm:text-sm">
+                    {remainingQty} <span className="text-foreground/20 font-sans text-[10px] sm:text-xs">of</span> {item.quantity}
+                  </span>
+                </div>
 
-              {/* Stepper */}
-              <div className="relative">
-                {showClaimHint && isFirstUnclaimed && isJoined && (
-                  <>
-                    <span className="absolute inset-0 rounded-glass-sm bg-sage/40 animate-ping" />
-                    <div className="absolute -top-8 right-0 sm:-right-4 animate-[bounce_2s_infinite] pointer-events-none z-20">
-                      <div className="bg-sage text-background text-[9px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
-                        Claim Item
-                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
-                      </div>
-                    </div>
-                  </>
-                )}
-                <div className="glass-panel rounded-glass-sm flex items-center border-[var(--glass-border)] bg-[var(--glass-bg-solid)] p-1 sm:p-2">
-                  <button
-                    disabled={!isJoined || userClaimAmt <= 0}
-                    onClick={() => handleClaimInteraction(-0.5)}
-                    className="rounded-glass-sm text-foreground/40 flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
-                  >
-                    —
-                  </button>
-
-                  <div className="flex w-16 flex-col justify-center text-center select-none sm:w-20">
-                    <span className="text-foreground/20 block text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Share</span>
-                    <span className="text-foreground font-sans text-lg font-semibold sm:text-xl">{userClaimAmt}</span>
-                  </div>
-
-                  <div className="relative">
-                    {showClaimHint && isFirstUnclaimed && isJoined && (
+                {/* Stepper */}
+                <div className="relative">
+                  {showClaimHint && isFirstUnclaimed && isJoined && (
+                    <>
                       <span className="absolute inset-0 rounded-glass-sm bg-sage/40 animate-ping" />
-                    )}
+                      <div className="absolute -top-8 right-0 sm:-right-4 animate-[bounce_2s_infinite] pointer-events-none z-20">
+                        <div className="bg-sage text-background text-[9px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
+                          Claim Item
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <div className="glass-panel rounded-glass-sm flex items-center border-[var(--glass-border)] bg-[var(--glass-bg-solid)] p-1 sm:p-2">
                     <button
-                      disabled={!isJoined || isFullyClaimed}
-                      onClick={() => handleClaimInteraction(0.5)}
-                      className="relative z-10 rounded-glass-sm text-sage flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
+                      disabled={!isJoined || userClaimAmt <= 0}
+                      onClick={() => handleClaimInteraction(-0.5)}
+                      className="rounded-glass-sm text-foreground/40 flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
                     >
-                      ＋
+                      —
                     </button>
+
+                    <div className="flex w-16 flex-col justify-center text-center select-none sm:w-20">
+                      <span className="text-foreground/20 block text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Share</span>
+                      <span className="text-foreground font-sans text-lg font-semibold sm:text-xl">{userClaimAmt}</span>
+                    </div>
+
+                    <div className="relative">
+                      {showClaimHint && isFirstUnclaimed && isJoined && (
+                        <span className="absolute inset-0 rounded-glass-sm bg-sage/40 animate-ping" />
+                      )}
+                      <button
+                        disabled={!isJoined || isFullyClaimed}
+                        onClick={() => handleClaimInteraction(0.5)}
+                        className="relative z-10 rounded-glass-sm text-sage flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
+                      >
+                        ＋
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
         )}

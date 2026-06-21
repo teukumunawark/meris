@@ -8,6 +8,8 @@ export interface ReceiptItem {
   name: string;
   price: number;
   quantity: number;
+  parentId?: string;
+  billId?: string;
   claims: ParticipantClaim[];
 }
 

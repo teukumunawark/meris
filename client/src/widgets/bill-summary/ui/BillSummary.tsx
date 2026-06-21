@@ -1,68 +1,63 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ParticipantBreakdown from "@/entities/participant/ui/ParticipantBreakdown";
 import { useSession } from "@/entities/session";
 import { useRemoveParticipant } from "@/features/remove-participant";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
-import { Input } from "@/shared/ui/Input";
-import { Button } from "@/shared/ui/Button";
-import { formatRupiah, getAvatarBg, getInitials } from "@/shared/lib";
-import { apiFetch } from "@/shared/api/client";
+import { formatRupiah } from "@/shared/lib";
+import { MoneyFlowGraph } from "./MoneyFlowGraph";
+
+function CopyAccountButton({ bankAccount }: { bankAccount: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (typeof window !== "undefined" && bankAccount) {
+      navigator.clipboard.writeText(bankAccount);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-sage hover:bg-sage/10 rounded-full px-3 py-1.5 border border-sage/20 text-xs font-bold uppercase transition-all whitespace-nowrap shrink-0 flex items-center gap-1 cursor-pointer"
+      title="Copy Account Number"
+    >
+      {copied ? (
+        <>
+          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          <span>Copied!</span>
+        </>
+      ) : (
+        <>
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>Copy Account</span>
+        </>
+      )}
+    </button>
+  );
+}
 
 export default function BillSummary() {
   const { 
-    sessionId,
-    participantToken,
     participants, 
     items, 
     tax, 
     serviceCharge, 
     userName, 
     isJoined, 
-    payerName, 
-    payerBankName, 
-    payerBankAccount 
+    payerName,
+    transfers,
+    rawDebts
   } = useSession();
   const { removeParticipant } = useRemoveParticipant();
-
-  const [copyAccountSuccess, setCopyAccountSuccess] = useState<boolean>(false);
-  const [isEditingPayment, setIsEditingPayment] = useState(false);
-  const [editBank, setEditBank] = useState(payerBankName);
-  const [editAccount, setEditAccount] = useState(payerBankAccount);
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  useEffect(() => {
-    setEditBank(payerBankName);
-    setEditAccount(payerBankAccount);
-  }, [payerBankName, payerBankAccount]);
-
-  const handleCopyAccount = () => {
-    if (typeof window !== "undefined" && payerBankAccount) {
-      navigator.clipboard.writeText(payerBankAccount);
-      setCopyAccountSuccess(true);
-      setTimeout(() => setCopyAccountSuccess(false), 2000);
-    }
-  };
-
-  const handleUpdatePaymentInfo = async () => {
-    try {
-      setIsUpdating(true);
-      await apiFetch(`/session/${sessionId}/payment-info`, {
-        method: "PUT",
-        body: JSON.stringify({
-          payerBankName: editBank,
-          payerBankAccount: editAccount,
-          token: participantToken,
-        }),
-      });
-      setIsEditingPayment(false);
-    } catch (err) {
-      console.error("Failed to update payment info:", err);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   const totalSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const grandTotal = totalSubtotal + tax + serviceCharge;
@@ -109,112 +104,59 @@ export default function BillSummary() {
           onRemoveParticipant={removeParticipant}
         />
  
-        {/* Payment Details */}
+        {/* Settlement Information (Optimized Transfers) */}
         <GlassPanel variant="solid" className="border-sage/10 relative space-y-6 p-6 sm:space-y-8 sm:p-10">
           <div className="via-sage/40 absolute top-0 left-0 h-1.5 w-full bg-linear-to-r from-transparent to-transparent" />
           
           <div className="relative flex items-center justify-center">
-            <h3 className="text-sage text-center font-sans text-[10px] font-bold tracking-[0.2em] uppercase sm:tracking-[0.4em]">Settlement Information</h3>
-            {isPayer && !isEditingPayment && (
-              <button 
-                onClick={() => setIsEditingPayment(true)}
-                className="text-foreground/30 hover:text-sage absolute right-0 transition-colors"
-                title="Edit Payment Info"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-              </button>
-            )}
+            <h3 className="text-sage text-center font-sans text-[10px] font-bold tracking-[0.2em] uppercase sm:tracking-[0.4em]">Optimized Transfers</h3>
           </div>
           
-          {isEditingPayment ? (
-            <div className="mx-auto max-w-sm space-y-5 pt-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-foreground/40 block text-[10px] font-bold tracking-[0.15em] uppercase sm:text-xs">Bank Name</label>
-                  <Input 
-                    value={editBank}
-                    onChange={(e) => setEditBank(e.target.value)}
-                    placeholder="e.g. BCA, Mandiri"
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-foreground/40 block text-[10px] font-bold tracking-[0.15em] uppercase sm:text-xs">Account Number</label>
-                  <Input 
-                    value={editAccount}
-                    onChange={(e) => setEditAccount(e.target.value)}
-                    placeholder="e.g. 12345678"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-center gap-3 pt-4 sm:pt-6">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => {
-                    setIsEditingPayment(false);
-                    setEditBank(payerBankName);
-                    setEditAccount(payerBankAccount);
-                  }}
-                  disabled={isUpdating}
-                  className="px-6"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={handleUpdatePaymentInfo}
-                  disabled={isUpdating}
-                  className="px-6"
-                >
-                  {isUpdating ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
+          {transfers.length === 0 ? (
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-foreground/30 font-sans text-sm font-normal italic">All debts settled! No transfers needed.</p>
             </div>
           ) : (
-            <div className="space-y-8 sm:space-y-12">
-              <div className="space-y-2 text-center sm:space-y-3">
-                <p className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">Payment Method</p>
-                {payerBankName ? (
-                  <p className="text-foreground font-sans text-lg font-medium tracking-tight sm:text-2xl">{payerBankName}</p>
-                ) : (
-                  <p className="text-foreground/30 font-sans text-sm font-normal italic sm:text-base">Not specified</p>
-                )}
-              </div>
-  
-              {payerBankAccount && (
-                <div className="space-y-2 text-center sm:space-y-3">
-                  <p className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">Account Number</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <span className="text-foreground font-mono text-xl font-semibold tracking-wider sm:text-3xl">
-                      {payerBankAccount}
-                    </span>
-                    <button
-                      onClick={handleCopyAccount}
-                      className="text-sage hover:bg-sage/10 rounded-full p-2 transition-all hover:scale-110 active:scale-95"
-                      title="Copy Account Number"
-                    >
-                      {copyAccountSuccess ? (
-                        <svg className="text-sage h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M20 6 9 17l-5-5"/>
-                        </svg>
-                      ) : (
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                        </svg>
-                      )}
-                    </button>
-                  </div>
+            <div className="space-y-6">
+              {/* Visual flow graph */}
+              <MoneyFlowGraph
+                transfers={transfers}
+                rawDebts={rawDebts}
+                participants={participants}
+                userName={userName}
+              />
+
+              {/* Action list */}
+              <div className="space-y-2 pt-2 border-t border-[var(--glass-border)]">
+                <p className="text-foreground/25 text-[10px] font-bold tracking-widest uppercase pt-2">Action Steps</p>
+                <div className="space-y-3">
+                  {transfers.map((transfer, idx) => {
+                    const recipient = participants.find(p => p.name === transfer.to);
+                    return (
+                      <div key={idx} className="flex flex-col gap-3 p-4 rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-sans text-foreground/80">
+                            <strong className="text-foreground font-bold">{transfer.from}</strong> transfers{" "}
+                            <span className="text-sage font-bold font-mono">{formatRupiah(Math.round(transfer.amount))}</span> to{" "}
+                            <strong className="text-foreground font-bold">{transfer.to}</strong>
+                          </p>
+                          {recipient && recipient.bankName ? (
+                            <p className="text-xs font-sans text-foreground/40 mt-1">
+                              Bank Details: <strong className="text-foreground/60">{recipient.bankName}</strong> – {recipient.bankAccount}
+                            </p>
+                          ) : (
+                            <p className="text-xs italic text-foreground/25 mt-1">
+                              Recipient has not specified bank details
+                            </p>
+                          )}
+                        </div>
+                        {recipient && recipient.bankAccount && (
+                          <CopyAccountButton bankAccount={recipient.bankAccount} />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-              
-              <div className="space-y-2 text-center sm:space-y-3">
-                <p className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">Account Owner</p>
-                <p className="text-foreground font-sans text-lg font-medium tracking-tight sm:text-xl">{payerName || "Anonymous Payer"}</p>
               </div>
             </div>
           )}

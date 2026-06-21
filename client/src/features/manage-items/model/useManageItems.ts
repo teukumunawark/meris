@@ -45,5 +45,73 @@ export function useManageItems() {
     }
   }, [sessionId, participantToken]);
 
-  return { addItem, updateItem, deleteItem };
+  const addBill = useCallback(async (file: File, payerName: string, billName: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("receipt", file);
+      formData.append("payerName", payerName);
+      formData.append("name", billName);
+      formData.append("token", participantToken);
+
+      await apiFetch(`/session/${sessionId}/bill`, {
+        method: "POST",
+        body: formData,
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to add bill stop:", err);
+      return false;
+    }
+  }, [sessionId, participantToken]);
+
+  const updateBill = useCallback(async (billId: string, name: string, payerName: string, tax: number, serviceCharge: number, grandTotal: number) => {
+    try {
+      await apiFetch(`/session/${sessionId}/bill/${billId}`, {
+        method: "PUT",
+        body: {
+          name,
+          payerName,
+          tax,
+          serviceCharge,
+          grandTotal,
+          token: participantToken,
+        },
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to update bill stop:", err);
+      return false;
+    }
+  }, [sessionId, participantToken]);
+
+  const deleteBill = useCallback(async (billId: string) => {
+    try {
+      await apiFetch(`/session/${sessionId}/bill/${billId}?token=${participantToken}`, {
+        method: "DELETE",
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to delete bill stop:", err);
+      return false;
+    }
+  }, [sessionId, participantToken]);
+
+  const updateParticipantBank = useCallback(async (participantId: number, bankName: string, bankAccount: string) => {
+    try {
+      await apiFetch(`/session/${sessionId}/participant/${participantId}/bank`, {
+        method: "PUT",
+        body: {
+          bankName,
+          bankAccount,
+          token: participantToken,
+        },
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to update participant bank details:", err);
+      return false;
+    }
+  }, [sessionId, participantToken]);
+
+  return { addItem, updateItem, deleteItem, addBill, updateBill, deleteBill, updateParticipantBank };
 }

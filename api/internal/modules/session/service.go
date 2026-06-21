@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,7 +54,10 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 			return err
 		}
 
-		billName := "Initial Stop"
+		billName := extracted.MerchantName
+		if billName == "" {
+			billName = "Initial Stop"
+		}
 
 		err = q.CreateBill(ctx, sqlc.CreateBillParams{
 			ID:            sessionID, // Default bill ID is the session ID
@@ -649,6 +653,57 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 	}
 	transfers := SimplifyDebts(balances)
 
+	// Build bilateral (pre-simplification) debts per bill stop.
+	// Each entry: consumer owes payer for their share at that stop.
+	var rawDebts []BilateralTransfer
+	for _, bill := range dbBills {
+		billItems := billItemsMap[bill.ID]
+		var billSubtotal float64
+		for _, it := range billItems {
+			billSubtotal += it.Price * float64(it.Quantity)
+		}
+		pBillSubtotalMap2 := make(map[int64]float64)
+		for _, it := range billItems {
+			for _, claim := range itemClaimsMap[it.ID] {
+				pBillSubtotalMap2[claim.ParticipantID] += it.Price * claim.Shares
+			}
+		}
+		for _, p := range participants {
+			if p.Name == bill.PayerName {
+				continue // payer doesn't owe themselves
+			}
+			pSub := pBillSubtotalMap2[p.ID]
+			if pSub <= 0 {
+				continue // consumed nothing at this stop
+			}
+			var proportion float64
+			if billSubtotal > 0 {
+				proportion = pSub / billSubtotal
+			}
+			amount := math.Round(pSub + proportion*bill.Tax + proportion*bill.ServiceCharge)
+			rawDebts = append(rawDebts, BilateralTransfer{
+				From:     p.Name,
+				To:       bill.PayerName,
+				BillName: bill.Name,
+				Amount:   amount,
+			})
+		}
+	}
+
+	compiledBills := make([]CompiledBill, 0, len(dbBills))
+	for _, b := range dbBills {
+		compiledBills = append(compiledBills, CompiledBill{
+			ID:            b.ID,
+			SessionID:     b.SessionID,
+			PayerName:     b.PayerName,
+			Name:          b.Name,
+			Tax:           b.Tax,
+			ServiceCharge: b.ServiceCharge,
+			GrandTotal:    b.GrandTotal,
+			CreatedAt:     sqlcutil.Time(b.CreatedAt).Format(time.RFC3339),
+		})
+	}
+
 	return CompiledSession{
 		ID:               session.ID,
 		PayerName:        session.PayerName,
@@ -660,8 +715,9 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		CreatedAt:        sqlcutil.Time(session.CreatedAt).Format(time.RFC3339),
 		Items:            compiledItems,
 		Participants:     compiledParticipants,
-		Bills:            dbBills,
+		Bills:            compiledBills,
 		Transfers:        transfers,
+		RawDebts:         rawDebts,
 	}, nil
 }
 
@@ -672,7 +728,11 @@ func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageB
 	}
 
 	if billName == "" {
-		billName = fmt.Sprintf("Stop %s", time.Now().Format("2006-01-02 15:04:05"))
+		if extracted.MerchantName != "" {
+			billName = extracted.MerchantName
+		} else {
+			billName = fmt.Sprintf("Stop %s", time.Now().Format("2006-01-02 15:04:05"))
+		}
 	}
 
 	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {

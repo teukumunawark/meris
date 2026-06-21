@@ -16,6 +16,7 @@ import (
 	"meris-backend/internal/platform/database"
 	"meris-backend/internal/platform/httpserver"
 	generated "meris-backend/internal/platform/httpserver/generated"
+	"meris-backend/internal/platform/i18n"
 	"meris-backend/internal/platform/logger"
 	"meris-backend/internal/platform/redis"
 	"meris-backend/internal/platform/sse"
@@ -69,8 +70,20 @@ func main() {
 	svc := session.NewService(repo, hub)
 	sessionHandler := session.NewHandler(svc)
 
+	translator := i18n.NewTranslator()
+
 	r := httpserver.NewRouter()
-	r.Use(otelchi.Middleware("meris-api", otelchi.WithChiRoutes(r)))
+	r.Use(translator.Middleware)
+	otelMW := otelchi.Middleware("meris-api", otelchi.WithChiRoutes(r))
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if req.URL.Path == "/healthz" || req.URL.Path == "/health" || req.URL.Path == "/metrics" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/robots.txt" {
+				next.ServeHTTP(w, req)
+				return
+			}
+			otelMW(next).ServeHTTP(w, req)
+		})
+	})
 	r.Use(httpserver.RequestLogger(appLogger))
 	r.Use(httpserver.CORS(cfg.CORS.AllowedOrigins))
 

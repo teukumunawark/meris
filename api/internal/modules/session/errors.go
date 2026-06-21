@@ -1,17 +1,47 @@
 package session
 
-import "errors"
+import (
+	"errors"
+	"meris-backend/internal/apperrors"
+	"net/http"
+)
 
 var (
-	// ErrUnauthorized is returned when a token does not match the expected participant.
-	ErrUnauthorized = errors.New("unauthorized")
-
-	// ErrNameConflict is returned when a participant name is already taken in the session.
-	ErrNameConflict = errors.New("participant name already taken in this session")
-
-	// ErrQuantityExceeded is returned when claimed shares exceed the item quantity.
-	ErrQuantityExceeded = errors.New("claimed shares exceed available item quantity")
-
-	// ErrItemNotFound is returned when an item ID does not exist within the session.
-	ErrItemNotFound = errors.New("item not found")
+	ErrUnauthorized = apperrors.NewAppError("errors.unauthorized", nil, http.StatusUnauthorized, errors.New("unauthorized"))
 )
+
+func NewNameConflictError(name string) *apperrors.AppError {
+	return apperrors.NewAppError(
+		"errors.name_conflict",
+		map[string]any{"name": name},
+		http.StatusConflict,
+		errors.New("name conflict"),
+	)
+}
+
+func NewQuantityExceededError() *apperrors.AppError {
+	return apperrors.NewAppError(
+		"errors.quantity_exceeded",
+		nil,
+		http.StatusBadRequest,
+		errors.New("claimed shares exceed available quantity"),
+	)
+}
+
+func NewItemNotFoundError(itemId string) *apperrors.AppError {
+	return apperrors.NewAppError(
+		"errors.item_not_found",
+		map[string]any{"itemId": itemId},
+		http.StatusNotFound,
+		errors.New("item not found"),
+	)
+}
+
+func NewSessionNotFoundError(sessionId string) *apperrors.AppError {
+	return apperrors.NewAppError(
+		"errors.session_not_found",
+		map[string]any{"sessionId": sessionId},
+		http.StatusNotFound,
+		errors.New("session not found"),
+	)
+}

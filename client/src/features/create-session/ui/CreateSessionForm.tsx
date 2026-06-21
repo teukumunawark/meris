@@ -60,21 +60,7 @@ export default function CreateSessionForm() {
         router.push(`/session/${data.id}`);
       } catch (err: any) {
         console.error("Upload failed:", err);
-        
-        let friendlyMsg = err.message || "An unexpected error occurred while processing the receipt. Please try again.";
-        const status = err.status;
-
-        if (status === 429) {
-          friendlyMsg = err.data?.message || "You have exceeded the session creation limit (5 sessions per 8 hours). Please try again later.";
-        } else if (status === 401) {
-          friendlyMsg = "The receipt scanning service is temporarily unavailable. Please try again later.";
-        } else if (friendlyMsg.includes("AI extraction failed")) {
-          friendlyMsg = "We couldn't parse the receipt details. Please make sure the photo is clear and contains readable items.";
-        } else if (friendlyMsg.includes("Invalid receipt image") || friendlyMsg.includes("Failed to read image")) {
-          friendlyMsg = "The uploaded file is not a valid image. Please choose another photo.";
-        }
-        
-        setErrorMsg(friendlyMsg);
+        setErrorMsg(err.message || "An unexpected error occurred while processing the receipt. Please try again.");
         setIsUploading(false);
       }
     }

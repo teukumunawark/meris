@@ -1,9 +1,5 @@
 package session
 
-import (
-	"meris-backend/internal/store/sqlc"
-)
-
 type CompiledClaim struct {
 	ID            int64   `json:"id"`
 	ItemID        string  `json:"itemId"`
@@ -36,6 +32,27 @@ type CompiledParticipant struct {
 	Claims        []CompiledClaim `json:"claims"`
 }
 
+type CompiledBill struct {
+	ID            string  `json:"id"`
+	SessionID     string  `json:"sessionId"`
+	PayerName     string  `json:"payerName"`
+	Name          string  `json:"name"`
+	Tax           float64 `json:"tax"`
+	ServiceCharge float64 `json:"serviceCharge"`
+	GrandTotal    float64 `json:"grandTotal"`
+	CreatedAt     string  `json:"createdAt"`
+}
+
+// BilateralTransfer represents a direct debt between two participants at one bill stop,
+// before any debt-simplification is applied. Used by the UI to show the intuitive
+// "who owes who per bill" breakdown.
+type BilateralTransfer struct {
+	From     string  `json:"from"`     // consumer
+	To       string  `json:"to"`       // payer (who fronted the bill)
+	BillName string  `json:"billName"` // name of the stop
+	Amount   float64 `json:"amount"`
+}
+
 type CompiledSession struct {
 	ID               string                `json:"id"`
 	PayerName        string                `json:"payerName"`
@@ -47,8 +64,9 @@ type CompiledSession struct {
 	CreatedAt        string                `json:"createdAt"`
 	Items            []CompiledItem        `json:"items"`
 	Participants     []CompiledParticipant `json:"participants"`
-	Bills            []sqlc.Bill           `json:"bills"`
+	Bills            []CompiledBill        `json:"bills"`
 	Transfers        []Transfer            `json:"transfers"`
+	RawDebts         []BilateralTransfer   `json:"rawDebts"` // pre-simplification bilateral debts
 }
 
 type CreateSessionResult struct {
@@ -63,4 +81,3 @@ type JoinSessionResult struct {
 	Name      string `json:"name"`
 	Token     string `json:"token"`
 }
-

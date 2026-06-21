@@ -40,11 +40,7 @@ export function useJoinSession() {
         })
       );
     } catch (err: any) {
-      if (err.status === 409) {
-        setJoinError("This name is already taken. Please choose another name to join.");
-      } else {
-        setJoinError(err.message || "Failed to join session.");
-      }
+      setJoinError(err.message || "Failed to join session.");
     }
   };
 

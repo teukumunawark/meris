@@ -4,12 +4,37 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { ReceiptItem } from "@/shared/types";
 import { apiFetch } from "@/shared/api/client";
 
+export interface Bill {
+  id: string;
+  payerName: string;
+  name: string;
+  tax: number;
+  serviceCharge: number;
+  grandTotal: number;
+  createdAt: string;
+}
+
+export interface Transfer {
+  from: string;
+  to: string;
+  amount: number;
+}
+
+export interface BilateralTransfer {
+  from: string;     // consumer
+  to: string;       // payer
+  billName: string; // stop name
+  amount: number;
+}
+
 export interface SSEServerUpdatePayload {
   items?: Array<{
     id?: string;
     name?: string;
     price?: number;
     quantity?: number;
+    parentId?: string;
+    billId?: string;
     claims?: Array<{
       participantId?: number;
       participant?: {
@@ -32,7 +57,11 @@ export interface SSEServerUpdatePayload {
     subtotal?: number;
     tax?: number;
     serviceCharge?: number;
+    bankName?: string;
+    bankAccount?: string;
   }>;
+  bills?: Bill[];
+  transfers?: Transfer[];
 }
 
 interface SessionContextType {
@@ -59,7 +88,12 @@ interface SessionContextType {
     subtotal?: number;
     tax?: number;
     serviceCharge?: number;
+    bankName?: string;
+    bankAccount?: string;
   }>;
+  bills: Bill[];
+  transfers: Transfer[];
+  rawDebts: BilateralTransfer[];
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -84,7 +118,12 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     subtotal?: number;
     tax?: number;
     serviceCharge?: number;
+    bankName?: string;
+    bankAccount?: string;
   }>>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [rawDebts, setRawDebts] = useState<BilateralTransfer[]>([]);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8091";
 
@@ -123,6 +162,8 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
         name: item.name || "Unnamed Item",
         price: typeof item.price === "number" ? item.price : 0,
         quantity: typeof item.quantity === "number" ? item.quantity : 1,
+        parentId: item.parentId,
+        billId: item.billId || "",
         claims: Array.isArray(item.claims)
           ? item.claims.map((claim) => ({
               name: claim.participant?.name || claim.name || "Unknown",
@@ -157,6 +198,9 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     if (data.payerBankName) setPayerBankName(data.payerBankName);
     if (data.payerBankAccount) setPayerBankAccount(data.payerBankAccount);
     if (Array.isArray(data.participants)) setParticipants(data.participants);
+    if (Array.isArray(data.bills)) setBills(data.bills);
+    if (Array.isArray(data.transfers)) setTransfers(data.transfers);
+    if (Array.isArray((data as any).rawDebts)) setRawDebts((data as any).rawDebts);
   }, [sessionId]);
 
   useEffect(() => {
@@ -224,7 +268,10 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
       payerName,
       payerBankName,
       payerBankAccount,
-      participants
+      participants,
+      bills,
+      transfers,
+      rawDebts
     }}>
       {children}
     </SessionContext.Provider>

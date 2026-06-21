@@ -3,23 +3,355 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ItemCard } from "@/entities/item";
-import { useSession } from "@/entities/session";
+import { useSession, Bill } from "@/entities/session";
 import { useJoinSession } from "@/features/join-session";
 import { useClaimItem } from "@/features/claim-item";
 import { useRenameItem } from "@/features/rename-item";
 import { Button } from "@/shared/ui/Button";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
-import { Input } from "@/shared/ui/Input";
 import { formatRupiah, getInitials } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
 import { useOnboarding } from "@/shared/hooks";
+import { ReceiptItem } from "@/shared/types";
+
+interface BillGroupCardProps {
+  bill: Bill;
+  items: Array<ReceiptItem & { depth: number }>;
+  isJoined: boolean;
+  userName: string;
+  sessionPayerName: string;
+  updateBill: (billId: string, name: string, payerName: string, tax: number, serviceCharge: number, grandTotal: number) => Promise<boolean>;
+  deleteBill: (billId: string) => Promise<boolean>;
+  firstUnclaimedId: string | undefined;
+  showClaimHint: boolean;
+  completeClaimHint: () => void;
+  updateClaim: (itemId: string, increment: number) => void;
+  renameItem: (itemId: string, newName: string) => void;
+}
+
+function BillGroupCard({
+  bill,
+  items,
+  isJoined,
+  userName,
+  sessionPayerName,
+  updateBill,
+  deleteBill,
+  firstUnclaimedId,
+  showClaimHint,
+  completeClaimHint,
+  updateClaim,
+  renameItem
+}: BillGroupCardProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(bill.name);
+  const [payerName, setPayerName] = useState(bill.payerName);
+  const [tax, setTax] = useState(bill.tax.toString());
+  const [serviceCharge, setServiceCharge] = useState(bill.serviceCharge.toString());
+  const [grandTotal, setGrandTotal] = useState(bill.grandTotal.toString());
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isAuthorized = isJoined && (
+    userName.trim().toLowerCase() === bill.payerName.trim().toLowerCase() ||
+    userName.trim().toLowerCase() === sessionPayerName.trim().toLowerCase()
+  );
+
+  const billSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const success = await updateBill(
+      bill.id,
+      name.trim(),
+      payerName.trim(),
+      parseFloat(tax) || 0,
+      parseFloat(serviceCharge) || 0,
+      parseFloat(grandTotal) || 0
+    );
+    if (success) {
+      setIsEditing(false);
+    }
+    setIsSaving(false);
+  };
+
+  const handleDelete = async () => {
+    if (confirm(`Are you sure you want to delete the stop "${bill.name}" and all its items?`)) {
+      await deleteBill(bill.id);
+    }
+  };
+
+  return (
+    <GlassPanel className="p-5 sm:p-6 space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-[var(--glass-border)] pb-3">
+        {isEditing ? (
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-bold text-foreground/40 uppercase">Stop Title</span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-bold text-foreground/40 uppercase">Payer Name</span>
+              <input
+                type="text"
+                value={payerName}
+                onChange={(e) => setPayerName(e.target.value)}
+                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-bold text-foreground/40 uppercase">Tax (Rp)</span>
+              <input
+                type="number"
+                value={tax}
+                onChange={(e) => setTax(e.target.value)}
+                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-bold text-foreground/40 uppercase">Service (Rp)</span>
+              <input
+                type="number"
+                value={serviceCharge}
+                onChange={(e) => setServiceCharge(e.target.value)}
+                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-bold text-foreground/40 uppercase">Grand Total (Rp)</span>
+              <input
+                type="number"
+                value={grandTotal}
+                onChange={(e) => setGrandTotal(e.target.value)}
+                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1">
+            <h3 className="text-foreground font-serif text-lg font-bold flex flex-wrap items-center gap-2">
+              <span>{bill.name}</span>
+              <span className="text-foreground/40 font-sans text-[10px] font-normal tracking-wide uppercase px-2 py-0.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)]">
+                Paid by {bill.payerName}
+              </span>
+            </h3>
+            <div className="text-[10px] font-mono text-foreground/50 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              <span>Subtotal: {formatRupiah(billSubtotal)}</span>
+              <span>Tax: {formatRupiah(bill.tax)}</span>
+              <span>Service Charge: {formatRupiah(bill.serviceCharge)}</span>
+              <span className="text-sage font-bold">Grand Total: {formatRupiah(bill.grandTotal)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-2 shrink-0">
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="text-[10px] font-bold tracking-widest uppercase text-sage hover:bg-sage/10 rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => {
+                  setName(bill.name);
+                  setPayerName(bill.payerName);
+                  setTax(bill.tax.toString());
+                  setServiceCharge(bill.serviceCharge.toString());
+                  setGrandTotal(bill.grandTotal.toString());
+                  setIsEditing(false);
+                }}
+                disabled={isSaving}
+                className="text-[10px] font-bold tracking-widest uppercase text-foreground/40 hover:text-foreground rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              {isAuthorized && bill.id !== "" && (
+                <>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="text-foreground/40 hover:text-foreground text-[10px] font-bold tracking-widest uppercase px-2 py-1 transition-colors cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="text-rose-400 hover:text-rose-500 text-[10px] font-bold tracking-widest uppercase px-2 py-1 transition-colors cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="text-foreground/40 hover:text-foreground text-[10px] font-bold tracking-widest uppercase px-2 py-1 transition-colors cursor-pointer"
+              >
+                {isCollapsed ? "Expand" : "Collapse"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            {items.length === 0 ? (
+              <p className="text-xs text-foreground/30 py-2">No items in this stop.</p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-2.5 pt-2" role="list">
+                {items.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    depth={item.depth || 0}
+                    isJoined={isJoined}
+                    userName={userName}
+                    isPayer={isAuthorized}
+                    showClaimHint={showClaimHint}
+                    isFirstUnclaimed={item.id === firstUnclaimedId}
+                    onInteraction={completeClaimHint}
+                    onUpdateClaim={updateClaim}
+                    onRenameItem={renameItem}
+                  />
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </GlassPanel>
+  );
+}
+
+interface ParticipantInfo {
+  id: number;
+  name: string;
+  totalOwed?: number;
+  subtotal?: number;
+  tax?: number;
+  serviceCharge?: number;
+  bankName?: string;
+  bankAccount?: string;
+}
+
+function BankInfoForm({
+  participant,
+  onUpdate
+}: {
+  participant: ParticipantInfo;
+  onUpdate: (id: number, bank: string, account: string) => Promise<boolean>;
+}) {
+  const [bankName, setBankName] = useState(participant.bankName || "");
+  const [bankAccount, setBankAccount] = useState(participant.bankAccount || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const success = await onUpdate(participant.id, bankName.trim(), bankAccount.trim());
+    if (success) {
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    }
+    setIsSaving(false);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="text"
+        value={bankName}
+        onChange={(e) => setBankName(e.target.value)}
+        placeholder="Bank Name (e.g. BCA)"
+        className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-xs px-1 py-0.5 text-foreground placeholder:text-foreground/20 w-28"
+      />
+      <input
+        type="text"
+        value={bankAccount}
+        onChange={(e) => setBankAccount(e.target.value)}
+        placeholder="Account Number"
+        className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-xs px-1 py-0.5 text-foreground placeholder:text-foreground/20 w-32"
+      />
+      <button
+        onClick={handleSave}
+        disabled={isSaving || (bankName === (participant.bankName || "") && bankAccount === (participant.bankAccount || ""))}
+        className="text-[10px] font-bold tracking-wider uppercase text-sage hover:bg-sage/10 rounded px-2 py-1 transition-colors disabled:opacity-30 cursor-pointer"
+      >
+        {isSaving ? "Saving..." : isSaved ? "Saved!" : "Save"}
+      </button>
+    </div>
+  );
+}
+
+function AddBillButton({ addBill }: { addBill: (file: File, payerName: string, billName: string) => Promise<boolean> }) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    await addBill(file, "", "");
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isUploading}
+        className="text-sage hover:bg-sage/10 flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs cursor-pointer"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {isUploading ? "Uploading Stop..." : "Add Stop"}
+      </button>
+    </div>
+  );
+}
 
 export default function ClaimBoard() {
-  const { sessionId, isJoined, userName, setUserName, items, payerName } = useSession();
+  const {
+    sessionId,
+    isJoined,
+    userName,
+    setUserName,
+    items,
+    payerName,
+    participants,
+    bills
+  } = useSession();
+
   const { joinSession, changeName, joinError } = useJoinSession();
   const { updateClaim } = useClaimItem();
   const { renameItem } = useRenameItem();
-  const { addItem } = useManageItems();
+  const { addItem, addBill, updateBill, deleteBill, updateParticipantBank } = useManageItems();
   const { showJoinHint, showClaimHint, completeJoinHint, completeClaimHint } = useOnboarding();
 
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -82,7 +414,39 @@ export default function ClaimBoard() {
 
   const isPayer = isJoined && userName.trim().toLowerCase() === payerName.trim().toLowerCase();
 
-  const firstUnclaimedItem = items.find(item => item.quantity > item.claims.reduce((s, c) => s + c.shares, 0));
+  const sortedItems = React.useMemo(() => {
+    const result: Array<ReceiptItem & { depth: number }> = [];
+    const visited = new Set<string>();
+
+    const addRecursive = (parentId?: string, depth: number = 0) => {
+      const children = items.filter(it => it.parentId === parentId);
+      children.forEach(child => {
+        if (!visited.has(child.id)) {
+          visited.add(child.id);
+          result.push({ ...child, depth });
+          addRecursive(child.id, depth + 1);
+        }
+      });
+    };
+
+    addRecursive(undefined, 0);
+
+    // Add any remaining items (safety for orphans or cycles)
+    items.forEach(item => {
+      if (!visited.has(item.id)) {
+        visited.add(item.id);
+        result.push({ ...item, depth: 0 });
+      }
+    });
+
+    return result;
+  }, [items]);
+
+  const firstUnclaimedItem = sortedItems.find(item => {
+    const isZeroPriceSubItem = !!item.parentId && item.price === 0;
+    if (isZeroPriceSubItem) return false;
+    return item.quantity > item.claims.reduce((s, c) => s + c.shares, 0);
+  });
   const firstUnclaimedId = firstUnclaimedItem?.id;
 
   const isShowJoinSpotlight = !isJoined && showJoinHint;
@@ -95,19 +459,21 @@ export default function ClaimBoard() {
   React.useEffect(() => {
     if (isShowJoinSpotlight) {
       setTimeout(() => {
-        // Try focusing both (the hidden one will be ignored by the browser, or offsetParent check ensures we target the right one)
         if (mobileInputRef.current && mobileInputRef.current.offsetParent !== null) {
           mobileInputRef.current.focus();
         } else if (desktopInputRef.current && desktopInputRef.current.offsetParent !== null) {
           desktopInputRef.current.focus();
         } else {
-           // Fallback if offsetParent check fails (e.g. in some headless setups), just try focusing both.
-           mobileInputRef.current?.focus();
-           desktopInputRef.current?.focus();
+          mobileInputRef.current?.focus();
+          desktopInputRef.current?.focus();
         }
       }, 500);
     }
   }, [isShowJoinSpotlight]);
+
+  const unassignedItems = React.useMemo(() => {
+    return sortedItems.filter(it => !bills.some(b => b.id === it.billId));
+  }, [sortedItems, bills]);
 
   return (
     <div className="space-y-8 sm:space-y-12">
@@ -190,7 +556,6 @@ export default function ClaimBoard() {
             </div>
           ) : (
             <div className={`relative flex flex-col gap-4 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
-              {/* Premium Floating Badge Hint */}
               {isShowJoinSpotlight && (
                 <div className="absolute -top-6 -right-2 z-20 animate-[bounce_2s_infinite]">
                   <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
@@ -204,6 +569,7 @@ export default function ClaimBoard() {
                 <div className="relative group/join flex items-end gap-3 mt-1">
                   <input
                     type="text"
+                    ref={mobileInputRef}
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder="Enter Guest Name..."
@@ -234,7 +600,6 @@ export default function ClaimBoard() {
 
       {/* Desktop Header Banner */}
       <GlassPanel className={`hidden p-8 md:block transition-all duration-700 ${isShowJoinSpotlight ? 'relative z-50 bg-(--glass-bg-solid)' : ''}`}>
-
         <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-96 w-96 opacity-10 blur-[150px]" />
         
         <div className="relative z-10 flex flex-col gap-6">
@@ -274,7 +639,7 @@ export default function ClaimBoard() {
               <span className="text-sage font-mono font-bold tracking-wider select-all">{shortenId(sessionId)}</span>
               <button
                 onClick={handleCopyCode}
-                className="text-foreground/40 hover:text-sage flex items-center gap-1 rounded-sm border border-(--glass-border) bg-(--glass-bg) px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
+                className="text-foreground/40 hover:text-sage flex items-center gap-1 rounded-sm border border-(--glass-border) bg-(--glass-bg) px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 title="Copy Session Code"
               >
                 {copyCodeSuccess ? (
@@ -320,7 +685,6 @@ export default function ClaimBoard() {
                 </div>
               ) : (
                 <div className={`relative flex flex-col items-end gap-1 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
-                  {/* Premium Floating Badge Hint */}
                   {isShowJoinSpotlight && (
                     <div className="absolute -top-6 -right-0.5 z-20 animate-[bounce_2s_infinite]">
                       <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
@@ -334,6 +698,7 @@ export default function ClaimBoard() {
                       <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
                       <input
                         type="text"
+                        ref={desktopInputRef}
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
                         placeholder="Enter Guest Name..."
@@ -404,15 +769,68 @@ export default function ClaimBoard() {
         </div>
       </section>
 
+      {/* Participants Roster Section */}
+      <section className="space-y-4 sm:space-y-6">
+        <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
+          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Participants</h2>
+          <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">
+            {participants.length} people
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {participants.map((p) => {
+            const isMe = isJoined && p.name === userName;
+            return (
+              <GlassPanel key={p.id} className="p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="bg-sage text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-inner">
+                    {getInitials(p.name)}
+                  </div>
+                  <div>
+                    <h3 className="text-foreground font-sans font-bold text-sm">
+                      {p.name} {isMe && <span className="text-sage text-xs font-normal font-sans ml-1">(You)</span>}
+                    </h3>
+                    <p className="text-foreground/40 text-[10px] font-mono">
+                      Subtotal: {formatRupiah(p.subtotal || 0)} | Total Owed: {formatRupiah(p.totalOwed || 0)}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Bank Details Input */}
+                <div className="space-y-1 mt-1 border-t border-[var(--glass-border)] pt-2">
+                  <p className="text-foreground/30 text-[9px] font-bold tracking-wider uppercase">Settlement Bank Account</p>
+                  {isMe ? (
+                    <BankInfoForm participant={p} onUpdate={updateParticipantBank} />
+                  ) : (
+                    <div className="text-xs text-foreground/70 font-sans">
+                      {p.bankName ? (
+                        <span>
+                          <strong className="text-foreground font-semibold">{p.bankName}</strong>: {p.bankAccount}
+                        </span>
+                      ) : (
+                        <span className="italic text-foreground/30">No bank details added yet</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </GlassPanel>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Inventory Items List */}
       <div className={`space-y-4 sm:space-y-6 transition-all duration-700 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
         <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
-          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Inventory</h2>
+          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Stops Inventory</h2>
           <div className="flex items-center gap-4">
+            {isJoined && (
+              <AddBillButton addBill={addBill} />
+            )}
             {isPayer && (
               <button
                 onClick={() => setIsAdding(true)}
-                className="text-sage hover:bg-sage/10 flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
+                className="text-sage hover:bg-sage/10 flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs cursor-pointer"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14M5 12h14" />
@@ -494,28 +912,60 @@ export default function ClaimBoard() {
           </GlassPanel>
         )}
 
-
-        {items.length === 0 && !isAdding ? (
+        {bills.length === 0 && unassignedItems.length === 0 && !isAdding ? (
           <GlassPanel className="border-dashed border-[var(--glass-border)] p-12 text-center sm:p-24">
             <p className="text-foreground/20 font-sans text-lg font-normal tracking-wide sm:text-xl">No items have been uploaded yet.</p>
           </GlassPanel>
         ) : (
-          <ul className="grid grid-cols-1 gap-2.5 sm:gap-4" role="list">
-            {items.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
+          <div className="space-y-6">
+            {/* Render items grouped by Bill */}
+            {bills.map((bill) => {
+              const billItems = sortedItems.filter(item => item.billId === bill.id);
+              return (
+                <BillGroupCard
+                  key={bill.id}
+                  bill={bill}
+                  items={billItems}
+                  isJoined={isJoined}
+                  userName={userName}
+                  sessionPayerName={payerName}
+                  updateBill={updateBill}
+                  deleteBill={deleteBill}
+                  firstUnclaimedId={firstUnclaimedId}
+                  showClaimHint={showClaimHint}
+                  completeClaimHint={completeClaimHint}
+                  updateClaim={updateClaim}
+                  renameItem={renameItem}
+                />
+              );
+            })}
+
+            {/* Render unassigned items if any */}
+            {unassignedItems.length > 0 && (
+              <BillGroupCard
+                bill={{
+                  id: "",
+                  name: "Other Unassigned Items",
+                  payerName: payerName,
+                  tax: 0,
+                  serviceCharge: 0,
+                  grandTotal: unassignedItems.reduce((s, it) => s + it.price * it.quantity, 0),
+                  createdAt: ""
+                }}
+                items={unassignedItems}
                 isJoined={isJoined}
                 userName={userName}
-                isPayer={isPayer}
+                sessionPayerName={payerName}
+                updateBill={async () => false}
+                deleteBill={async () => false}
+                firstUnclaimedId={firstUnclaimedId}
                 showClaimHint={showClaimHint}
-                isFirstUnclaimed={item.id === firstUnclaimedId}
-                onInteraction={completeClaimHint}
-                onUpdateClaim={updateClaim}
-                onRenameItem={renameItem}
+                completeClaimHint={completeClaimHint}
+                updateClaim={updateClaim}
+                renameItem={renameItem}
               />
-            ))}
-          </ul>
+            )}
+          </div>
         )}
       </div>
     </div>
