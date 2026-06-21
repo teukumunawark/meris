@@ -15,6 +15,7 @@ type CompiledClaim struct {
 type CompiledItem struct {
 	ID        string          `json:"id"`
 	SessionID string          `json:"sessionId"`
+	BillID    string          `json:"billId"`
 	ParentID  *string         `json:"parentId,omitempty"`
 	Name      string          `json:"name"`
 	Price     float64         `json:"price"`

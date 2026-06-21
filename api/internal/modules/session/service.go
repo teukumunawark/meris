@@ -389,6 +389,7 @@ func (s *Service) AddItem(ctx context.Context, sessionID string, name string, pr
 		return q.CreateItem(ctx, sqlc.CreateItemParams{
 			ID:        uuid.New().String(),
 			SessionID: sessionID,
+			BillID:    sessionID,
 			Name:      name,
 			Price:     price,
 			Quantity:  quantity,
@@ -612,6 +613,7 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		compiledItems = append(compiledItems, CompiledItem{
 			ID:        it.ID,
 			SessionID: it.SessionID,
+			BillID:    it.BillID,
 			ParentID:  sqlcutil.TextPtr(it.ParentID),
 			Name:      it.Name,
 			Price:     it.Price,
