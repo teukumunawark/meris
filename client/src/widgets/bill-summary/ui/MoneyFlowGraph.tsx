@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { formatRupiah } from "@/shared/lib";
+import { formatRupiah, getInitials } from "@/shared/lib";
 import { Transfer, BilateralTransfer } from "@/entities/session";
 
 interface Participant {
@@ -17,9 +17,7 @@ interface MoneyFlowGraphProps {
   userName: string;
 }
 
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
+
 
 function nameToHue(name: string): number {
   let hash = 0;

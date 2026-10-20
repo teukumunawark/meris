@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
@@ -34,13 +36,6 @@ func main() {
 		command = os.Args[1]
 	}
 
-	dbPool, err := database.Open(ctx, cfg.Database)
-	if err != nil {
-		slog.Error("Critical database initialization error", "error", err)
-		os.Exit(1)
-	}
-	defer dbPool.Close()
-
 	goose.SetBaseFS(migrations.FS)
 	goose.SetLogger(&database.GooseLogger{Log: appLogger})
 
@@ -49,7 +44,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	db := stdlib.OpenDBFromPool(dbPool)
+	var db *sql.DB
+	if cfg.Database.DirectURL != "" {
+		connConfig, err := pgx.ParseConfig(cfg.Database.DirectURL)
+		if err != nil {
+			slog.Error("Failed to parse direct migration url", "error", err)
+			os.Exit(1)
+		}
+		db = stdlib.OpenDB(*connConfig)
+	} else {
+		dbPool, err := database.Open(ctx, cfg.Database)
+		if err != nil {
+			slog.Error("Critical database initialization error", "error", err)
+			os.Exit(1)
+		}
+		defer dbPool.Close()
+		db = stdlib.OpenDBFromPool(dbPool)
+	}
 	defer db.Close()
 
 	slog.Info("Running goose command", "command", command)

@@ -62,6 +62,7 @@ export interface SSEServerUpdatePayload {
   }>;
   bills?: Bill[];
   transfers?: Transfer[];
+  rawDebts?: BilateralTransfer[];
 }
 
 interface SessionContextType {
@@ -178,29 +179,40 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
 
     if (data.payerName) {
       setPayerName(data.payerName);
-      const totalSub = Array.isArray(data.items) ? data.items.reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0) : 0;
-      const computedGrand = totalSub + (data.tax || 0) + (data.serviceCharge || 0);
+      if (typeof window !== "undefined") {
+        const totalSub = Array.isArray(data.items) ? data.items.reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0) : 0;
+        const computedGrand = totalSub + (data.tax || 0) + (data.serviceCharge || 0);
 
-      const stored = localStorage.getItem("meris_recent_sessions");
-      let list: Array<{ id: string; payerName: string; grandTotal: number; joinedAt: number }> = [];
-      if (stored) {
-        try { list = JSON.parse(stored); } catch {}
+        const stored = localStorage.getItem("meris_recent_sessions");
+        let list: Array<{ id: string; payerName: string; grandTotal: number; joinedAt: number }> = [];
+        if (stored) {
+          try { list = JSON.parse(stored); } catch {}
+        }
+        const existing = list.find(item => item.id === sessionId);
+        if (!existing) {
+          list.unshift({
+            id: sessionId,
+            payerName: data.payerName,
+            grandTotal: computedGrand,
+            joinedAt: Date.now(),
+          });
+          localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
+        } else if (existing.payerName !== data.payerName || existing.grandTotal !== computedGrand) {
+          list = list.map(item =>
+            item.id === sessionId
+              ? { ...item, payerName: data.payerName!, grandTotal: computedGrand }
+              : item
+          );
+          localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
+        }
       }
-      list = list.filter(item => item.id !== sessionId);
-      list.unshift({
-        id: sessionId,
-        payerName: data.payerName,
-        grandTotal: computedGrand,
-        joinedAt: Date.now(),
-      });
-      localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
     }
     if (data.payerBankName) setPayerBankName(data.payerBankName);
     if (data.payerBankAccount) setPayerBankAccount(data.payerBankAccount);
     if (Array.isArray(data.participants)) setParticipants(data.participants);
     if (Array.isArray(data.bills)) setBills(data.bills);
     if (Array.isArray(data.transfers)) setTransfers(data.transfers);
-    if (Array.isArray((data as any).rawDebts)) setRawDebts((data as any).rawDebts);
+    if (Array.isArray(data.rawDebts)) setRawDebts(data.rawDebts);
   }, [sessionId]);
 
   useEffect(() => {

@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,9 +17,20 @@ import (
 )
 
 var (
-	ErrInvalidJSON         = errors.New("invalid JSON format")
-	ErrCalculationMismatch = errors.New("subtotal mismatch with sum of items")
+	ErrInvalidJSON = errors.New("invalid JSON format")
 )
+
+type Config struct {
+	APIKey   string
+	Endpoint string
+	Model    string
+}
+
+var currentConfig Config
+
+func SetConfig(cfg Config) {
+	currentConfig = cfg
+}
 
 func (r *ExtractedReceipt) Validate() error {
 	var sum float64
@@ -76,64 +88,79 @@ func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
 	return &receipt, nil
 }
 
-type MiMoRequest struct {
+type ChatCompletionRequest struct {
 	Model          string              `json:"model"`
-	Messages       []MiMoMessage       `json:"messages"`
-	ResponseFormat *MiMoResponseFormat `json:"response_format,omitempty"`
+	Messages       []ChatMessage       `json:"messages"`
+	ResponseFormat *ChatResponseFormat `json:"response_format,omitempty"`
 	Temperature    float64             `json:"temperature"`
 	Stream         bool                `json:"stream"`
 }
 
-type MiMoResponseFormat struct {
+type ChatResponseFormat struct {
 	Type       string                `json:"type"`
-	JSONSchema *MiMoJSONSchemaConfig `json:"json_schema,omitempty"`
+	JSONSchema *ChatJSONSchemaConfig `json:"json_schema,omitempty"`
 }
 
-type MiMoJSONSchemaConfig struct {
+type ChatJSONSchemaConfig struct {
 	Name   string      `json:"name"`
 	Strict bool        `json:"strict"`
 	Schema interface{} `json:"schema"`
 }
 
-type MiMoMessage struct {
+type ChatMessage struct {
 	Role    string        `json:"role"`
-	Content []MiMoContent `json:"content"`
+	Content []ChatContent `json:"content"`
 }
 
-type MiMoContent struct {
+type ChatContent struct {
 	Type     string        `json:"type"`
 	Text     string        `json:"text,omitempty"`
-	ImageURL *MiMoImageURL `json:"image_url,omitempty"`
+	ImageURL *ChatImageURL `json:"image_url,omitempty"`
 }
 
-type MiMoImageURL struct {
+type ChatImageURL struct {
 	URL string `json:"url"`
 }
 
-func ExtractReceiptData(imageBytes []byte) (*ExtractedReceipt, error) {
+func ExtractReceiptData(ctx context.Context, imageBytes []byte) (*ExtractedReceipt, error) {
 	var lastErr error
 	for attempt := 1; attempt <= 2; attempt++ {
-		receipt, err := executeExtractionAttempt(imageBytes)
+		receipt, err := executeExtractionAttempt(ctx, imageBytes)
 		if err == nil {
 			return receipt, nil
 		}
 		lastErr = err
-		slog.Warn("AI extraction attempt failed, retrying...", "attempt", attempt, "error", err)
-		time.Sleep(1 * time.Second)
+		slog.WarnContext(ctx, "AI extraction attempt failed, retrying...", "attempt", attempt, "error", err)
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("AI extraction context cancelled: %w", ctx.Err())
+		case <-time.After(1 * time.Second):
+		}
 	}
 	return nil, fmt.Errorf("AI extraction failed after 2 attempts: %w", lastErr)
 }
 
-func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
-	apiKey := os.Getenv("MIMO_API_KEY")
-	endpoint := os.Getenv("MIMO_ENDPOINT")
-	if endpoint == "" {
-		return nil, errors.New("MIMO_ENDPOINT environment variable is not set")
+func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*ExtractedReceipt, error) {
+	apiKey := currentConfig.APIKey
+	if apiKey == "" {
+		apiKey = os.Getenv("AI_API_KEY")
 	}
 
-	model := os.Getenv("MIMO_MODEL")
+	endpoint := currentConfig.Endpoint
+	if endpoint == "" {
+		endpoint = os.Getenv("AI_ENDPOINT")
+	}
+	if endpoint == "" {
+		return nil, errors.New("AI_ENDPOINT environment variable is not set")
+	}
+
+	model := currentConfig.Model
 	if model == "" {
-		model = "mimo-v2.5"
+		model = os.Getenv("AI_MODEL")
+	}
+	if model == "" {
+		model = "gemini-2.5-flash"
 	}
 
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
@@ -183,20 +210,20 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 		"additionalProperties": false,
 	}
 
-	payload := MiMoRequest{
+	payload := ChatCompletionRequest{
 		Model: model,
-		Messages: []MiMoMessage{
+		Messages: []ChatMessage{
 			{
 				Role: "user",
-				Content: []MiMoContent{
+				Content: []ChatContent{
 					{Type: "text", Text: prompt},
-					{Type: "image_url", ImageURL: &MiMoImageURL{URL: dataURL}},
+					{Type: "image_url", ImageURL: &ChatImageURL{URL: dataURL}},
 				},
 			},
 		},
-		ResponseFormat: &MiMoResponseFormat{
+		ResponseFormat: &ChatResponseFormat{
 			Type: "json_schema",
-			JSONSchema: &MiMoJSONSchemaConfig{
+			JSONSchema: &ChatJSONSchemaConfig{
 				Name:   "receipt",
 				Strict: true,
 				Schema: schema,
@@ -210,14 +237,16 @@ func executeExtractionAttempt(imageBytes []byte) (*ExtractedReceipt, error) {
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 45 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

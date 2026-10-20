@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import imageCompression from "browser-image-compression";
-import { Button } from "@/shared/ui/Button";
+
 import { Input } from "@/shared/ui/Input";
 import { apiFetch } from "@/shared/api/client";
 

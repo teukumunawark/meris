@@ -12,11 +12,15 @@ import (
 )
 
 // Init initializes the OTel tracer provider exporting to the OTLP collector
-func Init(ctx context.Context, serviceName, otlpEndpoint string) (func(context.Context) error, error) {
+func Init(ctx context.Context, serviceName, env, otlpEndpoint string) (func(context.Context) error, error) {
+	if env == "" {
+		env = "production"
+	}
+
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceName(serviceName),
-			semconv.DeploymentEnvironment("production"),
+			semconv.DeploymentEnvironment(env),
 		),
 	)
 	if err != nil {

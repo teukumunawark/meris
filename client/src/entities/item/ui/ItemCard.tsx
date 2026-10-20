@@ -4,8 +4,6 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ReceiptItem } from "@/shared/types";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
-import { Input } from "@/shared/ui/Input";
-import { Button } from "@/shared/ui/Button";
 import { formatRupiah } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
 
@@ -19,7 +17,7 @@ interface ItemCardProps {
   isFirstUnclaimed?: boolean;
   onInteraction?: () => void;
   onUpdateClaim: (itemId: string, increment: number) => void;
-  onRenameItem: (itemId: string, newName: string) => void;
+  onRenameItem: (itemId: string, newName: string) => void | Promise<unknown>;
 }
 
 export default function ItemCard({
@@ -70,6 +68,19 @@ export default function ItemCard({
       setIsEditing(false);
     }
     setIsSaving(false);
+  };
+
+  const handleRenameSave = async () => {
+    const trimmed = editName.trim();
+    if (!trimmed) return;
+
+    setIsSaving(true);
+    try {
+      await onRenameItem(item.id, trimmed);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -162,6 +173,49 @@ export default function ItemCard({
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}
+                className="bg-sage text-background text-[10px] font-bold tracking-[0.2em] uppercase px-8 py-3 rounded-full hover:bg-sage/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] flex items-center gap-2"
+              >
+                {isSaving ? "Saving..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        ) : isEditing && !isPayer ? (
+          <div className="relative z-10 w-full animate-in fade-in zoom-in-95 duration-300">
+            <div className="space-y-1 mb-6">
+              <span className="text-[9px] font-bold tracking-[0.3em] uppercase text-sage">Rename Item</span>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleRenameSave();
+                  } else if (e.key === "Escape") {
+                    setEditName(item.name);
+                    setIsEditing(false);
+                  }
+                }}
+                placeholder="Item Name"
+                className="w-full bg-transparent font-sans text-2xl md:text-3xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/10 focus:border-sage pb-2 transition-colors"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-4 pt-4 border-t border-foreground/5">
+              <button 
+                onClick={() => {
+                  setEditName(item.name);
+                  setIsEditing(false);
+                }} 
+                disabled={isSaving}
+                className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/40 hover:text-foreground transition-colors px-4 py-2 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleRenameSave} 
+                disabled={isSaving || !editName.trim() || editName.trim() === item.name}
                 className="bg-sage text-background text-[10px] font-bold tracking-[0.2em] uppercase px-8 py-3 rounded-full hover:bg-sage/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] flex items-center gap-2"
               >
                 {isSaving ? "Saving..." : "Confirm"}

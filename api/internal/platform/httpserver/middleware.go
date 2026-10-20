@@ -135,7 +135,7 @@ func RateLimiter(limitType string, limit int, duration time.Duration) func(http.
 				ip = r.RemoteAddr
 			}
 
-			key := fmt.Sprintf("limiter:%s:%s", limitType, ip)
+			key := fmt.Sprintf("meris:limiter:%s:%s", limitType, ip)
 			ctx := r.Context()
 
 			if redis.RDB == nil {

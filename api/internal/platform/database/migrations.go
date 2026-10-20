@@ -2,10 +2,12 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -26,7 +28,7 @@ func (l *GooseLogger) Printf(format string, v ...any) {
 	l.Log.Info(fmt.Sprintf(format, v...))
 }
 
-func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
+func RunMigrations(ctx context.Context, pool *pgxpool.Pool, directURL string) error {
 	goose.SetBaseFS(migrations.FS)
 	goose.SetLogger(&GooseLogger{Log: slog.Default()})
 
@@ -34,7 +36,16 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("set goose dialect: %w", err)
 	}
 
-	db := stdlib.OpenDBFromPool(pool)
+	var db *sql.DB
+	if directURL != "" {
+		connConfig, err := pgx.ParseConfig(directURL)
+		if err != nil {
+			return fmt.Errorf("parse direct migration url: %w", err)
+		}
+		db = stdlib.OpenDB(*connConfig)
+	} else {
+		db = stdlib.OpenDBFromPool(pool)
+	}
 	defer db.Close()
 
 	slog.Info("Running pending goose database migrations...")

@@ -31,28 +31,31 @@ export function useClaimItem() {
     const targetUser = userName.trim();
     if (!isJoined || !targetUser) return;
 
-    const previousItems = [...items];
-    let updatedShares = 0;
+    const targetItem = items.find((item) => item.id === itemId);
+    if (!targetItem) return;
 
-    setItems((prevItems) => {
-      return prevItems.map((item) => {
+    const claimsByOthers = targetItem.claims.filter((c) => c.name !== targetUser);
+    const totalClaimedByOthers = claimsByOthers.reduce((sum, c) => sum + c.shares, 0);
+
+    const userClaim = targetItem.claims.find((c) => c.name === targetUser);
+    const currentShares = userClaim?.shares ?? 0;
+
+    let newShares = currentShares + increment;
+    if (newShares < 0) newShares = 0;
+    if (totalClaimedByOthers + newShares > targetItem.quantity) {
+      newShares = targetItem.quantity - totalClaimedByOthers;
+    }
+
+    if (newShares === currentShares) return;
+
+    const previousClaims = targetItem.claims;
+
+    setItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id !== itemId) return item;
 
-        const claimsByOthers = item.claims.filter((c) => c.name !== targetUser);
-        const totalClaimedByOthers = claimsByOthers.reduce((sum, c) => sum + c.shares, 0);
-
-        const userClaim = item.claims.find((c) => c.name === targetUser);
-        const currentShares = userClaim?.shares ?? 0;
-        
-        let newShares = currentShares + increment;
-        if (newShares < 0) newShares = 0;
-        if (totalClaimedByOthers + newShares > item.quantity) {
-          newShares = item.quantity - totalClaimedByOthers;
-        }
-
-        updatedShares = newShares;
-
-        const newClaims = [...claimsByOthers];
+        const claimsOthers = item.claims.filter((c) => c.name !== targetUser);
+        const newClaims = [...claimsOthers];
         if (newShares > 0) {
           newClaims.push({ name: targetUser, shares: newShares });
         }
@@ -61,15 +64,22 @@ export function useClaimItem() {
           ...item,
           claims: newClaims,
         };
-      });
-    });
+      })
+    );
 
-    setTimeout(async () => {
-      const success = await syncClaimToBackend(itemId, updatedShares);
+    void syncClaimToBackend(itemId, newShares).then((success) => {
       if (!success) {
-        setItems(previousItems);
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (item.id !== itemId) return item;
+            return {
+              ...item,
+              claims: previousClaims,
+            };
+          })
+        );
       }
-    }, 0);
+    });
   }, [isJoined, userName, items, setItems, syncClaimToBackend]);
 
   return { updateClaim };

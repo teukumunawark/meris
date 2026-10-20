@@ -12,17 +12,3 @@ export interface ReceiptItem {
   billId?: string;
   claims: ParticipantClaim[];
 }
-
-export interface ParticipantBreakdown {
-  name: string;
-  subtotal: number;
-  tax: number;
-  serviceCharge: number;
-  total: number;
-  claimedItems: Array<{
-    name: string;
-    shares: number;
-    price: number;
-    totalPrice: number;
-  }>;
-}

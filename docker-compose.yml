@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: meris-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: merisdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: meris-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+      dockerfile: ../deployments/api/Dockerfile
+    container_name: meris-api
+    restart: unless-stopped
+    ports:
+      - "8091:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=merisdb
+      - REDIS_ADDR=redis:6379
+      - BIND_ADDRESS=0.0.0.0
+    depends_on:
+      - postgres
+      - redis
+
+  client:
+    build:
+      context: ./client
+      dockerfile: ../deployments/client/Dockerfile
+      args:
+        - NEXT_PUBLIC_BACKEND_URL=http://localhost:8091
+    container_name: meris-client
+    restart: unless-stopped
+    ports:
+      - "3011:3000"
+    env_file:
+      - .env
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

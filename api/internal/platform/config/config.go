@@ -16,6 +16,7 @@ type Config struct {
 	HTTP            HTTPConfig
 	Database        database.Config
 	Redis           RedisConfig
+	AI              AIConfig
 	Telemetry       TelemetryConfig
 	CORS            CORSConfig
 	ShutdownTimeout time.Duration
@@ -29,6 +30,7 @@ type HTTPConfig struct {
 }
 
 type RedisConfig struct {
+	URL      string
 	Addr     string
 	Password string
 	DB       int
@@ -36,6 +38,12 @@ type RedisConfig struct {
 
 type TelemetryConfig struct {
 	OTLPEndpoint string
+}
+
+type AIConfig struct {
+	APIKey   string
+	Endpoint string
+	Model    string
 }
 
 type CORSConfig struct {
@@ -58,6 +66,8 @@ func Load() (Config, error) {
 			IdleTimeout:  120 * time.Second,
 		},
 		Database: database.Config{
+			RawURL:            getEnv("DATABASE_URL", ""),
+			DirectURL:         getEnv("DATABASE_DIRECT_URL", ""),
 			Host:              getEnv("DB_HOST", "localhost"),
 			Port:              getEnv("DB_PORT", "5432"),
 			User:              getEnv("DB_USER", "postgres"),
@@ -73,9 +83,15 @@ func Load() (Config, error) {
 			ConnectTimeout:    5 * time.Second,
 		},
 		Redis: RedisConfig{
+			URL:      getEnv("REDIS_URL", ""),
 			Addr:     getEnv("REDIS_ADDR", "localhost:6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       0,
+		},
+		AI: AIConfig{
+			APIKey:   getEnv("AI_API_KEY", ""),
+			Endpoint: getEnv("AI_ENDPOINT", ""),
+			Model:    getEnv("AI_MODEL", "gemini-2.5-flash"),
 		},
 		Telemetry: TelemetryConfig{
 			OTLPEndpoint: getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),

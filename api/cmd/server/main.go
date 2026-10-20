@@ -12,6 +12,7 @@ import (
 	"github.com/riandyrn/otelchi"
 
 	"meris-backend/internal/modules/session"
+	"meris-backend/internal/platform/ai"
 	"meris-backend/internal/platform/config"
 	"meris-backend/internal/platform/database"
 	"meris-backend/internal/platform/httpserver"
@@ -33,10 +34,16 @@ func main() {
 	appLogger := logger.New(cfg.Env)
 	slog.SetDefault(appLogger)
 
+	ai.SetConfig(ai.Config{
+		APIKey:   cfg.AI.APIKey,
+		Endpoint: cfg.AI.Endpoint,
+		Model:    cfg.AI.Model,
+	})
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	shutdownTele, err := telemetry.Init(ctx, "meris-api", cfg.Telemetry.OTLPEndpoint)
+	shutdownTele, err := telemetry.Init(ctx, "meris-api", cfg.Env, cfg.Telemetry.OTLPEndpoint)
 	if err != nil {
 		slog.Error("Failed to initialize OpenTelemetry", "error", err)
 	} else {
@@ -47,7 +54,7 @@ func main() {
 		}()
 	}
 
-	if err := redis.InitRedis(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB); err != nil {
+	if err := redis.InitRedis(cfg.Redis.URL, cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB); err != nil {
 		slog.Error("Critical error initializing Redis", "error", err)
 		os.Exit(1)
 	}
@@ -59,7 +66,7 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	if err := database.RunMigrations(ctx, dbPool); err != nil {
+	if err := database.RunMigrations(ctx, dbPool, cfg.Database.DirectURL); err != nil {
 		slog.Error("Database migrations failed", "error", err)
 		os.Exit(1)
 	}

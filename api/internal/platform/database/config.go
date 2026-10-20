@@ -8,6 +8,8 @@ import (
 )
 
 type Config struct {
+	RawURL            string
+	DirectURL         string
 	Host              string
 	Port              string
 	User              string
@@ -24,6 +26,10 @@ type Config struct {
 }
 
 func (c Config) DSN() string {
+	if c.RawURL != "" {
+		return c.RawURL
+	}
+
 	values := url.Values{}
 	values.Set("sslmode", c.SSLMode)
 	values.Set("connect_timeout", strconv.Itoa(int(c.ConnectTimeout/time.Second)))

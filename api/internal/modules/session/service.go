@@ -28,7 +28,7 @@ func NewService(repo *Repository, hub *sse.Hub) *Service {
 }
 
 func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte, payerName, payerBankName, payerBankAccount string) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, uint, string, error) {
-	extracted, err := ai.ExtractReceiptData(imageBytes)
+	extracted, err := ai.ExtractReceiptData(ctx, imageBytes)
 	if err != nil {
 		return nil, nil, nil, 0, "", fmt.Errorf("AI extraction failed: %w", err)
 	}
@@ -88,6 +88,18 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 				return err
 			}
 			payerID = uint(p.ID)
+
+			if payerBankName != "" || payerBankAccount != "" {
+				err = q.UpdateParticipantBankInfo(ctx, sqlc.UpdateParticipantBankInfoParams{
+					BankName:    payerBankName,
+					BankAccount: payerBankAccount,
+					ID:          p.ID,
+					SessionID:   sessionID,
+				})
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil
@@ -556,10 +568,8 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		pTotalPaidMap[p.ID] = 0.0
 	}
 
-	itemsMap := make(map[string]sqlc.Item)
 	billItemsMap := make(map[string][]sqlc.Item)
 	for _, it := range items {
-		itemsMap[it.ID] = it
 		billItemsMap[it.BillID] = append(billItemsMap[it.BillID], it)
 	}
 
@@ -588,19 +598,12 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 
 		for _, p := range participants {
 			pBillSubtotal := pBillSubtotalMap[p.ID]
-			var proportion float64
-			if billSubtotal > 0 {
-				proportion = pBillSubtotal / billSubtotal
-			}
+			share := CalculateShare(pBillSubtotal, billSubtotal, bill.Tax, bill.ServiceCharge)
 
-			pConsumedTax := proportion * bill.Tax
-			pConsumedServiceCharge := proportion * bill.ServiceCharge
-			pConsumedGrandTotal := pBillSubtotal + pConsumedTax + pConsumedServiceCharge
-
-			pSubtotalMap[p.ID] += pBillSubtotal
-			pTaxMap[p.ID] += pConsumedTax
-			pServiceChargeMap[p.ID] += pConsumedServiceCharge
-			pTotalOwedMap[p.ID] += pConsumedGrandTotal
+			pSubtotalMap[p.ID] += share.Subtotal
+			pTaxMap[p.ID] += share.Tax
+			pServiceChargeMap[p.ID] += share.ServiceCharge
+			pTotalOwedMap[p.ID] += share.Total
 
 			if bill.PayerName == p.Name {
 				pTotalPaidMap[p.ID] += bill.GrandTotal
@@ -722,7 +725,7 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 }
 
 func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageBytes []byte, payerName string, billName string, token string) error {
-	extracted, err := ai.ExtractReceiptData(imageBytes)
+	extracted, err := ai.ExtractReceiptData(ctx, imageBytes)
 	if err != nil {
 		return fmt.Errorf("AI extraction failed: %w", err)
 	}
