@@ -14,8 +14,11 @@ vendor/
 .next/
 out/
 
-# Dependency directories
+# Dependency directories & disallowed lockfiles
 node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # Environment Variables
 .env

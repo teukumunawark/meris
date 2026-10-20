@@ -42,7 +42,7 @@ The repository enforces a strict physical separation between runtimes:
 
 ## 3. Frontend Codebase Rules (`/client`)
 
-* **Tech Stack**: Next.js App Router (Turbopack, RSC + Client Components), TypeScript, Feature-Sliced Design (FSD), OpenTelemetry via `instrumentation.ts`.
+* **Tech Stack**: Next.js App Router (Turbopack, RSC + Client Components), TypeScript, Bun runtime/package manager, Feature-Sliced Design (FSD), OpenTelemetry via `instrumentation.ts`.
 * **Architecture (Feature-Sliced Design in `src/`)**:
   * `app/`: Next.js App Router pages, providers, global styles.
   * `widgets/`: Compositional UI components.
@@ -53,7 +53,7 @@ The repository enforces a strict physical separation between runtimes:
   * Generated API types derived from `contracts/openapi.yaml` via `openapi-typescript`.
   * **NEVER edit generated OpenAPI TypeScript interfaces manually.**
 * **Quality & Verification**:
-  * Run type checking and linting (`npm run lint`).
+  * Run type checking and linting (`bun run lint`).
 
 ---
 
@@ -79,4 +79,4 @@ make test
 1. **Contract-Driven First**: Any API contract modification MUST start in `contracts/openapi.yaml`.
 2. **Never Commit Secrets**: Do not write, expose, or commit `.env` credentials or secrets.
 3. **Preserve Generated File Integrity**: Never modify auto-generated code (`sqlc` outputs, generated OpenAPI TS files).
-4. **Empirical Verification**: Always verify code changes by running tests/builds (`go test ./...`, `npm run build`).
+4. **Empirical Verification**: Always verify code changes by running tests/builds (`go test ./...`, `bun run build`).

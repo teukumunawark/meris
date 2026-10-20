@@ -44,20 +44,18 @@ jobs:
           version: latest
           working-directory: ./api
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: 'npm'
-          cache-dependency-path: client/package-lock.json
+          bun-version: latest
 
       - name: Install Client Dependencies
         working-directory: ./client
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Run Client Linter
         working-directory: ./client
-        run: npm run lint
+        run: bun run lint
 
   build-and-push:
     name: Build & Push Images

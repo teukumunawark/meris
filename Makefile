@@ -5,7 +5,7 @@ up: dev
 
 dev:
 	@echo "Starting backend and frontend dev servers concurrently..."
-	(cd api && go run cmd/server/main.go) & (cd client && npm run dev)
+	(cd api && go run cmd/server/main.go) & (cd client && bun run dev)
 
 # Execute code generation pipelines
 generate:
@@ -14,32 +14,32 @@ generate:
 	@echo "Running backend SQLC generation..."
 	cd api && sqlc generate
 	@echo "Running frontend OpenAPI type generation..."
-	cd client && npm run generate-api-types || echo "No API types generator configured yet"
+	cd client && bun run generate-api-types || echo "No API types generator configured yet"
 
 # Run tests for both backend and client
 test:
 	@echo "Running Go backend unit tests..."
 	cd api && go test ./... -v
 	@echo "Running client linting..."
-	cd client && npm run lint || echo "No client lint target configured"
+	cd client && bun run lint || echo "No client lint target configured"
 
 # Run linters for both backend and client
 lint:
 	@echo "Running Go backend golangci-lint..."
 	cd api && golangci-lint run ./...
 	@echo "Running client linting..."
-	cd client && npm run lint
+	cd client && bun run lint
 
 # Install all dependencies for both projects
 install-deps:
 	@echo "Installing Go backend dependencies..."
 	cd api && go mod download
 	@echo "Installing Next.js client dependencies..."
-	cd client && npm install
+	cd client && bun install
 
 # Build production bundles
 build-all:
 	@echo "Building Go backend..."
 	cd api && go build -o bin/server cmd/server/main.go
 	@echo "Building Next.js client..."
-	cd client && npm run build
+	cd client && bun run build

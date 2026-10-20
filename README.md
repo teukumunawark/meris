@@ -4,7 +4,7 @@ Group expense sharing and bill splitting application designed for proportional c
 
 ## Architecture
 - **Backend:** Go 1.27 (`net/http` + `chi/v5`, `pgx/v5`, `sqlc`, `goose`, OpenTelemetry).
-- **Frontend:** Next.js 16 (App Router, Turbopack, Tailwind CSS, Feature-Sliced Design).
+- **Frontend:** Next.js 16 on Bun (App Router, Turbopack, Tailwind CSS, Feature-Sliced Design).
 - **Database & Cache:** PostgreSQL 18 & Redis 8.
 
 ## Quick Start (Local Development)
@@ -15,7 +15,7 @@ cp .env.example .env
 # 2. Start services with Docker Compose
 docker compose up -d
 
-# Or run locally with Go and Node.js
+# Or run locally with Go and Bun
 make dev
 ```
 
