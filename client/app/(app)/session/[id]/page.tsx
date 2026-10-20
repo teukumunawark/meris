@@ -1,12 +1,13 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use } from "react";
 import Link from "next/link";
 import { SessionProvider, useSession } from "@/entities/session/model/SessionContext";
 import { ThemeToggle } from "@/features/theme-toggle";
 import ClaimBoard from "@/widgets/claim-board/ui/ClaimBoard";
 import BillSummary from "@/widgets/bill-summary/ui/BillSummary";
 import { formatRupiah } from "@/shared/lib";
+import { useMounted } from "@/shared/hooks";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -25,12 +26,7 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
 function SessionPageContent({ sessionId }: { sessionId: string }) {
   const { isJoined, participants, userName } = useSession();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   const currentUserTotal = React.useMemo(() => {
     if (!isJoined || !userName) return 0;
@@ -120,7 +116,7 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
       </main>
 
       {/* Footer Branding */}
-      <footer className="mt-8 sm:mt-12 border-t border-[var(--glass-border)] py-3 sm:py-6 opacity-40">
+      <footer className="mt-8 border-t border-[var(--glass-border)] py-3 opacity-40 sm:mt-12 sm:py-6">
         <div className="text-foreground/40 mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 text-[10px] font-bold tracking-[0.3em] uppercase sm:flex-row">
           <p>Meris &copy; 2026</p>
           <p className="font-mono tracking-normal uppercase opacity-50">Session: {sessionId}</p>

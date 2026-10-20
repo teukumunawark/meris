@@ -7,6 +7,9 @@ import imageCompression from "browser-image-compression";
 
 import { Input } from "@/shared/ui/Input";
 import { apiFetch } from "@/shared/api/client";
+import type { components } from "@/shared/api/generated/api";
+
+type SessionCreationResponse = components["schemas"]["SessionCreationResponse"];
 
 export default function CreateSessionForm() {
   const router = useRouter();
@@ -41,13 +44,13 @@ export default function CreateSessionForm() {
         formData.append("payerBankName", payerBankName.trim());
         formData.append("payerBankAccount", payerBankAccount.trim());
 
-        const data = await apiFetch<any>("/session", {
+        const data = await apiFetch<SessionCreationResponse>("/session", {
           method: "POST",
           body: formData,
         });
 
         localStorage.setItem("meris_username", payerName.trim());
-        if (data.payerToken) {
+        if (data.payerToken && data.id) {
           localStorage.setItem(
             `meris_session_${data.id}_participant`,
             JSON.stringify({
@@ -57,10 +60,13 @@ export default function CreateSessionForm() {
             })
           );
         }
-        router.push(`/session/${data.id}`);
-      } catch (err: any) {
+        if (data.id) {
+          router.push(`/session/${data.id}`);
+        }
+      } catch (err: unknown) {
         console.error("Upload failed:", err);
-        setErrorMsg(err.message || "An unexpected error occurred while processing the receipt. Please try again.");
+        const message = err instanceof Error ? err.message : "An unexpected error occurred while processing the receipt. Please try again.";
+        setErrorMsg(message);
         setIsUploading(false);
       }
     }
@@ -111,7 +117,7 @@ export default function CreateSessionForm() {
             <div className={`bg-sage/10 text-sage flex h-12 w-12 items-center justify-center rounded-full ${!isUploading && "group-hover/upload:scale-105"} transition-transform duration-300`}>
               {isUploading ? (
                 <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="4.93" y1="4.93" x2="7.76" y2="7.76" /><line x1="16.24" y1="16.24" x2="19.07" y2="19.07" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /><line x1="4.93" y1="19.07" x2="7.76" y2="16.24" /><line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+                  <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="4.93" y1="4.93" x2="7.76" y2="7.76" /><line x1="16.24" y1="16.24" x2="19.07" y2="19.07" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="4.93" y1="19.07" x2="7.76" y2="16.24" /><line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
                 </svg>
               ) : (
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

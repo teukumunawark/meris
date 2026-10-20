@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ItemCard } from "@/entities/item";
-import { Bill } from "@/entities/session";
+import type { Bill } from "@/entities/session";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah } from "@/shared/lib";
-import { ReceiptItem } from "@/shared/types";
+import type { ReceiptItem } from "@/shared/types";
 
 export interface BillGroupCardProps {
   bill: Bill;
@@ -76,65 +76,65 @@ export function BillGroupCard({
   };
 
   return (
-    <GlassPanel className="p-5 sm:p-6 space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-[var(--glass-border)] pb-3">
+    <GlassPanel className="space-y-4 p-5 sm:p-6">
+      <div className="flex flex-col gap-3 border-b border-[var(--glass-border)] pb-3 md:flex-row md:items-center md:justify-between">
         {isEditing ? (
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-bold text-foreground/40 uppercase">Stop Title</span>
+              <span className="text-foreground/40 text-[8px] font-bold uppercase">Stop Title</span>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-bold text-foreground/40 uppercase">Payer Name</span>
+              <span className="text-foreground/40 text-[8px] font-bold uppercase">Payer Name</span>
               <input
                 type="text"
                 value={payerName}
                 onChange={(e) => setPayerName(e.target.value)}
-                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-bold text-foreground/40 uppercase">Tax (Rp)</span>
+              <span className="text-foreground/40 text-[8px] font-bold uppercase">Tax (Rp)</span>
               <input
                 type="number"
                 value={tax}
                 onChange={(e) => setTax(e.target.value)}
-                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-bold text-foreground/40 uppercase">Service (Rp)</span>
+              <span className="text-foreground/40 text-[8px] font-bold uppercase">Service (Rp)</span>
               <input
                 type="number"
                 value={serviceCharge}
                 onChange={(e) => setServiceCharge(e.target.value)}
-                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-bold text-foreground/40 uppercase">Grand Total (Rp)</span>
+              <span className="text-foreground/40 text-[8px] font-bold uppercase">Grand Total (Rp)</span>
               <input
                 type="number"
                 value={grandTotal}
                 onChange={(e) => setGrandTotal(e.target.value)}
-                className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-sm text-foreground px-1 py-0.5"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
               />
             </div>
           </div>
         ) : (
           <div className="flex-1">
-            <h3 className="text-foreground font-serif text-lg font-bold flex flex-wrap items-center gap-2">
+            <h3 className="text-foreground flex flex-wrap items-center gap-2 font-serif text-lg font-bold">
               <span>{bill.name}</span>
-              <span className="text-foreground/40 font-sans text-[10px] font-normal tracking-wide uppercase px-2 py-0.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)]">
+              <span className="text-foreground/40 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-0.5 font-sans text-[10px] font-normal tracking-wide uppercase">
                 Paid by {bill.payerName}
               </span>
             </h3>
-            <div className="text-[10px] font-mono text-foreground/50 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            <div className="text-foreground/50 mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px]">
               <span>Subtotal: {formatRupiah(billSubtotal)}</span>
               <span>Tax: {formatRupiah(bill.tax)}</span>
               <span>Service Charge: {formatRupiah(bill.serviceCharge)}</span>
@@ -143,13 +143,13 @@ export function BillGroupCard({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-2 shrink-0">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           {isEditing ? (
             <>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="text-[10px] font-bold tracking-widest uppercase text-sage hover:bg-sage/10 rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+                className="text-sage hover:bg-sage/10 cursor-pointer rounded px-2.5 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -163,7 +163,7 @@ export function BillGroupCard({
                   setIsEditing(false);
                 }}
                 disabled={isSaving}
-                className="text-[10px] font-bold tracking-widest uppercase text-foreground/40 hover:text-foreground rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+                className="text-foreground/40 hover:text-foreground cursor-pointer rounded px-2.5 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors"
               >
                 Cancel
               </button>
@@ -174,13 +174,13 @@ export function BillGroupCard({
                 <>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="text-foreground/40 hover:text-foreground text-[10px] font-bold tracking-widest uppercase px-2 py-1 transition-colors cursor-pointer"
+                    className="text-foreground/40 hover:text-foreground cursor-pointer px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors"
                   >
                     Edit
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="text-rose-400 hover:text-rose-500 text-[10px] font-bold tracking-widest uppercase px-2 py-1 transition-colors cursor-pointer"
+                    className="cursor-pointer px-2 py-1 text-[10px] font-bold tracking-widest text-rose-400 uppercase transition-colors hover:text-rose-500"
                   >
                     Delete
                   </button>
@@ -188,7 +188,7 @@ export function BillGroupCard({
               )}
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="text-foreground/40 hover:text-foreground text-[10px] font-bold tracking-widest uppercase px-2 py-1 transition-colors cursor-pointer"
+                className="text-foreground/40 hover:text-foreground cursor-pointer px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors"
               >
                 {isCollapsed ? "Expand" : "Collapse"}
               </button>
@@ -207,7 +207,7 @@ export function BillGroupCard({
             className="overflow-hidden"
           >
             {items.length === 0 ? (
-              <p className="text-xs text-foreground/30 py-2">No items in this stop.</p>
+              <p className="text-foreground/30 py-2 text-xs">No items in this stop.</p>
             ) : (
               <ul className="grid grid-cols-1 gap-2.5 pt-2" role="list">
                 {items.map((item) => (

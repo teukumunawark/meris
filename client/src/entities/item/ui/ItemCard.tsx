@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ReceiptItem } from "@/shared/types";
+import type { ReceiptItem } from "@/shared/types";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
@@ -106,55 +106,55 @@ export default function ItemCard({
       className={`${showClaimHint && isFirstUnclaimed && isJoined ? "relative z-[101]" : "relative z-0"} ${indentationClass}`}
     >
       <GlassPanel 
-        className={`group relative p-5 sm:p-8 transition-all duration-700 ${
+        className={`group relative p-5 transition-all duration-700 sm:p-8 ${
           userClaimAmt > 0 ? "border-sage/40 bg-sage/4" : ""
-        } ${showClaimHint && isFirstUnclaimed && isJoined ? "ring-1 ring-sage/30 shadow-[0_0_40px_rgba(var(--sage-rgb),0.15)] bg-background" : ""} ${borderPaddingClass}`}
+        } ${showClaimHint && isFirstUnclaimed && isJoined ? "ring-sage/30 bg-background shadow-[0_0_40px_rgba(var(--sage-rgb),0.15)] ring-1" : ""} ${borderPaddingClass}`}
       >
         <div className="from-sage/3 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-0 transition-opacity duration-1000 group-hover:opacity-100" />
         
         {isEditing && isPayer ? (
-          <div className="relative z-10 w-full animate-in fade-in zoom-in-95 duration-300">
-            <div className="space-y-1 mb-6">
-              <span className="text-[9px] font-bold tracking-[0.3em] uppercase text-sage">Edit Item</span>
+          <div className="animate-in fade-in zoom-in-95 relative z-10 w-full duration-300">
+            <div className="mb-6 space-y-1">
+              <span className="text-sage text-[9px] font-bold tracking-[0.3em] uppercase">Edit Item</span>
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Item Name"
-                className="w-full bg-transparent font-sans text-2xl md:text-3xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/10 focus:border-sage pb-2 transition-colors"
+                className="text-foreground placeholder:text-foreground/20 border-foreground/10 focus:border-sage w-full border-b bg-transparent pb-2 font-sans text-2xl font-light tracking-tight transition-colors focus:outline-none md:text-3xl"
                 autoFocus
               />
             </div>
             
             <div className="flex flex-wrap items-end gap-x-10 gap-y-6">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Qty</label>
+                <label className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Qty</label>
                 <input
                   type="number"
                   value={editQty}
                   onChange={(e) => setEditQty(e.target.value)}
                   placeholder="1"
-                  className="w-16 bg-transparent border-b border-foreground/10 focus:border-sage pb-1 font-mono text-xl text-foreground focus:outline-none transition-colors text-center"
+                  className="border-foreground/10 focus:border-sage text-foreground w-16 border-b bg-transparent pb-1 text-center font-mono text-xl transition-colors focus:outline-none"
                 />
               </div>
               
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Price</label>
-                <div className="flex items-center gap-2 border-b border-foreground/10 focus-within:border-sage pb-1 transition-colors">
+                <label className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Price</label>
+                <div className="border-foreground/10 focus-within:border-sage flex items-center gap-2 border-b pb-1 transition-colors">
                   <span className="text-foreground/40 font-mono text-xl">Rp</span>
                   <input
                     type="number"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
                     placeholder="0"
-                    className="w-32 bg-transparent font-mono text-xl text-foreground focus:outline-none"
+                    className="text-foreground w-32 bg-transparent font-mono text-xl focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
-                <label className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Total</label>
-                <div className="pb-1 flex items-center h-8">
+              <div className="flex min-w-[140px] flex-1 flex-col gap-2">
+                <label className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Total</label>
+                <div className="flex h-8 items-center pb-1">
                   <span className="text-sage text-glow-sage font-mono text-2xl font-bold">
                     {formatRupiah((parseFloat(editPrice) || 0) * (parseInt(editQty) || 0))}
                   </span>
@@ -162,27 +162,27 @@ export default function ItemCard({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-4 pt-8 mt-4 border-t border-foreground/5">
+            <div className="border-foreground/5 mt-4 flex items-center justify-end gap-4 border-t pt-8">
               <button 
                 onClick={() => setIsEditing(false)} 
                 disabled={isSaving}
-                className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/40 hover:text-foreground transition-colors px-4 py-2 cursor-pointer"
+                className="text-foreground/40 hover:text-foreground cursor-pointer px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}
-                className="bg-sage text-background text-[10px] font-bold tracking-[0.2em] uppercase px-8 py-3 rounded-full hover:bg-sage/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] flex items-center gap-2"
+                className="bg-sage text-background hover:bg-sage/90 flex cursor-pointer items-center gap-2 rounded-full px-8 py-3 text-[10px] font-bold tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] transition-all active:scale-95 disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Confirm"}
               </button>
             </div>
           </div>
         ) : isEditing && !isPayer ? (
-          <div className="relative z-10 w-full animate-in fade-in zoom-in-95 duration-300">
-            <div className="space-y-1 mb-6">
-              <span className="text-[9px] font-bold tracking-[0.3em] uppercase text-sage">Rename Item</span>
+          <div className="animate-in fade-in zoom-in-95 relative z-10 w-full duration-300">
+            <div className="mb-6 space-y-1">
+              <span className="text-sage text-[9px] font-bold tracking-[0.3em] uppercase">Rename Item</span>
               <input
                 type="text"
                 value={editName}
@@ -197,26 +197,26 @@ export default function ItemCard({
                   }
                 }}
                 placeholder="Item Name"
-                className="w-full bg-transparent font-sans text-2xl md:text-3xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/10 focus:border-sage pb-2 transition-colors"
+                className="text-foreground placeholder:text-foreground/20 border-foreground/10 focus:border-sage w-full border-b bg-transparent pb-2 font-sans text-2xl font-light tracking-tight transition-colors focus:outline-none md:text-3xl"
                 autoFocus
               />
             </div>
 
-            <div className="flex items-center justify-end gap-4 pt-4 border-t border-foreground/5">
+            <div className="border-foreground/5 flex items-center justify-end gap-4 border-t pt-4">
               <button 
                 onClick={() => {
                   setEditName(item.name);
                   setIsEditing(false);
                 }} 
                 disabled={isSaving}
-                className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/40 hover:text-foreground transition-colors px-4 py-2 cursor-pointer"
+                className="text-foreground/40 hover:text-foreground cursor-pointer px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleRenameSave} 
                 disabled={isSaving || !editName.trim() || editName.trim() === item.name}
-                className="bg-sage text-background text-[10px] font-bold tracking-[0.2em] uppercase px-8 py-3 rounded-full hover:bg-sage/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] flex items-center gap-2"
+                className="bg-sage text-background hover:bg-sage/90 flex cursor-pointer items-center gap-2 rounded-full px-8 py-3 text-[10px] font-bold tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] transition-all active:scale-95 disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Confirm"}
               </button>
@@ -229,20 +229,20 @@ export default function ItemCard({
           <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:gap-10">
 
             {/* ── LEFT: Info ── */}
-            <div className="flex-1 min-w-0 space-y-3">
+            <div className="min-w-0 flex-1 space-y-3">
               {/* Name + badge */}
               <div className="flex min-h-[2rem] items-center justify-between gap-4">
-                <div className="group/title flex flex-1 items-center gap-3 min-w-0">
+                <div className="group/title flex min-w-0 flex-1 items-center gap-3">
                   <h3 className="text-foreground truncate font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">
                     {item.name}
                   </h3>
                   {isSubItem && (
-                    <span className="rounded-full bg-sage/10 px-2.5 py-1 text-[8px] font-bold uppercase tracking-widest text-sage sm:text-[9px] border border-sage/20">
+                    <span className="bg-sage/10 text-sage border-sage/20 rounded-full border px-2.5 py-1 text-[8px] font-bold tracking-widest uppercase sm:text-[9px]">
                       Sub-menu
                     </span>
                   )}
                   {isJoined && (
-                    <div className="flex gap-1 shrink-0">
+                    <div className="flex shrink-0 gap-1">
                       <button
                         onClick={() => setIsEditing(true)}
                         className="text-foreground/30 hover:text-sage cursor-pointer p-1 transition-colors"
@@ -256,7 +256,7 @@ export default function ItemCard({
                       {isPayer && (
                         <button
                           onClick={handleDelete}
-                          className="text-foreground/30 hover:text-rose-400 cursor-pointer p-1 transition-colors"
+                          className="text-foreground/30 cursor-pointer p-1 transition-colors hover:text-rose-400"
                           title="Delete Item"
                         >
                           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -320,7 +320,7 @@ export default function ItemCard({
                 On mobile: full-width with border-top separator.
                 On md+: fixed-width column right-aligned. */}
             {!isZeroPriceSubItem && (
-              <div className="flex flex-row items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-5 md:flex-col md:items-end md:border-none md:pt-0 md:gap-3 shrink-0">
+              <div className="flex shrink-0 flex-row items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-5 md:flex-col md:items-end md:gap-3 md:border-none md:pt-0">
 
                 {/* Available count */}
                 <div className="flex flex-col gap-0.5 md:text-right">
@@ -334,11 +334,11 @@ export default function ItemCard({
                 <div className="relative">
                   {showClaimHint && isFirstUnclaimed && isJoined && (
                     <>
-                      <span className="absolute inset-0 rounded-glass-sm bg-sage/40 animate-ping" />
-                      <div className="absolute -top-8 right-0 sm:-right-4 animate-[bounce_2s_infinite] pointer-events-none z-20">
-                        <div className="bg-sage text-background text-[9px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
+                      <span className="rounded-glass-sm bg-sage/40 absolute inset-0 animate-ping" />
+                      <div className="pointer-events-none absolute -top-8 right-0 z-20 animate-[bounce_2s_infinite] sm:-right-4">
+                        <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)]">
                           Claim Item
-                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
                         </div>
                       </div>
                     </>
@@ -359,12 +359,12 @@ export default function ItemCard({
 
                     <div className="relative">
                       {showClaimHint && isFirstUnclaimed && isJoined && (
-                        <span className="absolute inset-0 rounded-glass-sm bg-sage/40 animate-ping" />
+                        <span className="rounded-glass-sm bg-sage/40 absolute inset-0 animate-ping" />
                       )}
                       <button
                         disabled={!isJoined || isFullyClaimed}
                         onClick={() => handleClaimInteraction(0.5)}
-                        className="relative z-10 rounded-glass-sm text-sage flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
+                        className="rounded-glass-sm text-sage relative z-10 flex h-10 w-10 cursor-pointer items-center justify-center text-lg font-light transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-10 sm:h-12 sm:w-12 sm:text-xl"
                       >
                         ＋
                       </button>

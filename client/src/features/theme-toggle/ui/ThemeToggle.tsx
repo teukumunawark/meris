@@ -1,17 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMounted } from "@/shared/hooks";
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   if (!mounted) {
     return <div className="h-9 w-9" />;
@@ -22,7 +17,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-foreground/60 transition-all duration-300 hover:bg-[var(--glass-highlight)] hover:text-foreground active:scale-95 focus:outline-none"
+      className="text-foreground/60 hover:text-foreground relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] transition-all duration-300 hover:bg-[var(--glass-highlight)] focus:outline-none active:scale-95"
       aria-label="Toggle theme"
     >
       <AnimatePresence mode="wait" initial={false}>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { ReceiptItem } from "@/shared/types";
+import type { ReceiptItem } from "@/shared/types";
 import { apiFetch } from "@/shared/api/client";
 
 export interface Bill {
@@ -164,7 +164,7 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
         price: typeof item.price === "number" ? item.price : 0,
         quantity: typeof item.quantity === "number" ? item.quantity : 1,
         parentId: item.parentId,
-        billId: item.billId || "",
+        billId: item.billId,
         claims: Array.isArray(item.claims)
           ? item.claims.map((claim) => ({
               name: claim.participant?.name || claim.name || "Unknown",
@@ -177,8 +177,9 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     if (typeof data.tax === "number") setTax(data.tax);
     if (typeof data.serviceCharge === "number") setServiceCharge(data.serviceCharge);
 
-    if (data.payerName) {
-      setPayerName(data.payerName);
+    const currentPayerName = data.payerName;
+    if (currentPayerName) {
+      setPayerName(currentPayerName);
       if (typeof window !== "undefined") {
         const totalSub = Array.isArray(data.items) ? data.items.reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0) : 0;
         const computedGrand = totalSub + (data.tax || 0) + (data.serviceCharge || 0);
@@ -192,15 +193,15 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
         if (!existing) {
           list.unshift({
             id: sessionId,
-            payerName: data.payerName,
+            payerName: currentPayerName,
             grandTotal: computedGrand,
             joinedAt: Date.now(),
           });
           localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
-        } else if (existing.payerName !== data.payerName || existing.grandTotal !== computedGrand) {
+        } else if (existing.payerName !== currentPayerName || existing.grandTotal !== computedGrand) {
           list = list.map(item =>
             item.id === sessionId
-              ? { ...item, payerName: data.payerName!, grandTotal: computedGrand }
+              ? { ...item, payerName: currentPayerName, grandTotal: computedGrand }
               : item
           );
           localStorage.setItem("meris_recent_sessions", JSON.stringify(list));
@@ -234,19 +235,16 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     const fetchInitialState = async () => {
       try {
         const data = await apiFetch<SSEServerUpdatePayload>(`/session/${sessionId}`);
-        mapBackendState(data);
+        if (data) mapBackendState(data);
       } catch (err) {
-        console.error("Failed to fetch initial session state:", err);
+        console.error("Initial fetch error:", err);
       }
     };
     fetchInitialState();
-  }, [sessionId, mapBackendState]);
 
-  useEffect(() => {
-    if (!sessionId) return;
-    const sseUrl = `${backendUrl}/stream?sessionId=${sessionId}`;
-    let eventSource: EventSource;
+    let eventSource: EventSource | null = null;
     try {
+      const sseUrl = `${backendUrl}/session/${sessionId}/events`;
       eventSource = new EventSource(sseUrl);
       eventSource.onmessage = (event) => {
         try {

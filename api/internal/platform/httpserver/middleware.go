@@ -101,8 +101,7 @@ func CORS(allowedOrigins string) func(http.Handler) http.Handler {
 			if allowedOrigins == "*" || allowedOrigins == "" {
 				allowed = true
 			} else {
-				origins := strings.Split(allowedOrigins, ",")
-				for _, o := range origins {
+				for o := range strings.SplitSeq(allowedOrigins, ",") {
 					if strings.TrimSpace(o) == origin {
 						allowed = true
 						break

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ReceiptItem } from "@/shared/types";
+import type { ReceiptItem } from "@/shared/types";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah, getAvatarBg, getInitials } from "@/shared/lib";
 

@@ -2,6 +2,18 @@ export type ApiFetchOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(message: string, status: number, data?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   { body, headers, ...init }: ApiFetchOptions = {},
@@ -31,17 +43,19 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const errorText = await response.text();
-    let errorData;
+    let errorData: unknown;
     try {
       errorData = JSON.parse(errorText);
     } catch {
       errorData = { message: errorText || response.statusText };
     }
 
-    const error = new Error(errorData.message || "API Request failed");
-    (error as any).status = response.status;
-    (error as any).data = errorData;
-    throw error;
+    const message =
+      typeof errorData === "object" && errorData !== null && "message" in errorData && typeof errorData.message === "string"
+        ? errorData.message
+        : "API Request failed";
+
+    throw new ApiError(message, response.status, errorData);
   }
 
   if (response.status === 204) {

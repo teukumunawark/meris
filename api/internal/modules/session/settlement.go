@@ -29,32 +29,8 @@ func SimplifyDebts(balances map[string]float64) []Transfer {
 		}
 	}
 
-	slices.SortFunc(debtors, func(a, b DebtNodeInt) int {
-		if b.Balance > a.Balance {
-			return 1
-		} else if b.Balance < a.Balance {
-			return -1
-		}
-		if a.Name < b.Name {
-			return -1
-		} else if a.Name > b.Name {
-			return 1
-		}
-		return 0
-	})
-	slices.SortFunc(creditors, func(a, b DebtNodeInt) int {
-		if b.Balance > a.Balance {
-			return 1
-		} else if b.Balance < a.Balance {
-			return -1
-		}
-		if a.Name < b.Name {
-			return -1
-		} else if a.Name > b.Name {
-			return 1
-		}
-		return 0
-	})
+	slices.SortFunc(debtors, compareDebtNodes)
+	slices.SortFunc(creditors, compareDebtNodes)
 
 	var transfers []Transfer
 	dIdx, cIdx := 0, 0
@@ -63,10 +39,7 @@ func SimplifyDebts(balances map[string]float64) []Transfer {
 		debtor := &debtors[dIdx]
 		creditor := &creditors[cIdx]
 
-		settledAmount := debtor.Balance
-		if creditor.Balance < settledAmount {
-			settledAmount = creditor.Balance
-		}
+		settledAmount := min(debtor.Balance, creditor.Balance)
 
 		if settledAmount > 0 {
 			transfers = append(transfers, Transfer{
@@ -88,4 +61,18 @@ func SimplifyDebts(balances map[string]float64) []Transfer {
 	}
 
 	return transfers
+}
+
+func compareDebtNodes(a, b DebtNodeInt) int {
+	if b.Balance > a.Balance {
+		return 1
+	} else if b.Balance < a.Balance {
+		return -1
+	}
+	if a.Name < b.Name {
+		return -1
+	} else if a.Name > b.Name {
+		return 1
+	}
+	return 0
 }

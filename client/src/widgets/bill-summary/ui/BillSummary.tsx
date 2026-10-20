@@ -22,7 +22,7 @@ function CopyAccountButton({ bankAccount }: { bankAccount: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-sage hover:bg-sage/10 rounded-full px-3 py-1.5 border border-sage/20 text-xs font-bold uppercase transition-all whitespace-nowrap shrink-0 flex items-center gap-1 cursor-pointer"
+      className="text-sage hover:bg-sage/10 border-sage/20 flex shrink-0 cursor-pointer items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold whitespace-nowrap uppercase transition-all"
       title="Copy Account Number"
     >
       {copied ? (
@@ -113,7 +113,7 @@ export default function BillSummary() {
           </div>
           
           {transfers.length === 0 ? (
-            <div className="text-center py-6 sm:py-8">
+            <div className="py-6 text-center sm:py-8">
               <p className="text-foreground/30 font-sans text-sm font-normal italic">All debts settled! No transfers needed.</p>
             </div>
           ) : (
@@ -127,25 +127,25 @@ export default function BillSummary() {
               />
 
               {/* Action list */}
-              <div className="space-y-2 pt-2 border-t border-[var(--glass-border)]">
-                <p className="text-foreground/25 text-[10px] font-bold tracking-widest uppercase pt-2">Action Steps</p>
+              <div className="space-y-2 border-t border-[var(--glass-border)] pt-2">
+                <p className="text-foreground/25 pt-2 text-[10px] font-bold tracking-widest uppercase">Action Steps</p>
                 <div className="space-y-3">
                   {transfers.map((transfer, idx) => {
                     const recipient = participants.find(p => p.name === transfer.to);
                     return (
-                      <div key={idx} className="flex flex-col gap-3 p-4 rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] sm:flex-row sm:items-center sm:justify-between">
+                      <div key={idx} className="flex flex-col gap-3 rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-sans text-foreground/80">
+                          <p className="text-foreground/80 font-sans text-sm">
                             <strong className="text-foreground font-bold">{transfer.from}</strong> transfers{" "}
-                            <span className="text-sage font-bold font-mono">{formatRupiah(Math.round(transfer.amount))}</span> to{" "}
+                            <span className="text-sage font-mono font-bold">{formatRupiah(Math.round(transfer.amount))}</span> to{" "}
                             <strong className="text-foreground font-bold">{transfer.to}</strong>
                           </p>
                           {recipient && recipient.bankName ? (
-                            <p className="text-xs font-sans text-foreground/40 mt-1">
+                            <p className="text-foreground/40 mt-1 font-sans text-xs">
                               Bank Details: <strong className="text-foreground/60">{recipient.bankName}</strong> – {recipient.bankAccount}
                             </p>
                           ) : (
-                            <p className="text-xs italic text-foreground/25 mt-1">
+                            <p className="text-foreground/25 mt-1 text-xs italic">
                               Recipient has not specified bank details
                             </p>
                           )}

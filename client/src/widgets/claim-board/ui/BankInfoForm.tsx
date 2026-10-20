@@ -41,19 +41,19 @@ export function BankInfoForm({ participant, onUpdate }: BankInfoFormProps) {
         value={bankName}
         onChange={(e) => setBankName(e.target.value)}
         placeholder="Bank Name (e.g. BCA)"
-        className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-xs px-1 py-0.5 text-foreground placeholder:text-foreground/20 w-28"
+        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-28 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
       />
       <input
         type="text"
         value={bankAccount}
         onChange={(e) => setBankAccount(e.target.value)}
         placeholder="Account Number"
-        className="bg-transparent border-b border-foreground/20 focus:border-sage focus:outline-none text-xs px-1 py-0.5 text-foreground placeholder:text-foreground/20 w-32"
+        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-32 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
       />
       <button
         onClick={handleSave}
         disabled={isSaving || (bankName === (participant.bankName || "") && bankAccount === (participant.bankAccount || ""))}
-        className="text-[10px] font-bold tracking-wider uppercase text-sage hover:bg-sage/10 rounded px-2 py-1 transition-colors disabled:opacity-30 cursor-pointer"
+        className="text-sage hover:bg-sage/10 cursor-pointer rounded px-2 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors disabled:opacity-30"
       >
         {isSaving ? "Saving..." : isSaved ? "Saved!" : "Save"}
       </button>

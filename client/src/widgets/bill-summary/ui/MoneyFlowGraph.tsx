@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { formatRupiah, getInitials } from "@/shared/lib";
-import { Transfer, BilateralTransfer } from "@/entities/session";
+import type { Transfer, BilateralTransfer } from "@/entities/session";
 
 interface Participant {
   id: number;
@@ -60,7 +60,7 @@ function FlowGraph({ names, edges, selected, onSelect, userName }: GraphProps) {
       m[name] = { x: CX + R * Math.cos(angle), y: CY + R * Math.sin(angle) };
     });
     return m;
-  }, [names, n]);
+  }, [names, n, R]);
 
   // Net balance per node from edges
   const balanceMap = useMemo(() => {
@@ -213,12 +213,12 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
   return (
     <div className="space-y-4">
       {/* Tab switcher */}
-      <div className="flex rounded-md overflow-hidden border border-[var(--glass-border)] text-[11px] font-bold font-sans">
+      <div className="flex overflow-hidden rounded-md border border-[var(--glass-border)] font-sans text-[11px] font-bold">
         {(["optimized", "intuitive"] as TabMode[]).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setSelected(null); }}
-            className={`flex-1 py-2 px-3 capitalize transition-colors duration-200 ${
+            className={`flex-1 px-3 py-2 capitalize transition-colors duration-200 ${
               tab === t
                 ? "bg-sage/20 text-sage"
                 : "text-foreground/40 hover:text-foreground/60"
@@ -230,7 +230,7 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
       </div>
 
       {/* Context caption */}
-      <p className="text-foreground/30 text-center text-[10px] font-sans leading-relaxed px-2">
+      <p className="text-foreground/30 px-2 text-center font-sans text-[10px] leading-relaxed">
         {tab === "optimized"
           ? "Minimum transfers to settle all debts. Tap a name to see why."
           : "Actual debts per stop. Tap a name to see who they owe at each place."}
@@ -248,37 +248,37 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-5 text-[10px] text-foreground/40 font-sans">
+      <div className="text-foreground/40 flex justify-center gap-5 font-sans text-[10px]">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#4ade80]" /> Receives money
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#4ade80]" /> Receives money
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#f87171]" /> Pays money
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#f87171]" /> Pays money
         </span>
       </div>
 
       {/* Personal narrative */}
       {selected && narrative && (
         <div
-          className="rounded-md border p-4 space-y-3 text-sm font-sans"
+          className="space-y-3 rounded-md border p-4 font-sans text-sm"
           style={{ borderColor: nodeColor(selected, 0.3), background: `hsla(${nameToHue(selected)}, 20%, 10%, 0.5)` }}
         >
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
               style={{ background: `hsl(${nameToHue(selected)}, 35%, 18%)`, color: nodeColor(selected) }}>
               {getInitials(selected)}
             </div>
-            <span className="font-bold text-foreground">{selected}</span>
+            <span className="text-foreground font-bold">{selected}</span>
             {selected.toLowerCase() === userName.toLowerCase() && (
-              <span className="text-[10px] text-foreground/30">(You)</span>
+              <span className="text-foreground/30 text-[10px]">(You)</span>
             )}
             {narrative.netBal > 0.5 && (
-              <span className="ml-auto text-[10px] font-bold text-green-400 uppercase tracking-wider">
+              <span className="ml-auto text-[10px] font-bold tracking-wider text-green-400 uppercase">
                 Net +{formatRupiah(Math.round(narrative.netBal))}
               </span>
             )}
             {narrative.netBal < -0.5 && (
-              <span className="ml-auto text-[10px] font-bold text-red-400 uppercase tracking-wider">
+              <span className="ml-auto text-[10px] font-bold tracking-wider text-red-400 uppercase">
                 Net −{formatRupiah(Math.round(-narrative.netBal))}
               </span>
             )}
@@ -286,12 +286,12 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
 
           {narrative.receiving.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] text-green-400/70 font-bold tracking-widest uppercase">Receives from</p>
+              <p className="text-[10px] font-bold tracking-widest text-green-400/70 uppercase">Receives from</p>
               {narrative.receiving.map((t, i) => (
-                <div key={i} className="flex justify-between text-foreground/70 text-xs">
+                <div key={i} className="text-foreground/70 flex justify-between text-xs">
                   <span className="flex items-center gap-1.5">
                     <span className="text-green-400">←</span>
-                    <span className="font-medium text-foreground/90">{t.from}</span>
+                    <span className="text-foreground/90 font-medium">{t.from}</span>
                     {"billName" in t && t.billName && (
                       <span className="text-foreground/30 text-[10px]">@ {t.billName}</span>
                     )}
@@ -304,12 +304,12 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
 
           {narrative.paying.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] text-red-400/70 font-bold tracking-widest uppercase">Pays to</p>
+              <p className="text-[10px] font-bold tracking-widest text-red-400/70 uppercase">Pays to</p>
               {narrative.paying.map((t, i) => (
-                <div key={i} className="flex justify-between text-foreground/70 text-xs">
+                <div key={i} className="text-foreground/70 flex justify-between text-xs">
                   <span className="flex items-center gap-1.5">
                     <span className="text-red-400">→</span>
-                    <span className="font-medium text-foreground/90">{t.to}</span>
+                    <span className="text-foreground/90 font-medium">{t.to}</span>
                     {"billName" in t && t.billName && (
                       <span className="text-foreground/30 text-[10px]">@ {t.billName}</span>
                     )}
@@ -326,7 +326,7 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
 
           {(narrative.receiving.length > 0 || narrative.paying.length > 0) && (
             <div className="border-t border-[var(--glass-border)] pt-2">
-              <p className="text-[10px] text-foreground/30 leading-relaxed">
+              <p className="text-foreground/30 text-[10px] leading-relaxed">
                 {tab === "optimized"
                   ? narrative.netBal > 0.5
                     ? `${selected} fronted cash for the group. Others owe them ${formatRupiah(Math.round(narrative.netBal))} total.`

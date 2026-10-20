@@ -46,8 +46,7 @@ func DecodeJSON(r *http.Request, target any) error {
 func WriteLocalizedError(w http.ResponseWriter, r *http.Request, err error) {
 	localizer := i18n.GetLocalizer(r.Context())
 
-	var appErr *apperrors.AppError
-	if errors.As(err, &appErr) {
+	if appErr, ok := errors.AsType[*apperrors.AppError](err); ok {
 		message := ""
 		if localizer != nil {
 			msg, locErr := localizer.Localize(&i18nPkg.LocalizeConfig{

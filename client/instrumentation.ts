@@ -1,5 +1,5 @@
 import { registerOTel } from '@vercel/otel';
-import { trace, Context, SpanKind, Attributes, Link } from '@opentelemetry/api';
+import { trace, type Attributes, type Context, type Link, type SpanKind } from '@opentelemetry/api';
 
 const customSampler = {
   shouldSample(context: Context, traceId: string, name: string, spanKind: SpanKind, attributes: Attributes, _links: Link[]) {
@@ -25,15 +25,15 @@ const customSampler = {
       target.includes('/robots.txt');
 
     if (isExcluded) {
-      return { decision: 0 }; // SamplingDecision.DROP
+      return { decision: 0 };
     }
 
-    // Default: Record and sample root spans
-    return { decision: 2 }; // SamplingDecision.RECORD_AND_SAMPLE
+    // 3. Fallback: Always sample normal business and API transactions
+    return { decision: 2 };
   },
   toString() {
-    return 'CustomFilterSampler';
-  }
+    return 'CustomHomelabSampler';
+  },
 };
 
 export function register() {
@@ -42,4 +42,3 @@ export function register() {
     traceSampler: customSampler,
   });
 }
-

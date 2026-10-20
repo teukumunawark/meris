@@ -25,7 +25,6 @@ export default function LandingPage() {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           setRecentSessions(parsed.slice(0, 5));
         }
       } catch (err) {

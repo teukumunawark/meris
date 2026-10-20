@@ -8,11 +8,69 @@ const eslintConfig = defineConfig([
   ...nextTs,
   ...tailwind.configs["flat/recommended"],
   {
+    settings: {
+      tailwindcss: {
+        callees: ["cn", "cva", "clsx"],
+        config: {},
+      },
+    },
     rules: {
-      "tailwindcss/no-custom-classname": "off",
+      // TypeScript strictness rules
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/consistent-type-imports": [
+        "warn",
+        {
+          prefer: "type-imports",
+          fixStyle: "inline-type-imports",
+        },
+      ],
+      "@typescript-eslint/no-empty-object-type": "error",
+      "@typescript-eslint/no-non-null-assertion": "warn",
+
+      // React & JSX quality rules
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "error",
       "react-hooks/set-state-in-effect": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-empty-object-type": "off",
+      "react/self-closing-comp": [
+        "warn",
+        {
+          component: true,
+          html: true,
+        },
+      ],
+      "react/jsx-boolean-value": ["warn", "never"],
+      "react/jsx-curly-brace-presence": [
+        "warn",
+        {
+          props: "never",
+          children: "never",
+          propElementValues: "always",
+        },
+      ],
+      "react/jsx-no-useless-fragment": "warn",
+      "react/no-unescaped-entities": "error",
+
+      // Tailwind CSS rules
+      "tailwindcss/no-custom-classname": "off",
+      "tailwindcss/classnames-order": "warn",
+      "tailwindcss/enforces-shorthand": "warn",
+      "tailwindcss/no-contradicting-classname": "error",
+
+      // Code quality & modern JS best practices
+      "no-console": ["warn", { allow: ["warn", "error", "info", "debug"] }],
+      eqeqeq: ["error", "always", { null: "ignore" }],
+      "no-var": "error",
+      "prefer-const": "error",
+      "no-duplicate-imports": "off", // Handled by @typescript-eslint/consistent-type-imports (inline-type-imports)
+      "object-shorthand": ["warn", "always"],
     },
   },
   // Override default ignores of eslint-config-next.
@@ -22,6 +80,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "src/shared/api/generated/**",
   ]),
 ]);
 

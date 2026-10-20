@@ -2,11 +2,11 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <main className="bg-background flex min-h-screen items-center justify-center px-6 py-16 text-foreground">
+    <main className="bg-background text-foreground flex min-h-screen items-center justify-center px-6 py-16">
       <div className="glass-panel rounded-glass w-full max-w-xl border-[var(--glass-border)] bg-[var(--glass-bg)] p-8 sm:p-10">
         <div className="space-y-6">
           <div className="space-y-3">
-            <p className="font-mono text-sm font-medium uppercase tracking-[0.24em] opacity-40">
+            <p className="font-mono text-sm font-medium tracking-[0.24em] uppercase opacity-40">
               404
             </p>
             <h1 className="font-serif text-2xl font-semibold tracking-tight">

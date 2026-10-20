@@ -10,10 +10,10 @@ export default function GlobalError({
 }) {
   return (
     <html lang="id">
-      <body className="bg-background flex min-h-screen items-center justify-center px-6 text-foreground antialiased">
+      <body className="bg-background text-foreground flex min-h-screen items-center justify-center px-6 antialiased">
         <title>Application Error | Meris</title>
         <div className="glass-panel rounded-glass w-full max-w-xl border-[var(--glass-border)] bg-[var(--glass-bg)] p-8 sm:p-10">
-          <p className="font-mono text-sm font-medium uppercase tracking-[0.24em] opacity-40">
+          <p className="font-mono text-sm font-medium tracking-[0.24em] uppercase opacity-40">
             Application Error
           </p>
           <h1 className="mt-4 font-serif text-2xl font-semibold tracking-tight">

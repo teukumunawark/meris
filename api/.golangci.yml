@@ -10,8 +10,12 @@ linters:
     - misspell
     - revive
     - gosec
+    - dupl
+    - modernize
 
   settings:
+    dupl:
+      threshold: 80
     revive:
       rules:
         - name: exported

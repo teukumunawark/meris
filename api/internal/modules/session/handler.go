@@ -51,6 +51,28 @@ func (h *Handler) readReceiptImage(w http.ResponseWriter, r *http.Request) ([]by
 	return imageBytes, true
 }
 
+func (h *Handler) writeServiceError(w http.ResponseWriter, err error) {
+	if errors.Is(err, ErrUnauthorized) {
+		httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+	} else {
+		httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+	}
+}
+
+func (h *Handler) executeDelete(w http.ResponseWriter, token string, deleteFn func() error) {
+	if token == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		return
+	}
+
+	if err := deleteFn(); err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	imageBytes, ok := h.readReceiptImage(w, r)
 	if !ok {
@@ -110,8 +132,7 @@ func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string)
 
 	p, err := h.service.JoinSession(r.Context(), id, payload.Name, payload.Token)
 	if err != nil {
-		var appErr *apperrors.AppError
-		if errors.As(err, &appErr) && appErr.Code == "errors.name_conflict" {
+		if appErr, ok := errors.AsType[*apperrors.AppError](err); ok && appErr.Code == "errors.name_conflict" {
 			httpresponse.WriteLocalizedError(w, r, NewNameConflictError(payload.Name))
 		} else {
 			httpresponse.WriteLocalizedError(w, r, err)
@@ -141,8 +162,7 @@ func (h *Handler) ClaimItem(w http.ResponseWriter, r *http.Request, id string) {
 
 	err := h.service.ClaimItem(r.Context(), id, payload.ParticipantID, payload.ItemID, payload.Shares, payload.Token)
 	if err != nil {
-		var appErr *apperrors.AppError
-		if errors.As(err, &appErr) {
+		if appErr, ok := errors.AsType[*apperrors.AppError](err); ok {
 			switch appErr.Code {
 			case "errors.unauthorized":
 				httpresponse.WriteLocalizedError(w, r, ErrUnauthorized)
@@ -200,11 +220,7 @@ func (h *Handler) DeleteParticipant(w http.ResponseWriter, r *http.Request, id s
 
 	err = h.service.DeleteParticipant(r.Context(), id, uint(pID), callerToken)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 
@@ -224,11 +240,7 @@ func (h *Handler) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id s
 
 	err := h.service.UpdatePaymentInfo(r.Context(), id, payload.PayerBankName, payload.PayerBankAccount, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 
@@ -249,11 +261,7 @@ func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request, id string) {
 
 	err := h.service.AddItem(r.Context(), id, payload.Name, payload.Price, payload.Quantity, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 
@@ -274,11 +282,7 @@ func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request, id string, 
 
 	err := h.service.UpdateItem(r.Context(), id, itemId, payload.Name, payload.Price, payload.Quantity, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 
@@ -286,23 +290,9 @@ func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request, id string, 
 }
 
 func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params generated.DeleteItemParams) {
-	token := params.Token
-	if token == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
-		return
-	}
-
-	err := h.service.DeleteItem(r.Context(), id, itemId, token)
-	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	h.executeDelete(w, params.Token, func() error {
+		return h.service.DeleteItem(r.Context(), id, itemId, params.Token)
+	})
 }
 
 func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
@@ -317,11 +307,7 @@ func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
 
 	err := h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 
@@ -329,23 +315,9 @@ func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func (h *Handler) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
-	token := params.Token
-	if token == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
-		return
-	}
-
-	err := h.service.DeleteBill(r.Context(), id, billId, token)
-	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	h.executeDelete(w, params.Token, func() error {
+		return h.service.DeleteBill(r.Context(), id, billId, params.Token)
+	})
 }
 
 func (h *Handler) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
@@ -364,11 +336,7 @@ func (h *Handler) UpdateBill(w http.ResponseWriter, r *http.Request, id string, 
 
 	err := h.service.UpdateBill(r.Context(), id, billId, payload.Name, payload.PayerName, payload.Tax, payload.ServiceCharge, payload.GrandTotal, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 
@@ -394,11 +362,7 @@ func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Reque
 
 	err = h.service.UpdateParticipantBankInfo(r.Context(), id, pID, payload.BankName, payload.BankAccount, payload.Token)
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-		} else {
-			httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-		}
+		h.writeServiceError(w, err)
 		return
 	}
 

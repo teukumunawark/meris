@@ -14,9 +14,9 @@ export function useClaimItem() {
       await apiFetch(`/session/${sessionId}/claim`, {
         method: "POST",
         body: {
-          participantId: participantId,
-          itemId: itemId,
-          shares: shares,
+          participantId,
+          itemId,
+          shares,
           token: participantToken,
         },
       });

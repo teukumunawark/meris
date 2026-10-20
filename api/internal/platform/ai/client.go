@@ -51,15 +51,13 @@ func cleanJSON(content []byte) []byte {
 	str := string(content)
 	str = strings.TrimSpace(str)
 
-	if idx := strings.Index(str, "```json"); idx != -1 {
-		sub := str[idx+7:]
-		if endIdx := strings.Index(sub, "```"); endIdx != -1 {
-			str = sub[:endIdx]
+	if _, sub, found := strings.Cut(str, "```json"); found {
+		if content, _, endFound := strings.Cut(sub, "```"); endFound {
+			str = content
 		}
-	} else if idx := strings.Index(str, "```"); idx != -1 {
-		sub := str[idx+3:]
-		if endIdx := strings.Index(sub, "```"); endIdx != -1 {
-			str = sub[:endIdx]
+	} else if _, sub, found := strings.Cut(str, "```"); found {
+		if content, _, endFound := strings.Cut(sub, "```"); endFound {
+			str = content
 		}
 	}
 
@@ -104,7 +102,7 @@ type ChatResponseFormat struct {
 type ChatJSONSchemaConfig struct {
 	Name   string      `json:"name"`
 	Strict bool        `json:"strict"`
-	Schema interface{} `json:"schema"`
+	Schema any  `json:"schema"`
 }
 
 type ChatMessage struct {
@@ -168,20 +166,20 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 
 	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Do NOT use decimal points for thousands separators (e.g., 14.000 on an Indonesian receipt must be output as 14000).\n3. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n4. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent.\n5. Detect packages and their sub-items. If an item has sub-items listed below it (often indented or with '-' prefix), nest them under 'sub_items'. Sub-items should have a price of 0 if their cost is included in the parent package.\n6. Extract the merchant or store name from the receipt header if visible (e.g. restaurant name, cafe name, shop name). Output it as merchant_name. If not detectable, omit the field."
 
-	itemSchema := map[string]interface{}{
+	itemSchema := map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"name":     map[string]interface{}{"type": "string"},
-			"price":    map[string]interface{}{"type": "number"},
-			"quantity": map[string]interface{}{"type": "integer"},
-			"sub_items": map[string]interface{}{
+		"properties": map[string]any{
+			"name":     map[string]any{"type": "string"},
+			"price":    map[string]any{"type": "number"},
+			"quantity": map[string]any{"type": "integer"},
+			"sub_items": map[string]any{
 				"type": "array",
-				"items": map[string]interface{}{
+				"items": map[string]any{
 					"type": "object",
-					"properties": map[string]interface{}{
-						"name":     map[string]interface{}{"type": "string"},
-						"price":    map[string]interface{}{"type": "number"},
-						"quantity": map[string]interface{}{"type": "integer"},
+					"properties": map[string]any{
+						"name":     map[string]any{"type": "string"},
+						"price":    map[string]any{"type": "number"},
+						"quantity": map[string]any{"type": "integer"},
 					},
 					"required":             []string{"name", "price", "quantity"},
 					"additionalProperties": false,
@@ -192,18 +190,18 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 		"additionalProperties": false,
 	}
 
-	schema := map[string]interface{}{
+	schema := map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"merchant_name": map[string]interface{}{"type": "string"},
-			"items": map[string]interface{}{
+		"properties": map[string]any{
+			"merchant_name": map[string]any{"type": "string"},
+			"items": map[string]any{
 				"type":  "array",
 				"items": itemSchema,
 			},
-			"subtotal":       map[string]interface{}{"type": "number"},
-			"tax":            map[string]interface{}{"type": "number"},
-			"service_charge": map[string]interface{}{"type": "number"},
-			"grand_total":    map[string]interface{}{"type": "number"},
+			"subtotal":       map[string]any{"type": "number"},
+			"tax":            map[string]any{"type": "number"},
+			"service_charge": map[string]any{"type": "number"},
+			"grand_total":    map[string]any{"type": "number"},
 		},
 		"required":             []string{"items", "subtotal", "tax", "service_charge", "grand_total"},
 		"additionalProperties": false,

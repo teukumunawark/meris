@@ -11,7 +11,7 @@ import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah, getInitials } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
 import { useOnboarding } from "@/shared/hooks";
-import { ReceiptItem } from "@/shared/types";
+import type { ReceiptItem } from "@/shared/types";
 import { BillGroupCard } from "./BillGroupCard";
 import { BankInfoForm } from "./BankInfoForm";
 import { AddBillButton } from "./AddBillButton";
@@ -169,7 +169,7 @@ export default function ClaimBoard() {
               completeJoinHint();
               completeClaimHint();
             }}
-            className="fixed top-0 left-0 w-[100vw] h-[100dvh] z-40 bg-black/60 backdrop-blur-sm cursor-pointer pointer-events-auto"
+            className="pointer-events-auto fixed top-0 left-0 z-40 h-[100dvh] w-[100vw] cursor-pointer bg-black/60 backdrop-blur-sm"
             aria-hidden="true"
           />
         )}
@@ -238,7 +238,7 @@ export default function ClaimBoard() {
             <div className={`relative flex flex-col gap-4 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
               {isShowJoinSpotlight && (
                 <div className="absolute -top-6 -right-2 z-20 animate-[bounce_2s_infinite]">
-                  <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
+                  <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)]">
                     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M19 12l-7 7-7-7"/></svg>
                     Start Here
                   </div>
@@ -246,7 +246,7 @@ export default function ClaimBoard() {
               )}
               <div className="flex flex-col gap-1">
                 <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
-                <div className="relative group/join flex items-end gap-3 mt-1">
+                <div className="group/join relative mt-1 flex items-end gap-3">
                   <input
                     type="text"
                     ref={mobileInputRef}
@@ -254,7 +254,7 @@ export default function ClaimBoard() {
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder="Enter Guest Name..."
                     maxLength={20}
-                    className="w-full bg-transparent font-serif text-2xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/20 focus:border-sage pb-1.5 transition-colors"
+                    className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b bg-transparent pb-1.5 font-serif text-2xl font-light tracking-tight transition-colors focus:outline-none"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") joinSession(userName);
                     }}
@@ -263,7 +263,7 @@ export default function ClaimBoard() {
                   <button
                     onClick={() => joinSession(userName)}
                     disabled={!userName.trim()}
-                    className="flex shrink-0 h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition-all hover:bg-sage active:scale-95 disabled:opacity-30 cursor-pointer shadow-md"
+                    className="bg-foreground text-background hover:bg-sage flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full shadow-md transition-all active:scale-95 disabled:opacity-30"
                     aria-label="Join Session"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -279,7 +279,7 @@ export default function ClaimBoard() {
       </section>
 
       {/* Desktop Header Banner */}
-      <GlassPanel className={`hidden p-8 md:block transition-all duration-700 ${isShowJoinSpotlight ? 'relative z-50 bg-(--glass-bg-solid)' : ''}`}>
+      <GlassPanel className={`hidden p-8 transition-all duration-700 md:block ${isShowJoinSpotlight ? 'relative z-50 bg-(--glass-bg-solid)' : ''}`}>
         <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-96 w-96 opacity-10 blur-[150px]" />
         
         <div className="relative z-10 flex flex-col gap-6">
@@ -291,7 +291,7 @@ export default function ClaimBoard() {
             <Button
               onClick={handleCopyLink}
               variant="ghost"
-              className="px-5 py-3 flex shrink-0 items-center justify-center gap-2"
+              className="flex shrink-0 items-center justify-center gap-2 px-5 py-3"
             >
               {copySuccess ? (
                 <>
@@ -302,7 +302,7 @@ export default function ClaimBoard() {
                 </>
               ) : (
                 <>
-                  <svg className="h-4 w-4 opacity-50 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                   </svg>
@@ -314,12 +314,12 @@ export default function ClaimBoard() {
 
           <div className="h-px w-full bg-(--glass-border)" />
 
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans text-sm">
+          <div className="relative flex flex-col justify-between gap-4 font-sans text-sm md:flex-row md:items-center">
             <div className="flex items-center gap-3">
               <span className="text-sage font-mono font-bold tracking-wider select-all">{shortenId(sessionId)}</span>
               <button
                 onClick={handleCopyCode}
-                className="text-foreground/40 hover:text-sage flex items-center gap-1 rounded-sm border border-(--glass-border) bg-(--glass-bg) px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                className="text-foreground/40 hover:text-sage flex cursor-pointer items-center gap-1 rounded-sm border border-(--glass-border) bg-(--glass-bg) px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
                 title="Copy Session Code"
               >
                 {copyCodeSuccess ? (
@@ -343,10 +343,10 @@ export default function ClaimBoard() {
 
             <div className="hidden h-4 w-px bg-(--glass-border) md:block" />
 
-            <div className="flex justify-start md:justify-end min-w-0">
+            <div className="flex min-w-0 justify-start md:justify-end">
               {isJoined ? (
-                <div className="flex flex-row items-center gap-4 min-w-0">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex min-w-0 flex-row items-center gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div 
                       className="bg-sage text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-inner"
                     >
@@ -358,7 +358,7 @@ export default function ClaimBoard() {
                   </div>
                   <button
                     onClick={changeName}
-                    className="text-foreground/60 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-1.5 text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-[var(--glass-highlight)] active:scale-95 shrink-0"
+                    className="text-foreground/60 shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-1.5 text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-[var(--glass-highlight)] active:scale-95"
                   >
                     Switch Account
                   </button>
@@ -367,14 +367,14 @@ export default function ClaimBoard() {
                 <div className={`relative flex flex-col items-end gap-1 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
                   {isShowJoinSpotlight && (
                     <div className="absolute -top-6 -right-0.5 z-20 animate-[bounce_2s_infinite]">
-                      <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)] whitespace-nowrap">
+                      <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)]">
                         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M19 12l-7 7-7-7"/></svg>
                         Start Here
                       </div>
                     </div>
                   )}
-                  <div className="flex flex-row items-end gap-4 min-w-[320px]">
-                    <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex min-w-[320px] flex-row items-end gap-4">
+                    <div className="flex flex-1 flex-col gap-1">
                       <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
                       <input
                         type="text"
@@ -383,7 +383,7 @@ export default function ClaimBoard() {
                         onChange={(e) => setUserName(e.target.value)}
                         placeholder="Enter Guest Name..."
                         maxLength={20}
-                        className="w-full bg-transparent font-serif text-2xl font-light tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-foreground/20 focus:border-sage pb-1.5 transition-colors"
+                        className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b bg-transparent pb-1.5 font-serif text-2xl font-light tracking-tight transition-colors focus:outline-none"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") joinSession(userName);
                         }}
@@ -393,7 +393,7 @@ export default function ClaimBoard() {
                     <button
                       onClick={() => joinSession(userName)}
                       disabled={!userName.trim()}
-                      className="flex shrink-0 h-10 px-6 items-center justify-center rounded-full bg-foreground text-background transition-all hover:bg-sage active:scale-95 disabled:opacity-30 cursor-pointer shadow-md text-[10px] font-bold tracking-[0.2em] uppercase whitespace-nowrap"
+                      className="bg-foreground text-background hover:bg-sage flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-full px-6 text-[10px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-md transition-all active:scale-95 disabled:opacity-30"
                       aria-label="Join Session"
                     >
                       Join
@@ -401,7 +401,7 @@ export default function ClaimBoard() {
                     </button>
                   </div>
                   {joinError && (
-                    <p className="absolute right-0 -bottom-5 font-sans text-[10px] text-rose-400 whitespace-nowrap">{joinError}</p>
+                    <p className="absolute right-0 -bottom-5 font-sans text-[10px] whitespace-nowrap text-rose-400">{joinError}</p>
                   )}
                 </div>
               )}
@@ -457,38 +457,38 @@ export default function ClaimBoard() {
             {participants.length} people
           </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {participants.map((p) => {
             const isMe = isJoined && p.name === userName;
             return (
-              <GlassPanel key={p.id} className="p-4 flex flex-col gap-3">
+              <GlassPanel key={p.id} className="flex flex-col gap-3 p-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-sage text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-inner">
                     {getInitials(p.name)}
                   </div>
                   <div>
-                    <h3 className="text-foreground font-sans font-bold text-sm">
-                      {p.name} {isMe && <span className="text-sage text-xs font-normal font-sans ml-1">(You)</span>}
+                    <h3 className="text-foreground font-sans text-sm font-bold">
+                      {p.name} {isMe && <span className="text-sage ml-1 font-sans text-xs font-normal">(You)</span>}
                     </h3>
-                    <p className="text-foreground/40 text-[10px] font-mono">
+                    <p className="text-foreground/40 font-mono text-[10px]">
                       Subtotal: {formatRupiah(p.subtotal || 0)} | Total Owed: {formatRupiah(p.totalOwed || 0)}
                     </p>
                   </div>
                 </div>
                 
                 {/* Bank Details Input */}
-                <div className="space-y-1 mt-1 border-t border-[var(--glass-border)] pt-2">
+                <div className="mt-1 space-y-1 border-t border-[var(--glass-border)] pt-2">
                   <p className="text-foreground/30 text-[9px] font-bold tracking-wider uppercase">Settlement Bank Account</p>
                   {isMe ? (
                     <BankInfoForm participant={p} onUpdate={updateParticipantBank} />
                   ) : (
-                    <div className="text-xs text-foreground/70 font-sans">
+                    <div className="text-foreground/70 font-sans text-xs">
                       {p.bankName ? (
                         <span>
                           <strong className="text-foreground font-semibold">{p.bankName}</strong>: {p.bankAccount}
                         </span>
                       ) : (
-                        <span className="italic text-foreground/30">No bank details added yet</span>
+                        <span className="text-foreground/30 italic">No bank details added yet</span>
                       )}
                     </div>
                   )}
@@ -500,7 +500,7 @@ export default function ClaimBoard() {
       </section>
 
       {/* Inventory Items List */}
-      <div className={`space-y-4 sm:space-y-6 transition-all duration-700 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
+      <div className={`space-y-4 transition-all duration-700 sm:space-y-6 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
         <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
           <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Stops Inventory</h2>
           <div className="flex items-center gap-4">
@@ -510,7 +510,7 @@ export default function ClaimBoard() {
             {isPayer && (
               <button
                 onClick={() => setIsAdding(true)}
-                className="text-sage hover:bg-sage/10 flex items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs cursor-pointer"
+                className="text-sage hover:bg-sage/10 flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14M5 12h14" />
@@ -523,50 +523,50 @@ export default function ClaimBoard() {
         </div>
 
         {isAdding && (
-          <GlassPanel className="animate-in fade-in slide-in-from-top-4 p-5 sm:p-8 relative overflow-hidden">
+          <GlassPanel className="animate-in fade-in slide-in-from-top-4 relative overflow-hidden p-5 sm:p-8">
             <div className="from-sage/10 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-50" />
             
-            <div className="relative z-10 flex-1 flex flex-col gap-5 sm:gap-8 py-2">
-              <div className="w-full relative group/input">
+            <div className="relative z-10 flex flex-1 flex-col gap-5 py-2 sm:gap-8">
+              <div className="group/input relative w-full">
                 <input
                   type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   placeholder="New Item Name..."
-                  className="w-full bg-transparent font-sans text-xl sm:text-2xl md:text-3xl font-normal tracking-tight text-foreground placeholder:text-foreground/20 focus:outline-none border-b border-dashed border-foreground/20 focus:border-sage focus:border-solid pb-1.5 transition-all"
+                  className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b border-dashed bg-transparent pb-1.5 font-sans text-xl font-normal tracking-tight transition-all focus:border-solid focus:outline-none sm:text-2xl md:text-3xl"
                   autoFocus
                 />
               </div>
               
               <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
-                <div className="flex items-center gap-3 relative group/input">
-                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Qty</span>
+                <div className="group/input relative flex items-center gap-3">
+                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Qty</span>
                   <input
                     type="number"
                     value={newItemQty}
                     onChange={(e) => setNewItemQty(e.target.value)}
                     placeholder="1"
-                    className="w-12 bg-transparent font-mono text-lg sm:text-xl text-foreground focus:outline-none border-b border-dashed border-foreground/20 focus:border-sage focus:border-solid pb-1 text-center transition-all"
+                    className="text-foreground border-foreground/20 focus:border-sage w-12 border-b border-dashed bg-transparent pb-1 text-center font-mono text-lg transition-all focus:border-solid focus:outline-none sm:text-xl"
                   />
                 </div>
                 
-                <div className="flex items-center gap-3 relative group/input">
-                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Price</span>
-                  <div className="flex items-center gap-1 border-b border-dashed border-foreground/20 focus-within:border-sage focus-within:border-solid pb-1 transition-all">
+                <div className="group/input relative flex items-center gap-3">
+                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Price</span>
+                  <div className="border-foreground/20 focus-within:border-sage flex items-center gap-1 border-b border-dashed pb-1 transition-all focus-within:border-solid">
                     <span className="text-foreground/40 font-mono text-lg sm:text-xl">Rp</span>
                     <input
                       type="number"
                       value={newItemPrice}
                       onChange={(e) => setNewItemPrice(e.target.value)}
                       placeholder="0"
-                      className="w-24 sm:w-32 bg-transparent font-mono text-lg sm:text-xl text-foreground focus:outline-none"
+                      className="text-foreground w-24 bg-transparent font-mono text-lg focus:outline-none sm:w-32 sm:text-xl"
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/30">Total</span>
-                  <span className="text-sage text-glow-sage font-mono text-lg sm:text-xl font-bold">
+                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Total</span>
+                  <span className="text-sage text-glow-sage font-mono text-lg font-bold sm:text-xl">
                     {formatRupiah((parseFloat(newItemPrice) || 0) * (parseInt(newItemQty) || 0))}
                   </span>
                 </div>
@@ -576,14 +576,14 @@ export default function ClaimBoard() {
                 <button 
                   onClick={handleAddItem} 
                   disabled={isSaving}
-                  className="bg-foreground text-background text-[10px] font-bold tracking-[0.2em] uppercase px-6 py-2.5 rounded-full hover:bg-sage hover:text-white transition-all active:scale-95 disabled:opacity-50 shadow-md cursor-pointer"
+                  className="bg-foreground text-background hover:bg-sage cursor-pointer rounded-full px-6 py-2.5 text-[10px] font-bold tracking-[0.2em] uppercase shadow-md transition-all hover:text-white active:scale-95 disabled:opacity-50"
                 >
                   {isSaving ? "Adding..." : "Add to Inventory"}
                 </button>
                 <button 
                   onClick={() => setIsAdding(false)} 
                   disabled={isSaving}
-                  className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/40 hover:text-foreground transition-colors px-4 py-2 cursor-pointer"
+                  className="text-foreground/40 hover:text-foreground cursor-pointer px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-colors"
                 >
                   Cancel
                 </button>
@@ -626,7 +626,7 @@ export default function ClaimBoard() {
                 bill={{
                   id: "",
                   name: "Other Unassigned Items",
-                  payerName: payerName,
+                  payerName,
                   tax: 0,
                   serviceCharge: 0,
                   grandTotal: unassignedItems.reduce((s, it) => s + it.price * it.quantity, 0),
