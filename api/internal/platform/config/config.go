@@ -89,7 +89,7 @@ func Load() (Config, error) {
 		AI: AIConfig{
 			APIKey:   getEnv("AI_API_KEY", ""),
 			Endpoint: getEnv("AI_ENDPOINT", ""),
-			Model:    getEnv("AI_MODEL", "gemini-2.5-flash"),
+			Model:    getEnv("AI_MODEL", "gemini-3.8-flash-high"),
 		},
 		Telemetry: TelemetryConfig{
 			OTLPEndpoint: getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),

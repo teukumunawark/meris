@@ -11,23 +11,23 @@ export default function GlobalError({
   return (
     <html lang="id">
       <body className="bg-background text-foreground flex min-h-screen items-center justify-center px-6 antialiased">
-        <title>Application Error | Meris</title>
+        <title>Kendala Sistem | Meris</title>
         <div className="glass-panel rounded-glass w-full max-w-xl border-[var(--glass-border)] bg-[var(--glass-bg)] p-8 sm:p-10">
           <p className="font-mono text-sm font-medium tracking-[0.24em] uppercase opacity-40">
-            Application Error
+            Kendala Sistem
           </p>
           <h1 className="mt-4 font-serif text-2xl font-semibold tracking-tight">
-            Meris gagal memuat halaman ini.
+            Halaman gagal dimuat.
           </h1>
           <p className="mt-3 font-sans text-sm leading-6 opacity-60">
-            Terjadi gangguan teknis. Coba muat ulang halaman atau kembali ke beranda beberapa saat lagi.
+            Peramban gagal memproses data halaman ini. Coba muat ulang halaman atau kembali ke beranda.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button 
               onClick={() => reset()}
               className="rounded-glass-sm bg-sage text-background cursor-pointer px-5 py-2.5 font-sans text-xs font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
             >
-              Coba Lagi
+              Muat Ulang Halaman
             </button>
             <Link 
               href="/"

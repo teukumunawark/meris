@@ -100,9 +100,9 @@ type ChatResponseFormat struct {
 }
 
 type ChatJSONSchemaConfig struct {
-	Name   string      `json:"name"`
-	Strict bool        `json:"strict"`
-	Schema any  `json:"schema"`
+	Name   string `json:"name"`
+	Strict bool   `json:"strict"`
+	Schema any    `json:"schema"`
 }
 
 type ChatMessage struct {
@@ -158,7 +158,7 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 		model = os.Getenv("AI_MODEL")
 	}
 	if model == "" {
-		model = "gemini-2.5-flash"
+		model = "gemini-3.8-flash-high"
 	}
 
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)

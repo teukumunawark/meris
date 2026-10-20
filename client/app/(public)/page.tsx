@@ -15,6 +15,53 @@ interface RecentSession {
   joinedAt: number;
 }
 
+function RecentSessionsList({ sessions }: { sessions: RecentSession[] }) {
+  if (sessions.length === 0) return null;
+
+  return (
+    <div className="space-y-3 pt-2 sm:space-y-4 sm:pt-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-foreground/60 font-sans text-xs font-semibold">
+          Sesi Terakhir
+        </h3>
+        <span className="text-foreground/40 font-mono text-[11px]">
+          {sessions.length} tersimpan
+        </span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {sessions.map((session) => (
+          <Link
+            key={session.id}
+            href={`/session/${session.id}`}
+            className="group hover:border-sage/40 flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3.5 transition-all duration-300 hover:bg-[var(--glass-highlight)] active:scale-[0.99]"
+          >
+            <div className="flex min-w-0 flex-col gap-0.5 pr-3">
+              <span className="text-foreground group-hover:text-sage truncate font-sans text-xs font-semibold transition-colors sm:text-sm">
+                {session.payerName ? `Tagihan ${session.payerName}` : "Tagihan Bersama"}
+              </span>
+              <span className="text-foreground/40 font-sans text-[11px]">
+                {new Date(session.joinedAt).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric"
+                })}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-sage font-mono text-xs font-bold sm:text-sm">
+                {formatRupiah(session.grandTotal)}
+              </span>
+              <svg className="text-foreground/30 group-hover:text-sage h-4 w-4 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<"create" | "join">("create");
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
@@ -34,138 +81,104 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="bg-background text-foreground relative min-h-screen overflow-hidden font-sans antialiased">
+    <div className="bg-background text-foreground relative min-h-screen overflow-x-hidden font-sans antialiased">
       {/* Decorative Orbs */}
       <div className="bg-orb-sage pointer-events-none fixed top-[-15%] right-[-10%] h-[70%] w-[70%] rounded-full opacity-20 blur-[140px]" />
       <div className="bg-orb-slate pointer-events-none fixed bottom-[-10%] left-[-10%] h-[60%] w-[60%] rounded-full opacity-15 blur-[120px]" />
 
-      {/* Top Header Row for ThemeToggle */}
-      <header className="relative z-20 mx-auto flex max-w-7xl justify-end px-6 pt-6 sm:px-10">
+      {/* Top Header Row with Consistent Brand and ThemeToggle */}
+      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 pt-4 sm:px-8 sm:pt-6">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-glass-sm bg-sage text-background flex h-8 w-8 items-center justify-center font-mono text-sm font-bold shadow-xs sm:h-9 sm:w-9 sm:text-base">
+            M
+          </div>
+          <span className="text-foreground font-sans text-base font-semibold tracking-[0.2em] uppercase sm:text-lg">
+            Meris
+          </span>
+        </div>
         <ThemeToggle />
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl px-6 pt-8 pb-24 sm:px-10 sm:pt-12">
-        <div className="grid grid-cols-1 items-start gap-16 lg:grid-cols-12 lg:gap-24">
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-8 sm:pt-10 sm:pb-24">
+        <div className="grid grid-cols-1 items-start gap-8 sm:gap-12 lg:grid-cols-12 lg:gap-16 xl:gap-24">
 
           {/* Left Side: Branding and Context */}
-          <div className="space-y-10 lg:col-span-6 lg:pt-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div
-                  className="rounded-glass-sm bg-sage text-background flex h-10 w-10 items-center justify-center font-mono text-lg font-bold"
-                >
-                  M
-                </div>
-                <span className="text-foreground font-sans text-xl font-medium tracking-[0.2em] uppercase">Meris</span>
-              </div>
-
-              <h1 className="text-foreground font-serif text-5xl leading-[1.1] tracking-tight sm:text-7xl lg:text-8xl">
-                Elegance in <br />
-                <span className="text-sage font-sans font-light italic">Sharing.</span>
+          <div className="space-y-6 lg:col-span-6 lg:space-y-10 lg:pt-8">
+            <div className="space-y-3 sm:space-y-5">
+              <h1 className="text-foreground font-serif text-3xl leading-[1.15] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+                Bagi Tagihan Cepat, <br />
+                <span className="text-sage font-sans font-light italic">Tanpa Bikin Akun.</span>
               </h1>
 
-              <p className="text-foreground/45 max-w-md font-sans text-lg leading-relaxed font-light tracking-wide sm:text-xl">
-                A minimal, zero-account split billing experience powered by AI and aesthetic precision.
+              <p className="text-foreground/60 max-w-md font-sans text-sm leading-relaxed sm:text-base lg:text-lg">
+                Foto struk belanja, pilih pesanan masing-masing, dan dapatkan rincian transfer otomatis tanpa perlu registrasi atau kata sandi.
               </p>
             </div>
 
-            {recentSessions.length > 0 && (
-              <div className="space-y-6 pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-px w-8 bg-[var(--glass-border)]" />
-                  <h3 className="text-foreground/25 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">Recent Sessions</h3>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {recentSessions.map((session) => (
-                    <Link
-                      key={session.id}
-                      href={`/session/${session.id}`}
-                      className="glass-panel group rounded-glass-sm hover:border-sage/30 flex items-center justify-between border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 transition-all duration-500 hover:bg-[var(--glass-highlight)]"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="text-foreground/70 group-hover:text-foreground font-sans text-sm font-medium transition-colors">
-                          {session.payerName}&apos;s Bill
-                        </span>
-                        <span className="text-foreground/25 font-mono text-[10px] uppercase">
-                          ID: {session.id}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sage text-glow-sage block font-sans text-sm font-bold">
-                          {formatRupiah(session.grandTotal)}
-                        </span>
-                        <span className="text-foreground/20 font-mono text-[9px] uppercase">
-                          {new Date(session.joinedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Recent Sessions for Desktop View */}
+            <div className="hidden lg:block">
+              <RecentSessionsList sessions={recentSessions} />
+            </div>
           </div>
 
           {/* Right Side: Action Panel */}
-          <div className="lg:col-span-6">
-            <GlassPanel className="p-8 sm:p-12">
-              <div className="mb-10 flex gap-8 border-b border-[var(--glass-border)] pb-2">
+          <div className="space-y-6 lg:col-span-6">
+            <GlassPanel className="p-4 sm:p-7 md:p-10">
+              {/* Mobile-Friendly Segmented Pill Tabs */}
+              <div 
+                className="mb-6 flex gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] p-1 sm:mb-8"
+                role="tablist"
+                aria-label="Session actions"
+              >
                 <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "create"}
                   onClick={() => setActiveTab("create")}
-                  className={`relative pb-4 font-sans text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 ${
-                    activeTab === "create" ? "text-sage" : "text-foreground/25 hover:text-foreground/50"
+                  className={`min-h-[44px] flex-1 cursor-pointer rounded-full py-2.5 font-sans text-xs font-semibold transition-all duration-300 active:scale-[0.98] sm:py-3 ${
+                    activeTab === "create"
+                      ? "bg-sage text-background shadow-xs"
+                      : "text-foreground/60 hover:text-foreground"
                   }`}
                 >
-                  Create
-                  {activeTab === "create" && (
-                    <div className="bg-sage absolute bottom-[-1px] left-0 h-0.5 w-full shadow-[0_0_10px_rgba(139,168,149,0.5)]" />
-                  )}
+                  Foto Struk
                 </button>
                 <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "join"}
                   onClick={() => setActiveTab("join")}
-                  className={`relative pb-4 font-sans text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 ${
-                    activeTab === "join" ? "text-sage" : "text-foreground/25 hover:text-foreground/50"
+                  className={`min-h-[44px] flex-1 cursor-pointer rounded-full py-2.5 font-sans text-xs font-semibold transition-all duration-300 active:scale-[0.98] sm:py-3 ${
+                    activeTab === "join"
+                      ? "bg-sage text-background shadow-xs"
+                      : "text-foreground/60 hover:text-foreground"
                   }`}
                 >
-                  Join
-                  {activeTab === "join" && (
-                    <div className="bg-sage absolute bottom-[-1px] left-0 h-0.5 w-full shadow-[0_0_10px_rgba(139,168,149,0.5)]" />
-                  )}
+                  Gabung Sesi
                 </button>
               </div>
 
-              <div className="min-h-[320px]">
+              <div className="min-h-[260px]">
                 {activeTab === "create" ? (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <CreateSessionForm />
                   </div>
                 ) : (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <JoinSessionForm />
                   </div>
                 )}
               </div>
-
-              <div className="mt-12 border-t border-[var(--glass-border)] pt-8 text-center">
-                <p className="text-foreground/20 font-sans text-[10px] leading-relaxed font-light tracking-[0.15em] uppercase">
-                  No accounts. No passwords. <br />
-                  Just upload, claim, and settle.
-                </p>
-              </div>
             </GlassPanel>
+
+            {/* Recent Sessions for Mobile View (Ordered directly under the action card) */}
+            <div className="block lg:hidden">
+              <RecentSessionsList sessions={recentSessions} />
+            </div>
           </div>
 
         </div>
       </main>
-
-      <footer className="relative z-10 border-t border-[var(--glass-border)] py-10 opacity-30">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-10 text-[10px] font-bold tracking-[0.3em] uppercase sm:flex-row">
-          <p>Meris Studio &copy; 2026</p>
-          <div className="flex gap-6">
-            <span className="hover:text-sage cursor-help transition-colors">Privacy</span>
-            <span className="hover:text-sage cursor-help transition-colors">Github</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

@@ -37,6 +37,7 @@ export function useJoinSession() {
 
       if (participant.id !== undefined && participant.token) {
         setParticipantData(participant.id, trimmedName, participant.token);
+        localStorage.setItem("meris_username", trimmedName);
         localStorage.setItem(
           `meris_session_${sessionId}_participant`,
           JSON.stringify({
@@ -47,7 +48,7 @@ export function useJoinSession() {
         );
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to join session.";
+      const message = err instanceof Error ? err.message : "Could not join this session. Check your internet connection or verify the session code.";
       setJoinError(message);
     }
   };

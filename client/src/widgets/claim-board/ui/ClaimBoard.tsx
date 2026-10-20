@@ -93,6 +93,7 @@ export default function ClaimBoard() {
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
 
   const isPayer = isJoined && userName.trim().toLowerCase() === payerName.trim().toLowerCase();
+  const sessionTitle = bills[0]?.name?.trim() || "Tagihan Bersama";
 
   const sortedItems = React.useMemo(() => {
     const result: Array<ReceiptItem & { depth: number }> = [];
@@ -175,107 +176,102 @@ export default function ClaimBoard() {
         )}
       </AnimatePresence>
 
-      {/* Mobile Header Title & Code Card */}
-      <section className="flex flex-col gap-4 md:hidden">
-        <div className="space-y-3">
-          <h1 className="text-foreground font-serif text-3xl leading-tight tracking-tight">
-            Reviewing the <span className="text-sage font-sans font-light">Meris</span>
+      {/* Mobile Header: Store Title, Payer Subtitle & Clean User Status */}
+      <section className="flex flex-col gap-3 md:hidden">
+        <div className="space-y-1">
+          <h1 className="text-foreground font-serif text-2xl font-normal tracking-tight sm:text-3xl">
+            {sessionTitle}
           </h1>
+          <p className="text-foreground/60 font-sans text-xs">
+            {payerName ? `Dibayar oleh ${payerName}` : "Belum ditentukan pembayar"} · Total {formatRupiah(totalSubtotal)}
+          </p>
         </div>
-        <GlassPanel className={`space-y-4 p-5 transition-all duration-700 ${isShowJoinSpotlight ? 'relative z-50 bg-[var(--glass-bg-solid)]' : ''}`}>
-          <div className="flex items-center justify-between gap-3">
+
+        {/* User Status Bar if Joined */}
+        {isJoined ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="text-foreground/40 shrink-0 font-mono text-[10px] tracking-wider uppercase">Code:</span>
-              <span className="text-sage truncate font-mono text-sm font-bold tracking-wider">{sessionId}</span>
+              <div className="bg-sage text-background flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                {getInitials(userName)}
+              </div>
+              <p className="text-foreground/85 truncate font-sans text-xs">
+                <span className="text-foreground font-semibold">{userName}</span>
+                <span className="text-foreground/40 ml-1">(Anda)</span>
+              </p>
+              <button
+                onClick={changeName}
+                className="text-foreground/40 hover:text-sage ml-1 cursor-pointer text-[11px] underline transition-colors"
+                title="Ganti Nama"
+              >
+                Ganti
+              </button>
             </div>
-            <Button
+
+            <button
               onClick={handleCopyLink}
-              variant="ghost"
-              size="sm"
-              className="flex shrink-0 items-center gap-1.5"
+              className="text-sage hover:bg-sage/10 border-sage/30 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all active:scale-95"
             >
               {copySuccess ? (
                 <>
                   <svg className="text-sage h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5"/>
+                    <path d="M20 6 9 17l-5-5" />
                   </svg>
-                  <span className="text-sage">Copied</span>
+                  <span>Tersalin</span>
                 </>
               ) : (
                 <>
-                  <svg className="text-foreground/50 h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  <svg className="text-sage h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
-                  <span>Copy Link</span>
+                  <span>Bagikan</span>
                 </>
               )}
-            </Button>
+            </button>
           </div>
-
-          <div className="h-px bg-[var(--glass-border)]" />
-
-          {isJoined ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <div 
-                  className="bg-sage text-background flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                >
-                  {getInitials(userName)}
-                </div>
-                <p className="text-foreground/70 truncate font-sans text-xs">
-                  Joined as <span className="text-foreground font-bold">{userName}</span>
-                </p>
-              </div>
+        ) : (
+          /* Prominent Onboarding Card if not joined */
+          <div className={`border-sage/30 bg-sage/5 rounded-2xl border p-4 transition-all duration-500 sm:p-5 ${isShowJoinSpotlight ? "ring-sage/40 relative z-50 ring-2" : ""}`}>
+            <div className="mb-2.5 flex flex-col gap-0.5">
+              <span className="text-sage text-xs font-bold tracking-wider uppercase">
+                {payerName ? "Mulai Klaim Menu" : "Siapa yang membayar struk ini?"}
+              </span>
+              <p className="text-foreground/60 text-xs">
+                {payerName 
+                  ? "Masukkan namamu untuk memilih makanan atau minuman pesananmu." 
+                  : "Masukkan namamu untuk memulai pembagian tagihan."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                ref={mobileInputRef}
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Ketik namamu..."
+                maxLength={20}
+                className="text-foreground placeholder:text-foreground/30 focus:border-sage flex-1 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2 text-base transition-colors focus:outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") joinSession(userName);
+                }}
+                autoFocus={isShowJoinSpotlight}
+              />
               <button
-                onClick={changeName}
-                className="text-foreground/60 shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1.5 text-[9px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-[var(--glass-highlight)] active:scale-95"
+                onClick={() => joinSession(userName)}
+                disabled={!userName.trim()}
+                className="bg-sage text-background hover:bg-sage/90 flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold tracking-wider uppercase shadow-sm transition-all active:scale-95 disabled:opacity-30"
               >
-                Switch Account
+                <span>Gabung</span>
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
-          ) : (
-            <div className={`relative flex flex-col gap-4 transition-all duration-700 ${isShowJoinSpotlight ? 'scale-105' : ''}`}>
-              {isShowJoinSpotlight && (
-                <div className="absolute -top-6 -right-2 z-20 animate-[bounce_2s_infinite]">
-                  <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)]">
-                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M19 12l-7 7-7-7"/></svg>
-                    Start Here
-                  </div>
-                </div>
-              )}
-              <div className="flex flex-col gap-1">
-                <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
-                <div className="group/join relative mt-1 flex items-end gap-3">
-                  <input
-                    type="text"
-                    ref={mobileInputRef}
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Enter Guest Name..."
-                    maxLength={20}
-                    className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b bg-transparent pb-1.5 font-serif text-2xl font-light tracking-tight transition-colors focus:outline-none"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") joinSession(userName);
-                    }}
-                    autoFocus={isShowJoinSpotlight}
-                  />
-                  <button
-                    onClick={() => joinSession(userName)}
-                    disabled={!userName.trim()}
-                    className="bg-foreground text-background hover:bg-sage flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full shadow-md transition-all active:scale-95 disabled:opacity-30"
-                    aria-label="Join Session"
-                  >
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </button>
-                </div>
-              </div>
-              {joinError && (
-                <p className="font-sans text-[10px] text-rose-400">{joinError}</p>
-              )}
-            </div>
-          )}
-        </GlassPanel>
+            {joinError && (
+              <p className="mt-2 font-sans text-xs text-rose-400">{joinError}</p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Desktop Header Banner */}
@@ -284,9 +280,14 @@ export default function ClaimBoard() {
         
         <div className="relative z-10 flex flex-col gap-6">
           <div className="flex items-center justify-between gap-6">
-            <h1 className="text-foreground font-serif text-4xl leading-tight tracking-tight lg:text-5xl">
-              Reviewing the <span className="text-sage font-sans font-light">Meris</span>
-            </h1>
+            <div>
+              <h1 className="text-foreground font-serif text-3xl leading-tight tracking-tight lg:text-4xl">
+                {sessionTitle}
+              </h1>
+              <p className="text-foreground/50 mt-1 font-sans text-xs">
+                {payerName ? `Dibayar oleh ${payerName}` : "Belum ditentukan pembayar"} · Total {formatRupiah(totalSubtotal)}
+              </p>
+            </div>
             
             <Button
               onClick={handleCopyLink}
@@ -375,13 +376,13 @@ export default function ClaimBoard() {
                   )}
                   <div className="flex min-w-[320px] flex-row items-end gap-4">
                     <div className="flex flex-1 flex-col gap-1">
-                      <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Who are you?</p>
+                      <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">{payerName ? "Who are you?" : "Who paid this bill?"}</p>
                       <input
                         type="text"
                         ref={desktopInputRef}
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
-                        placeholder="Enter Guest Name..."
+                        placeholder={payerName ? "Enter Your Name..." : "Enter your name (Payer)..."}
                         maxLength={20}
                         className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b bg-transparent pb-1.5 font-serif text-2xl font-light tracking-tight transition-colors focus:outline-none"
                         onKeyDown={(e) => {
@@ -396,7 +397,7 @@ export default function ClaimBoard() {
                       className="bg-foreground text-background hover:bg-sage flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-full px-6 text-[10px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-md transition-all active:scale-95 disabled:opacity-30"
                       aria-label="Join Session"
                     >
-                      Join
+                      {payerName ? "Join" : "Claim as Payer"}
                       <svg className="ml-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </button>
                   </div>
@@ -410,47 +411,76 @@ export default function ClaimBoard() {
         </div>
       </GlassPanel>
 
-      {/* Progress Section */}
-      <section className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col justify-between gap-2 border-b border-[var(--glass-border)] pb-3 sm:flex-row sm:items-baseline">
-          <span className="text-foreground/30 font-mono text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">
-            COLLABORATION STATE // CLAIMING
-          </span>
-          <span className="text-sage font-mono text-sm font-bold">
-            {claimProgressPercent}% COMPLETE
+      {/* Modern Continuous Progress Bar */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between font-sans text-xs">
+          <span className="text-foreground/70 font-medium">Progres Klaim</span>
+          <span className="text-foreground/85 font-mono">
+            <strong className="text-sage font-bold">{claimProgressPercent}%</strong>
+            <span className="text-foreground/40 ml-1.5 text-[11px]">
+              ({formatRupiah(totalClaimedSubtotal)} / {formatRupiah(totalSubtotal)})
+            </span>
           </span>
         </div>
-
-        <div className="flex h-4 items-center gap-1 sm:h-5 sm:gap-1.5">
-          {Array.from({ length: 20 }).map((_, i) => {
-            const isActive = i < Math.round((claimProgressPercent / 100) * 20);
-            return (
-              <div 
-                key={i}
-                className={`h-full flex-1 transition-all duration-700 ease-out ${
-                  isActive 
-                    ? "bg-sage" 
-                    : "border border-[var(--glass-border)] bg-[var(--glass-bg)]"
-                }`}
-              />
-            );
-          })}
-        </div>
-
-        <div className="text-foreground/20 flex flex-col justify-between gap-2 font-mono text-[10px] font-bold tracking-wider uppercase sm:flex-row sm:items-center sm:text-xs">
-          <div className="flex items-center gap-2">
-            <span className="bg-sage inline-block h-1.5 w-1.5" />
-            <span>CLAIMED: {formatRupiah(totalClaimedSubtotal)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 bg-[var(--glass-border)]" />
-            <span>TOTAL INVENTORY: {formatRupiah(totalSubtotal)}</span>
-          </div>
+        <div className="h-2 w-full overflow-hidden rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)]">
+          <div
+            className="bg-sage h-full rounded-full shadow-[0_0_10px_rgba(var(--sage-rgb),0.35)] transition-all duration-700 ease-out"
+            style={{ width: `${claimProgressPercent}%` }}
+          />
         </div>
       </section>
 
-      {/* Participants Roster Section */}
-      <section className="space-y-4 sm:space-y-6">
+      {/* Mobile Participants Bar (Compact Avatar Chips) */}
+      <section className="space-y-2 md:hidden">
+        <div className="flex items-center justify-between border-b border-[var(--glass-border)] pb-2">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-foreground font-sans text-xs font-semibold">Peserta</h2>
+            <span className="text-foreground/40 font-mono text-[11px]">
+              ({participants.length})
+            </span>
+          </div>
+          <button
+            onClick={handleCopyLink}
+            className="text-sage hover:bg-sage/10 border-sage/25 flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors"
+          >
+            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <line x1="19" y1="8" x2="19" y2="14" />
+              <line x1="22" y1="11" x2="16" y2="11" />
+            </svg>
+            Undang Teman
+          </button>
+        </div>
+
+        {/* Horizontal Participant Avatar Chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {participants.map((p) => {
+            const isMe = isJoined && p.name === userName;
+            return (
+              <div
+                key={p.id}
+                className={`rounded-glass-sm flex items-center gap-1.5 border px-2.5 py-1 text-xs transition-colors ${
+                  isMe
+                    ? "border-sage/40 bg-sage/10 text-sage"
+                    : "text-foreground/75 border-[var(--glass-border)] bg-[var(--glass-bg)]"
+                }`}
+              >
+                <div className="bg-sage text-background flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold">
+                  {getInitials(p.name)}
+                </div>
+                <span className="max-w-[90px] truncate font-medium">
+                  {p.name}
+                </span>
+                {isMe && <span className="text-[10px] opacity-75">(Anda)</span>}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Desktop Participants Roster Grid */}
+      <section className="hidden space-y-4 sm:space-y-6 md:block">
         <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
           <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Participants</h2>
           <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">
@@ -478,7 +508,7 @@ export default function ClaimBoard() {
                 
                 {/* Bank Details Input */}
                 <div className="mt-1 space-y-1 border-t border-[var(--glass-border)] pt-2">
-                  <p className="text-foreground/30 text-[9px] font-bold tracking-wider uppercase">Settlement Bank Account</p>
+                  <p className="text-foreground/30 text-[9px] font-bold tracking-wider uppercase">Settlement Account</p>
                   {isMe ? (
                     <BankInfoForm participant={p} onUpdate={updateParticipantBank} />
                   ) : (
@@ -488,7 +518,7 @@ export default function ClaimBoard() {
                           <strong className="text-foreground font-semibold">{p.bankName}</strong>: {p.bankAccount}
                         </span>
                       ) : (
-                        <span className="text-foreground/30 italic">No bank details added yet</span>
+                        <span className="text-foreground/30 italic">No bank or e-wallet account listed</span>
                       )}
                     </div>
                   )}
@@ -502,7 +532,7 @@ export default function ClaimBoard() {
       {/* Inventory Items List */}
       <div className={`space-y-4 transition-all duration-700 sm:space-y-6 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
         <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
-          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Stops Inventory</h2>
+          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Bill Items</h2>
           <div className="flex items-center gap-4">
             {isJoined && (
               <AddBillButton addBill={addBill} />
@@ -593,8 +623,13 @@ export default function ClaimBoard() {
         )}
 
         {bills.length === 0 && unassignedItems.length === 0 && !isAdding ? (
-          <GlassPanel className="border-dashed border-[var(--glass-border)] p-12 text-center sm:p-24">
-            <p className="text-foreground/20 font-sans text-lg font-normal tracking-wide sm:text-xl">No items have been uploaded yet.</p>
+          <GlassPanel className="border-dashed border-[var(--glass-border)] p-12 text-center sm:p-20">
+            <div className="mx-auto max-w-sm space-y-2">
+              <p className="text-foreground/70 font-sans text-base font-medium">No items in this session yet</p>
+              <p className="text-foreground/30 font-sans text-xs leading-relaxed">
+                Add a bill receipt or enter items manually to start splitting with your group.
+              </p>
+            </div>
           </GlassPanel>
         ) : (
           <div className="space-y-6">
@@ -606,6 +641,7 @@ export default function ClaimBoard() {
                   key={bill.id}
                   bill={bill}
                   items={billItems}
+                  isSingleBill={bills.length <= 1}
                   isJoined={isJoined}
                   userName={userName}
                   sessionPayerName={payerName}
@@ -633,6 +669,7 @@ export default function ClaimBoard() {
                   createdAt: ""
                 }}
                 items={unassignedItems}
+                isSingleBill={bills.length === 0}
                 isJoined={isJoined}
                 userName={userName}
                 sessionPayerName={payerName}

@@ -44,7 +44,7 @@ export default function ParticipantBreakdown({
       </div>
 
       {participants.length === 0 ? (
-        <p className="text-foreground/30 relative z-10 py-6 text-center font-sans text-sm sm:py-10 sm:text-base">No data to display yet.</p>
+        <p className="text-foreground/30 relative z-10 py-6 text-center font-sans text-sm sm:py-10 sm:text-base">No breakdown yet. Claim your items to see each person&apos;s share.</p>
       ) : (
         <ul className="relative z-10 space-y-4" role="list">
           <AnimatePresence mode="popLayout">

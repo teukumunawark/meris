@@ -176,8 +176,21 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 	})
 	if err != nil {
 		return nil, err
-	}
 
+	}
+	// If session has no payer yet, this first participant becomes the payer
+	sess, err := q.GetSession(ctx, sessionID)
+	if err == nil && sess.PayerName == "" {
+		_ = q.UpdateSessionPayerName(ctx, sqlc.UpdateSessionPayerNameParams{
+			PayerName: name,
+			ID:        sessionID,
+		})
+		_ = q.UpdateBillPayerName(ctx, sqlc.UpdateBillPayerNameParams{
+			PayerName: name,
+			ID:        sessionID,
+			SessionID: sessionID,
+		})
+	}
 	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
 
 	return &p, nil

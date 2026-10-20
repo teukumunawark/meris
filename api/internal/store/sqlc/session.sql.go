@@ -483,6 +483,23 @@ func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) error {
 	return err
 }
 
+const updateBillPayerName = `-- name: UpdateBillPayerName :exec
+UPDATE bills
+SET payer_name = $1
+WHERE id = $2 AND session_id = $3
+`
+
+type UpdateBillPayerNameParams struct {
+	PayerName string `db:"payer_name" json:"payer_name"`
+	ID        string `db:"id" json:"id"`
+	SessionID string `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) UpdateBillPayerName(ctx context.Context, arg UpdateBillPayerNameParams) error {
+	_, err := q.db.Exec(ctx, updateBillPayerName, arg.PayerName, arg.ID, arg.SessionID)
+	return err
+}
+
 const updateClaimShares = `-- name: UpdateClaimShares :exec
 UPDATE claims SET shares = $1 WHERE item_id = $2 AND participant_id = $3
 `
@@ -557,6 +574,22 @@ func (q *Queries) UpdateParticipantBankInfo(ctx context.Context, arg UpdateParti
 		arg.ID,
 		arg.SessionID,
 	)
+	return err
+}
+
+const updateSessionPayerName = `-- name: UpdateSessionPayerName :exec
+UPDATE sessions 
+SET payer_name = $1 
+WHERE id = $2
+`
+
+type UpdateSessionPayerNameParams struct {
+	PayerName string `db:"payer_name" json:"payer_name"`
+	ID        string `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateSessionPayerName(ctx context.Context, arg UpdateSessionPayerNameParams) error {
+	_, err := q.db.Exec(ctx, updateSessionPayerName, arg.PayerName, arg.ID)
 	return err
 }
 

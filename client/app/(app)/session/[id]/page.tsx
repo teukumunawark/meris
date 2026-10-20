@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use } from "react";
+import React, { use, useState, useMemo } from "react";
 import Link from "next/link";
 import { SessionProvider, useSession } from "@/entities/session/model/SessionContext";
 import { ThemeToggle } from "@/features/theme-toggle";
@@ -19,16 +19,50 @@ export default function ClaimSessionPage({ params }: PageProps) {
 
   return (
     <SessionProvider sessionId={sessionId}>
-      <SessionPageContent sessionId={sessionId} />
+      <SessionPageContent />
     </SessionProvider>
   );
 }
 
-function SessionPageContent({ sessionId }: { sessionId: string }) {
+function NavbarShareButton() {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="text-foreground/75 hover:text-sage flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] transition-all duration-300 hover:bg-[var(--glass-highlight)] active:scale-95 md:hidden"
+      title="Bagikan Sesi"
+      aria-label="Bagikan Sesi"
+    >
+      {copied ? (
+        <svg className="text-sage h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      ) : (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function SessionPageContent() {
   const { isJoined, participants, userName } = useSession();
   const mounted = useMounted();
+  const [mobileTab, setMobileTab] = useState<"claims" | "settlement">("claims");
 
-  const currentUserTotal = React.useMemo(() => {
+  const currentUserTotal = useMemo(() => {
     if (!isJoined || !userName) return 0;
     const match = participants.find(p => p.name.trim() === userName.trim());
     return match?.totalOwed || 0;
@@ -44,6 +78,13 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
       </div>
     );
   }
+
+  const handleSwitchTab = (tab: "claims" | "settlement") => {
+    setMobileTab(tab);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <div className={`bg-background text-foreground relative min-h-screen overflow-x-hidden font-sans antialiased ${isJoined ? "pb-24 lg:pb-6" : "pb-6"}`}>
@@ -96,48 +137,96 @@ function SessionPageContent({ sessionId }: { sessionId: string }) {
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <NavbarShareButton />
             <ThemeToggle />
           </div>
         </div>
       </header>
 
+      {/* Mobile Sticky Segmented Tabs Bar */}
+      <div className="bg-background/90 sticky top-16 z-30 border-b border-[var(--glass-border)] px-4 py-2 backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-md gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] p-1">
+          <button
+            type="button"
+            onClick={() => handleSwitchTab("claims")}
+            className={`min-h-[38px] flex-1 cursor-pointer rounded-full font-sans text-xs font-semibold transition-all duration-300 ${
+              mobileTab === "claims"
+                ? "bg-sage text-background shadow-xs"
+                : "text-foreground/60 hover:text-foreground"
+            }`}
+          >
+            Klaim Menu
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchTab("settlement")}
+            className={`min-h-[38px] flex-1 cursor-pointer rounded-full font-sans text-xs font-semibold transition-all duration-300 ${
+              mobileTab === "settlement"
+                ? "bg-sage text-background shadow-xs"
+                : "text-foreground/60 hover:text-foreground"
+            }`}
+          >
+            Pembayaran
+          </button>
+        </div>
+      </div>
+
       {/* Main Layout */}
-      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pt-4 pb-4 sm:gap-12 sm:px-10 sm:pt-8 sm:pb-8">
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-16">
+      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-3 pb-4 sm:gap-10 sm:px-10 sm:pt-8 sm:pb-8">
+        {/* Desktop View: Side by Side */}
+        <div className="hidden items-start lg:grid lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-8">
             <ClaimBoard />
           </div>
-
           <div className="lg:col-span-4">
             <BillSummary />
           </div>
         </div>
+
+        {/* Mobile View: Tab-based View (One Focused View at a Time) */}
+        <div className="block lg:hidden">
+          {mobileTab === "claims" ? (
+            <div className="animate-in fade-in duration-300">
+              <ClaimBoard />
+            </div>
+          ) : (
+            <div className="animate-in fade-in duration-300">
+              <BillSummary />
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* Footer Branding */}
-      <footer className="mt-8 border-t border-[var(--glass-border)] py-3 opacity-40 sm:mt-12 sm:py-6">
-        <div className="text-foreground/40 mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 text-[10px] font-bold tracking-[0.3em] uppercase sm:flex-row">
-          <p>Meris &copy; 2026</p>
-          <p className="font-mono tracking-normal uppercase opacity-50">Session: {sessionId}</p>
-        </div>
-      </footer>
-
+      {/* Mobile Sticky Action Bar */}
       {isJoined && (
-        <div className="bg-background/80 fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between border-t border-[var(--glass-border)] p-4 shadow-2xl backdrop-blur-xl lg:hidden">
+        <div className="bg-background/90 fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between border-t border-[var(--glass-border)] px-5 py-3 shadow-2xl backdrop-blur-xl lg:hidden">
           <div className="flex flex-col text-left">
-            <span className="text-foreground/30 font-mono text-[10px] font-bold tracking-[0.2em] uppercase">Your Share</span>
-            <span className="text-sage text-glow-sage text-xl font-bold">{formatRupiah(currentUserTotal)}</span>
+            <span className="text-foreground/50 text-[10px] font-medium tracking-wide">Total Anda</span>
+            <span className="text-sage text-glow-sage text-lg font-bold sm:text-xl">{formatRupiah(currentUserTotal)}</span>
           </div>
-          <button
-            onClick={() => {
-              const breakdownEl = document.getElementById("bill-summary");
-              breakdownEl?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="rounded-glass-sm bg-sage text-background cursor-pointer px-5 py-2.5 font-sans text-xs font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
-          >
-            View Details
-          </button>
+
+          {mobileTab === "claims" ? (
+            <button
+              onClick={() => handleSwitchTab("settlement")}
+              className="bg-sage text-background flex cursor-pointer items-center gap-1.5 rounded-full px-5 py-2.5 font-sans text-xs font-bold tracking-wider uppercase shadow-md transition-all active:scale-[0.98]"
+            >
+              <span>Pembayaran</span>
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleSwitchTab("claims")}
+              className="text-foreground flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-5 py-2.5 font-sans text-xs font-bold tracking-wider uppercase transition-all hover:bg-[var(--glass-highlight)] active:scale-[0.98]"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              <span>Klaim Menu</span>
+            </button>
+          )}
         </div>
       )}
     </div>

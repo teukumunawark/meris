@@ -10,10 +10,10 @@ export default function NotFound() {
               404
             </p>
             <h1 className="font-serif text-2xl font-semibold tracking-tight">
-              Halaman tidak ditemukan.
+              Sesi tidak ditemukan.
             </h1>
             <p className="font-sans text-sm leading-6 opacity-60">
-              URL ini tidak mengarah ke halaman Meris yang valid atau sesi ini sudah berakhir.
+              Tautan ini salah, atau sesi pembagian tagihan sudah selesai dan dihapus dari penyimpanan.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -21,7 +21,7 @@ export default function NotFound() {
               href="/" 
               className="rounded-glass-sm bg-sage text-background cursor-pointer px-5 py-2.5 font-sans text-xs font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
             >
-              Ke Beranda
+              Kembali ke Beranda
             </Link>
           </div>
         </div>

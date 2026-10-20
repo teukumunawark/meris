@@ -71,6 +71,11 @@ UPDATE sessions
 SET payer_bank_name = $1, payer_bank_account = $2 
 WHERE id = $3;
 
+-- name: UpdateSessionPayerName :exec
+UPDATE sessions 
+SET payer_name = $1 
+WHERE id = $2;
+
 -- name: CreateBill :exec
 INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, grand_total, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
@@ -83,6 +88,11 @@ UPDATE bills
 SET payer_name = $1, name = $2, tax = $3, service_charge = $4, grand_total = $5
 WHERE id = $6 AND session_id = $7;
 
+-- name: UpdateBillPayerName :exec
+UPDATE bills
+SET payer_name = $1
+WHERE id = $2 AND session_id = $3;
+
 -- name: DeleteBill :exec
 DELETE FROM bills WHERE id = $1 AND session_id = $2;
 
@@ -90,4 +100,3 @@ DELETE FROM bills WHERE id = $1 AND session_id = $2;
 UPDATE participants
 SET bank_name = $1, bank_account = $2
 WHERE id = $3 AND session_id = $4;
-

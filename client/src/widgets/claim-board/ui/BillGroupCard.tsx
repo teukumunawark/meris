@@ -11,6 +11,7 @@ import type { ReceiptItem } from "@/shared/types";
 export interface BillGroupCardProps {
   bill: Bill;
   items: Array<ReceiptItem & { depth: number }>;
+  isSingleBill?: boolean;
   isJoined: boolean;
   userName: string;
   sessionPayerName: string;
@@ -26,6 +27,7 @@ export interface BillGroupCardProps {
 export function BillGroupCard({
   bill,
   items,
+  isSingleBill = false,
   isJoined,
   userName,
   sessionPayerName,
@@ -70,133 +72,146 @@ export function BillGroupCard({
   };
 
   const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete the stop "${bill.name}" and all its items?`)) {
+    if (confirm(`Hapus daftar pesanan "${bill.name}" beserta semua menunya?`)) {
       await deleteBill(bill.id);
     }
   };
 
-  return (
-    <GlassPanel className="space-y-4 p-5 sm:p-6">
-      <div className="flex flex-col gap-3 border-b border-[var(--glass-border)] pb-3 md:flex-row md:items-center md:justify-between">
-        {isEditing ? (
-          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+  const content = (
+    <>
+      {isEditing ? (
+        <div className="border-sage/20 bg-sage/5 mb-3 space-y-3 rounded-xl border p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
             <div className="flex flex-col gap-1">
-              <span className="text-foreground/40 text-[8px] font-bold uppercase">Stop Title</span>
+              <span className="text-foreground/40 text-[10px] font-bold tracking-wider uppercase">Nama Struk/Tempat</span>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-1 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-foreground/40 text-[8px] font-bold uppercase">Payer Name</span>
+              <span className="text-foreground/40 text-[10px] font-bold tracking-wider uppercase">Nama Pembayar</span>
               <input
                 type="text"
                 value={payerName}
                 onChange={(e) => setPayerName(e.target.value)}
-                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-1 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-foreground/40 text-[8px] font-bold uppercase">Tax (Rp)</span>
+              <span className="text-foreground/40 text-[10px] font-bold tracking-wider uppercase">Pajak (Rp)</span>
               <input
                 type="number"
                 value={tax}
                 onChange={(e) => setTax(e.target.value)}
-                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-1 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-foreground/40 text-[8px] font-bold uppercase">Service (Rp)</span>
+              <span className="text-foreground/40 text-[10px] font-bold tracking-wider uppercase">Biaya Layanan (Rp)</span>
               <input
                 type="number"
                 value={serviceCharge}
                 onChange={(e) => setServiceCharge(e.target.value)}
-                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-1 text-sm focus:outline-none"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-foreground/40 text-[8px] font-bold uppercase">Grand Total (Rp)</span>
+              <span className="text-foreground/40 text-[10px] font-bold tracking-wider uppercase">Total Struk (Rp)</span>
               <input
                 type="number"
                 value={grandTotal}
                 onChange={(e) => setGrandTotal(e.target.value)}
-                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="border-foreground/20 focus:border-sage text-foreground border-b bg-transparent px-1 py-1 text-sm focus:outline-none"
               />
             </div>
           </div>
-        ) : (
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border)] pt-2">
+            <button
+              onClick={() => {
+                setName(bill.name);
+                setPayerName(bill.payerName);
+                setTax(bill.tax.toString());
+                setServiceCharge(bill.serviceCharge.toString());
+                setGrandTotal(bill.grandTotal.toString());
+                setIsEditing(false);
+              }}
+              disabled={isSaving}
+              className="text-foreground/50 hover:text-foreground cursor-pointer rounded px-3 py-1 text-xs font-semibold"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-sage text-background hover:bg-sage/90 cursor-pointer rounded-full px-4 py-1 text-xs font-semibold shadow-xs"
+            >
+              {isSaving ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </div>
+      ) : !isSingleBill ? (
+        /* Multiple Bills Header: shown only when there is more than 1 bill */
+        <div className="flex flex-col gap-2 border-b border-[var(--glass-border)] pb-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
-            <h3 className="text-foreground flex flex-wrap items-center gap-2 font-serif text-lg font-bold">
+            <h3 className="text-foreground flex flex-wrap items-center gap-2 font-serif text-base font-semibold sm:text-lg">
               <span>{bill.name}</span>
-              <span className="text-foreground/40 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-0.5 font-sans text-[10px] font-normal tracking-wide uppercase">
-                Paid by {bill.payerName}
+              <span className="text-foreground/50 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-0.5 font-sans text-[10px] font-medium">
+                Dibayar oleh {bill.payerName}
               </span>
             </h3>
-            <div className="text-foreground/50 mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px]">
+            <div className="text-foreground/50 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs">
               <span>Subtotal: {formatRupiah(billSubtotal)}</span>
-              <span>Tax: {formatRupiah(bill.tax)}</span>
-              <span>Service Charge: {formatRupiah(bill.serviceCharge)}</span>
-              <span className="text-sage font-bold">Grand Total: {formatRupiah(bill.grandTotal)}</span>
+              {bill.tax > 0 && <span>Pajak: {formatRupiah(bill.tax)}</span>}
+              {bill.serviceCharge > 0 && <span>Layanan: {formatRupiah(bill.serviceCharge)}</span>}
+              <span className="text-sage font-bold">Total: {formatRupiah(bill.grandTotal)}</span>
             </div>
           </div>
-        )}
 
-        <div className="flex shrink-0 items-center justify-end gap-2">
-          {isEditing ? (
-            <>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="text-sage hover:bg-sage/10 cursor-pointer rounded px-2.5 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors"
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </button>
-              <button
-                onClick={() => {
-                  setName(bill.name);
-                  setPayerName(bill.payerName);
-                  setTax(bill.tax.toString());
-                  setServiceCharge(bill.serviceCharge.toString());
-                  setGrandTotal(bill.grandTotal.toString());
-                  setIsEditing(false);
-                }}
-                disabled={isSaving}
-                className="text-foreground/40 hover:text-foreground cursor-pointer rounded px-2.5 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              {isAuthorized && bill.id !== "" && (
-                <>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="text-foreground/40 hover:text-foreground cursor-pointer px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="cursor-pointer px-2 py-1 text-[10px] font-bold tracking-widest text-rose-400 uppercase transition-colors hover:text-rose-500"
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="text-foreground/40 hover:text-foreground cursor-pointer px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors"
-              >
-                {isCollapsed ? "Expand" : "Collapse"}
-              </button>
-            </>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {isAuthorized && bill.id !== "" && (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-foreground/50 hover:text-sage cursor-pointer text-xs transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="cursor-pointer text-xs text-rose-400 transition-colors hover:text-rose-500"
+                >
+                  Hapus
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="text-foreground/50 hover:text-foreground cursor-pointer text-xs transition-colors"
+            >
+              {isCollapsed ? "Buka" : "Tutup"}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : isAuthorized && bill.id !== "" && (
+        /* Single Bill: Minimal Edit Strip for Payer */
+        <div className="text-foreground/50 flex items-center justify-between pb-1 text-xs">
+          <div className="flex items-center gap-2 font-mono text-[11px]">
+            {bill.tax > 0 && <span>Pajak: {formatRupiah(bill.tax)}</span>}
+            {bill.serviceCharge > 0 && <span>Layanan: {formatRupiah(bill.serviceCharge)}</span>}
+          </div>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-sage cursor-pointer text-[11px] font-semibold hover:underline"
+          >
+            Edit Rincian Tagihan
+          </button>
+        </div>
+      )}
 
+      {/* Item List */}
       <AnimatePresence initial={false}>
         {!isCollapsed && (
           <motion.div
@@ -207,9 +222,9 @@ export function BillGroupCard({
             className="overflow-hidden"
           >
             {items.length === 0 ? (
-              <p className="text-foreground/30 py-2 text-xs">No items in this stop.</p>
+              <p className="text-foreground/30 py-3 text-center text-xs">Belum ada menu di struk ini.</p>
             ) : (
-              <ul className="grid grid-cols-1 gap-2.5 pt-2" role="list">
+              <ul className="grid grid-cols-1 gap-2.5 pt-1" role="list">
                 {items.map((item) => (
                   <ItemCard
                     key={item.id}
@@ -230,6 +245,16 @@ export function BillGroupCard({
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+  );
+
+  if (isSingleBill) {
+    return <div className="space-y-2.5">{content}</div>;
+  }
+
+  return (
+    <GlassPanel className="space-y-3.5 p-4 sm:p-6">
+      {content}
     </GlassPanel>
   );
 }

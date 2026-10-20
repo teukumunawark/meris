@@ -40,15 +40,15 @@ export function BankInfoForm({ participant, onUpdate }: BankInfoFormProps) {
         type="text"
         value={bankName}
         onChange={(e) => setBankName(e.target.value)}
-        placeholder="Bank Name (e.g. BCA)"
-        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-28 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
+        placeholder="Bank or E-Wallet (e.g. BCA, GoPay)"
+        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-36 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
       />
       <input
         type="text"
         value={bankAccount}
         onChange={(e) => setBankAccount(e.target.value)}
-        placeholder="Account Number"
-        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-32 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
+        placeholder="Account / Phone Number"
+        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-36 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
       />
       <button
         onClick={handleSave}

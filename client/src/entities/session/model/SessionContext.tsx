@@ -244,7 +244,7 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
 
     let eventSource: EventSource | null = null;
     try {
-      const sseUrl = `${backendUrl}/session/${sessionId}/events`;
+      const sseUrl = `${backendUrl}/stream?sessionId=${sessionId}`;
       eventSource = new EventSource(sseUrl);
       eventSource.onmessage = (event) => {
         try {
