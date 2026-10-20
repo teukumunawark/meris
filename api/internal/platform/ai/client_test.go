@@ -13,12 +13,12 @@ func TestExtractReceiptData_EmptyEndpoint(t *testing.T) {
 	origEndpoint := os.Getenv("AI_ENDPOINT")
 	origAPIKey := os.Getenv("AI_API_KEY")
 	defer func() {
-		os.Setenv("AI_ENDPOINT", origEndpoint)
-		os.Setenv("AI_API_KEY", origAPIKey)
+		_ = os.Setenv("AI_ENDPOINT", origEndpoint)
+		_ = os.Setenv("AI_API_KEY", origAPIKey)
 	}()
 
-	os.Setenv("AI_ENDPOINT", "")
-	os.Setenv("AI_API_KEY", "test-key")
+	_ = os.Setenv("AI_ENDPOINT", "")
+	_ = os.Setenv("AI_API_KEY", "test-key")
 
 	_, err := ExtractReceiptData(context.Background(), []byte("fake-image"))
 	if err == nil {

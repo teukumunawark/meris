@@ -21,7 +21,7 @@ func (r *Repository) WithTx(ctx context.Context, fn func(*sqlc.Queries) error) e
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	q := sqlc.New(tx)
 	if err := fn(q); err != nil {

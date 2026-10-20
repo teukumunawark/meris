@@ -205,7 +205,6 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 			"service_charge": map[string]interface{}{"type": "number"},
 			"grand_total":    map[string]interface{}{"type": "number"},
 		},
-		// merchant_name intentionally omitted from required — it's optional.
 		"required":             []string{"items", "subtotal", "tax", "service_charge", "grand_total"},
 		"additionalProperties": false,
 	}
@@ -251,7 +250,7 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -46,7 +46,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, directURL string) er
 	} else {
 		db = stdlib.OpenDBFromPool(pool)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	slog.Info("Running pending goose database migrations...")
 	if err := goose.UpContext(ctx, db, "."); err != nil {

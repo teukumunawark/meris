@@ -9,7 +9,7 @@ import (
 
 type Hub struct {
 	mu      sync.Mutex
-	clients map[string]map[chan string]bool // Map of sessionID -> client channels
+	clients map[string]map[chan string]bool
 }
 
 func NewHub() *Hub {
@@ -57,7 +57,7 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 		close(messageChan)
 	}()
 
-	fmt.Fprintf(w, ": ok\n\n")
+	_, _ = fmt.Fprintf(w, ": ok\n\n")
 	flusher.Flush()
 
 	ticker := time.NewTicker(15 * time.Second)
@@ -69,10 +69,10 @@ func (h *Hub) StreamHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			fmt.Fprintf(w, "data: %s\n\n", msg)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", msg)
 			flusher.Flush()
 		case <-ticker.C:
-			fmt.Fprintf(w, ": ping\n\n")
+			_, _ = fmt.Fprintf(w, ": ping\n\n")
 			flusher.Flush()
 		case <-r.Context().Done():
 			return

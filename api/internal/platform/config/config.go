@@ -52,9 +52,7 @@ type CORSConfig struct {
 
 func Load() (Config, error) {
 	if err := godotenv.Load(); err != nil {
-		if err := godotenv.Load("../.env"); err != nil {
-			// Ignore if .env doesn't exist
-		}
+		_ = godotenv.Load("../.env")
 	}
 
 	cfg := Config{
@@ -62,7 +60,7 @@ func Load() (Config, error) {
 		HTTP: HTTPConfig{
 			Addr:         getEnv("BIND_ADDRESS", "127.0.0.1") + ":" + getEnv("PORT", "8080"),
 			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 0, // Disable write timeout to support SSE streaming
+			WriteTimeout: 0,
 			IdleTimeout:  120 * time.Second,
 		},
 		Database: database.Config{

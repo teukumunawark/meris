@@ -44,7 +44,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 		s.logger.Info("http server shutting down gracefully")
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.shutdownTimeout)
 		defer cancel()
 
 		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {

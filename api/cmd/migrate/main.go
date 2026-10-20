@@ -61,7 +61,7 @@ func main() {
 		defer dbPool.Close()
 		db = stdlib.OpenDBFromPool(dbPool)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	slog.Info("Running goose command", "command", command)
 	switch command {

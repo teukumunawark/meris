@@ -20,35 +20,46 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
+const maxReceiptUploadSize = 5 * 1024 * 1024
+
+func (h *Handler) readReceiptImage(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxReceiptUploadSize)
 
 	file, _, err := r.FormFile("receipt")
 	if err != nil {
 		if err.Error() == "http: request body too large" || strings.Contains(err.Error(), "too large") {
 			httpresponse.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Upload size exceeded the 5MB limit")
-			return
+			return nil, false
 		}
 		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_file", "Invalid receipt image")
-		return
+		return nil, false
 	}
-	defer file.Close()
-
-	payerName := r.FormValue("payerName")
-	payerBankName := r.FormValue("payerBankName")
-	payerBankAccount := r.FormValue("payerBankAccount")
+	defer func() { _ = file.Close() }()
 
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
 		httpresponse.WriteError(w, http.StatusInternalServerError, "read_failed", "Failed to read image")
-		return
+		return nil, false
 	}
 
 	contentType := http.DetectContentType(imageBytes)
 	if !strings.HasPrefix(contentType, "image/") {
 		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_content_type", "Uploaded file must be a valid image")
+		return nil, false
+	}
+
+	return imageBytes, true
+}
+
+func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
+	imageBytes, ok := h.readReceiptImage(w, r)
+	if !ok {
 		return
 	}
+
+	payerName := r.FormValue("payerName")
+	payerBankName := r.FormValue("payerBankName")
+	payerBankAccount := r.FormValue("payerBankAccount")
 
 	session, _, _, payerID, payerToken, err := h.service.ExtractAndCreateSession(
 		r.Context(),
@@ -295,36 +306,16 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, id string, 
 }
 
 func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
-	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
-
-	file, _, err := r.FormFile("receipt")
-	if err != nil {
-		if err.Error() == "http: request body too large" || strings.Contains(err.Error(), "too large") {
-			httpresponse.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Upload size exceeded the 5MB limit")
-			return
-		}
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_file", "Invalid receipt image")
+	imageBytes, ok := h.readReceiptImage(w, r)
+	if !ok {
 		return
 	}
-	defer file.Close()
 
 	payerName := r.FormValue("payerName")
 	billName := r.FormValue("name")
 	token := r.FormValue("token")
 
-	imageBytes, err := io.ReadAll(file)
-	if err != nil {
-		httpresponse.WriteError(w, http.StatusInternalServerError, "read_failed", "Failed to read image")
-		return
-	}
-
-	contentType := http.DetectContentType(imageBytes)
-	if !strings.HasPrefix(contentType, "image/") {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_content_type", "Uploaded file must be a valid image")
-		return
-	}
-
-	err = h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
+	err := h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
 	if err != nil {
 		if errors.Is(err, ErrUnauthorized) {
 			httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())

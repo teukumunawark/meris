@@ -24,10 +24,9 @@ func TestTranslator_Middleware(t *testing.T) {
 			t.Fatalf("failed to localize: %v", err)
 		}
 
-		w.Write([]byte(msg))
+		_, _ = w.Write([]byte(msg))
 	}))
 
-	// Test English fallback
 	reqEn := httptest.NewRequest("GET", "/", nil)
 	reqEn.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	wEn := httptest.NewRecorder()
@@ -38,7 +37,6 @@ func TestTranslator_Middleware(t *testing.T) {
 		t.Errorf("expected '%s', got '%s'", expectedEn, wEn.Body.String())
 	}
 
-	// Test Indonesian
 	reqId := httptest.NewRequest("GET", "/", nil)
 	reqId.Header.Set("Accept-Language", "id-ID,id;q=0.9")
 	wId := httptest.NewRecorder()

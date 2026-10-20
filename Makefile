@@ -1,4 +1,4 @@
-.PHONY: dev up generate test clean install-deps build-all
+.PHONY: dev up generate test lint clean install-deps build-all
 
 # Run both api backend and client frontend concurrently
 up: dev
@@ -23,6 +23,13 @@ test:
 	@echo "Running client linting..."
 	cd client && npm run lint || echo "No client lint target configured"
 
+# Run linters for both backend and client
+lint:
+	@echo "Running Go backend golangci-lint..."
+	cd api && golangci-lint run ./...
+	@echo "Running client linting..."
+	cd client && npm run lint
+
 # Install all dependencies for both projects
 install-deps:
 	@echo "Installing Go backend dependencies..."
@@ -36,4 +43,3 @@ build-all:
 	cd api && go build -o bin/server cmd/server/main.go
 	@echo "Building Next.js client..."
 	cd client && npm run build
-

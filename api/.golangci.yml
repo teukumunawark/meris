@@ -1,0 +1,38 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - misspell
+    - revive
+    - gosec
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+    gosec:
+      excludes:
+        - G115
+        - G704
+
+  exclusions:
+    paths:
+      - "internal/platform/httpserver/generated"
+      - "internal/store/sqlc"
+      - "sql/migrations"
+    rules:
+      - path: "_test\\.go$"
+        linters:
+          - errcheck
+          - gosec
+      - text: "SA1019:"
+        linters:
+          - staticcheck
