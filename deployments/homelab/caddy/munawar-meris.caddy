@@ -1,0 +1,21 @@
+# Copy to /srv/lab/core/caddy/sites/munawar-meris.caddy on zoro, then validate and reload Caddy (see README).
+# Public via munawar's Cloudflare Tunnel: one Public Hostname, meris.teukumunawark.my.id -> http://127.0.0.1:8080.
+# The API has no hostname of its own: the browser calls /_api/* on the same origin (client is built with
+# NEXT_PUBLIC_BACKEND_URL=/_api), so there is no CORS preflight and meris-api is never exposed directly.
+http://meris.teukumunawark.my.id {
+	log
+
+	# API: strip the /_api prefix, the Go router serves /session/... at the root.
+	# flush_interval -1 sends SSE events immediately instead of buffering them.
+	handle_path /_api/* {
+		reverse_proxy meris-api:8080 {
+			flush_interval -1
+		}
+	}
+
+	# Everything else is the Next.js client (its own /api/healthz stays here, it is not under /_api).
+	handle {
+		encode zstd gzip
+		reverse_proxy meris-client:3000
+	}
+}

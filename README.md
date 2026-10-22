@@ -20,4 +20,6 @@ make dev
 ```
 
 ## Production Deployment
-Configured for automated build & push via GitHub Actions to GHCR and deployed on homelab (`docker-compose.prod.yml`).
+Configured for automated build & push via GitHub Actions to GHCR and deployed on homelab as two apps, `meris-api` and `meris-client` (compose files in `deployments/homelab/`).
+
+Meris has a single public hostname, `meris.teukumunawark.my.id`. Caddy (`deployments/homelab/caddy/munawar-meris.caddy`) sends `/_api/*` to `meris-api` with the prefix stripped and everything else to `meris-client`. The client image is built in CI with `NEXT_PUBLIC_BACKEND_URL=/_api`, so the browser talks to the API on the same origin and `meris-api` has no public hostname.

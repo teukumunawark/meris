@@ -95,8 +95,9 @@ jobs:
         with:
           context: ./client
           file: ./deployments/client/Dockerfile
+          # Same-origin: Caddy routes meris.teukumunawark.my.id/_api/* to meris-api (deployments/homelab/caddy).
           build-args: |
-            NEXT_PUBLIC_BACKEND_URL=https://meris-api.teukumunawark.my.id
+            NEXT_PUBLIC_BACKEND_URL=/_api
           push: true
           tags: |
             ${{ env.CLIENT_IMAGE }}:${{ github.sha }}
@@ -107,7 +108,7 @@ jobs:
   deploy:
     name: Deploy to Homelab
     needs: build-and-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.TS_OAUTH_CLIENT_ID != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Connect to Tailscale
@@ -125,4 +126,7 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes "deploy@${DEPLOY_HOST}" "meris ${GITHUB_SHA}"
+          # Each homelab app is one name = one /srv/apps/<name> dir. The API goes first so the client never runs ahead of it.
+          for app in meris-api meris-client; do
+            ssh -o StrictHostKeyChecking=yes -o BatchMode=yes "deploy@${DEPLOY_HOST}" "${app} ${GITHUB_SHA}"
+          done

@@ -19,7 +19,7 @@ The repository enforces a strict physical separation between runtimes:
 ├── /deployments         # Dockerfiles and infrastructure configs
 ├── Makefile             # Root orchestration (make dev, make build-all, etc.)
 ├── docker-compose.yml   # Standalone local Docker Compose (API + Client + DB + Redis)
-├── docker-compose.prod.yml # Homelab production deployment spec
+│   └── homelab/         # Per-app compose files for /srv/apps/<meris-api|meris-client> on zoro
 ├── CONTEXT.md           # Ubiquitous domain vocabulary
 └── AGENTS.md            # AI Agent instructions and context rules (this file)
 ```
