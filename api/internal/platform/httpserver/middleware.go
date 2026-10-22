@@ -126,6 +126,14 @@ func CORS(allowedOrigins string) func(http.Handler) http.Handler {
 	}
 }
 
+// limiterKeyPrefix must start with the service name: on the homelab the Redis ACL user `meris-api`
+// can only touch keys matching `meris-api:*`, and any other prefix fails with NOPERM.
+const limiterKeyPrefix = "meris-api:limiter"
+
+func limiterKey(limitType, ip string) string {
+	return fmt.Sprintf("%s:%s:%s", limiterKeyPrefix, limitType, ip)
+}
+
 func RateLimiter(limitType string, limit int, duration time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +142,7 @@ func RateLimiter(limitType string, limit int, duration time.Duration) func(http.
 				ip = r.RemoteAddr
 			}
 
-			key := fmt.Sprintf("meris:limiter:%s:%s", limitType, ip)
+			key := limiterKey(limitType, ip)
 			ctx := r.Context()
 
 			if redis.RDB == nil {
