@@ -1,10 +1,12 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ReceiptItem } from "@/shared/types";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah, getAvatarBg, getInitials } from "@/shared/lib";
+import { useMounted } from "@/shared/hooks";
 
 interface ParticipantBreakdownProps {
   participants: Array<{
@@ -34,6 +36,9 @@ export default function ParticipantBreakdown({
   payerName,
   onRemoveParticipant,
 }: ParticipantBreakdownProps) {
+  const mounted = useMounted();
+  const [participantToDelete, setParticipantToDelete] = React.useState<{ id: number; name: string } | null>(null);
+
   return (
     <GlassPanel className="space-y-6 p-4 sm:p-6">
       <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-48 w-48 opacity-10 blur-[100px]" />
@@ -93,14 +98,18 @@ export default function ParticipantBreakdown({
                         if (isPayer && !isTargetPayer) {
                           return (
                             <button
-                              onClick={() => onRemoveParticipant(p.id)}
-                              className="text-foreground/30 shrink-0 cursor-pointer p-1 transition-colors hover:text-rose-400"
+                              type="button"
+                              onClick={() => setParticipantToDelete({ id: p.id, name: p.name })}
+                              className="flex min-h-[32px] shrink-0 cursor-pointer items-center gap-1 rounded-md bg-rose-500/10 px-2 py-1 text-xs font-semibold text-rose-400 transition-all hover:bg-rose-500/20 hover:text-rose-300 active:scale-95"
+                              title={`Keluarkan ${p.name}`}
+                              aria-label={`Keluarkan ${p.name}`}
                             >
-                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 6h18" />
                                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                               </svg>
+                              <span>Keluarkan</span>
                             </button>
                           );
                         }
@@ -149,6 +158,71 @@ export default function ParticipantBreakdown({
             })}
           </AnimatePresence>
         </ul>
+      )}
+
+      {/* Konfirmasi Keluarkan Peserta Centered Dialog (Portaled to Document Body) */}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {participantToDelete && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => setParticipantToDelete(null)}
+                className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+                aria-hidden="true"
+              />
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="bg-background text-foreground relative z-10 w-full max-w-sm rounded-2xl border border-rose-500/25 p-5 shadow-2xl sm:p-6"
+              >
+                <div className="mb-4 flex items-start gap-3.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-400">
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <line x1="10" y1="11" x2="10" y2="17" />
+                      <line x1="14" y1="11" x2="14" y2="17" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-foreground font-sans text-base font-semibold">
+                      Keluarkan {participantToDelete.name}?
+                    </h4>
+                    <p className="text-foreground/60 mt-1 font-sans text-xs leading-relaxed">
+                      Semua menu yang sudah diklaim oleh peserta ini akan dikembalikan ke tagihan bersama.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border)] pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setParticipantToDelete(null)}
+                    className="text-foreground/70 hover:text-foreground min-h-[38px] cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold transition-all hover:bg-[var(--glass-highlight)] active:scale-95"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemoveParticipant(participantToDelete.id);
+                      setParticipantToDelete(null);
+                    }}
+                    className="min-h-[38px] cursor-pointer rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all hover:bg-rose-600 active:scale-95"
+                  >
+                    Ya, Keluarkan
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
     </GlassPanel>
   );

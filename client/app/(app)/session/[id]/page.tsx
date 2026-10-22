@@ -24,39 +24,6 @@ export default function ClaimSessionPage({ params }: PageProps) {
   );
 }
 
-function NavbarShareButton() {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="text-foreground/75 hover:text-sage flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] transition-all duration-300 hover:bg-[var(--glass-highlight)] active:scale-95 md:hidden"
-      title="Bagikan Sesi"
-      aria-label="Bagikan Sesi"
-    >
-      {copied ? (
-        <svg className="text-sage h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-      ) : (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
 function SessionPageContent() {
   const { isJoined, participants, userName } = useSession();
   const mounted = useMounted();
@@ -138,7 +105,6 @@ function SessionPageContent() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <NavbarShareButton />
             <ThemeToggle />
           </div>
         </div>

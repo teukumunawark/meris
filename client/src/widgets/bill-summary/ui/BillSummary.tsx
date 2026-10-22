@@ -229,8 +229,8 @@ export default function BillSummary() {
         )}
       </GlassPanel>
 
-      {/* 2. Personal Payout Account (Settlement Account) */}
-      {isJoined && (() => {
+      {/* 2. Personal Payout Account (Only shown to Payer or Net Receivers) */}
+      {isJoined && (isPayer || myIncoming.length > 0) && (() => {
         const myParticipant = participants.find((p) => p.name === userName);
         if (!myParticipant) return null;
         return (
@@ -238,7 +238,7 @@ export default function BillSummary() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <span className="text-sage text-[10px] font-bold tracking-widest uppercase">
-                  Rekening Penerimaan Anda
+                  Rekening Penerimaan Pembayaran
                 </span>
                 <p className="text-foreground/80 mt-1 font-sans text-xs sm:text-sm">
                   {myParticipant.bankName ? (
@@ -247,7 +247,7 @@ export default function BillSummary() {
                     </>
                   ) : (
                     <span className="text-foreground/40 italic">
-                      Belum diatur. Atur rekening agar teman tahu tujuan transfer ke Anda.
+                      Belum diatur. Atur rekening atau e-wallet agar teman tahu tujuan transfer ke Anda.
                     </span>
                   )}
                 </p>
