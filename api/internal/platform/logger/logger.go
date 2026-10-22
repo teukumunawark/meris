@@ -5,58 +5,42 @@ import (
 	"log/slog"
 	"os"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel/trace"
 )
 
+// New returns the application logger. Logs go to stdout only (Alloy collects them), and every record
+// logged with a context that carries a span also carries trace_id and span_id.
 func New(env string) *slog.Logger {
-	otelHandler := otelslog.NewHandler("meris-api")
-
-	var consoleHandler slog.Handler
+	var handler slog.Handler
 	if env == "local" || env == "" {
-		consoleHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	} else {
-		consoleHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 	}
 
-	return slog.New(&multiHandler{
-		handlers: []slog.Handler{otelHandler, consoleHandler},
-	})
+	return slog.New(&traceHandler{Handler: handler})
 }
 
-type multiHandler struct {
-	handlers []slog.Handler
+// traceHandler copies the active span's IDs into the log record so logs can be joined with traces
+// (Loki to Tempo in Grafana). Calls without a context, such as slog.Info, carry no span and get no IDs.
+type traceHandler struct {
+	slog.Handler
 }
 
-func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	for _, h := range m.handlers {
-		if h.Enabled(ctx, level) {
-			return true
-		}
+func (h *traceHandler) Handle(ctx context.Context, record slog.Record) error {
+	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
+		record.AddAttrs(
+			slog.String("trace_id", sc.TraceID().String()),
+			slog.String("span_id", sc.SpanID().String()),
+		)
 	}
-	return false
+	return h.Handler.Handle(ctx, record)
 }
 
-func (m *multiHandler) Handle(ctx context.Context, record slog.Record) error {
-	for _, h := range m.handlers {
-		if h.Enabled(ctx, record.Level) {
-			_ = h.Handle(ctx, record.Clone())
-		}
-	}
-	return nil
+func (h *traceHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &traceHandler{Handler: h.Handler.WithAttrs(attrs)}
 }
 
-func (m *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	newHandlers := make([]slog.Handler, len(m.handlers))
-	for i, h := range m.handlers {
-		newHandlers[i] = h.WithAttrs(attrs)
-	}
-	return &multiHandler{handlers: newHandlers}
-}
-
-func (m *multiHandler) WithGroup(name string) slog.Handler {
-	newHandlers := make([]slog.Handler, len(m.handlers))
-	for i, h := range m.handlers {
-		newHandlers[i] = h.WithGroup(name)
-	}
-	return &multiHandler{handlers: newHandlers}
+func (h *traceHandler) WithGroup(name string) slog.Handler {
+	return &traceHandler{Handler: h.Handler.WithGroup(name)}
 }

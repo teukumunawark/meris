@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/riandyrn/otelchi"
+	otelchimetric "github.com/riandyrn/otelchi/metric"
 
 	"meris-backend/internal/modules/session"
 	"meris-backend/internal/platform/ai"
@@ -82,13 +83,15 @@ func main() {
 	r := httpserver.NewRouter()
 	r.Use(translator.Middleware)
 	otelMW := otelchi.Middleware("meris-api", otelchi.WithChiRoutes(r))
+	durationMW := otelchimetric.NewServerRequestDuration(otelchimetric.NewBaseConfig("meris-api"))
 	r.Use(func(next http.Handler) http.Handler {
+		instrumented := durationMW(otelMW(next))
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			if req.URL.Path == "/healthz" || req.URL.Path == "/health" || req.URL.Path == "/metrics" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/robots.txt" {
 				next.ServeHTTP(w, req)
 				return
 			}
-			otelMW(next).ServeHTTP(w, req)
+			instrumented.ServeHTTP(w, req)
 		})
 	})
 	r.Use(httpserver.RequestLogger(appLogger))
