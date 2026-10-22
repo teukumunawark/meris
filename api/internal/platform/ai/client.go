@@ -158,7 +158,7 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 		model = os.Getenv("AI_MODEL")
 	}
 	if model == "" {
-		model = "gemini-3.8-flash-high"
+		model = "ag/gemini-3.8-flash-high"
 	}
 
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
