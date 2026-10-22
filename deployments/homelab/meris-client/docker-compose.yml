@@ -19,7 +19,7 @@ services:
       OTEL_RESOURCE_ATTRIBUTES: deployment.environment.name=homelab,service.version=${APP_VERSION:-dev}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_METRIC_EXPORT_INTERVAL: "30000"
+      # Traces only: the client registers no metric reader, so there is no metric export interval to set
       OTEL_TRACES_SAMPLER: parentbased_always_on
       OTEL_LOGS_EXPORTER: none
     networks: [shared-net]
