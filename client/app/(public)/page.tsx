@@ -81,13 +81,13 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="bg-background text-foreground relative min-h-screen overflow-x-hidden font-sans antialiased">
+    <div className="bg-background text-foreground relative flex min-h-screen flex-col overflow-x-hidden font-sans antialiased">
       {/* Decorative Orbs */}
       <div className="bg-orb-sage pointer-events-none fixed top-[-15%] right-[-10%] h-[70%] w-[70%] rounded-full opacity-20 blur-[140px]" />
       <div className="bg-orb-slate pointer-events-none fixed bottom-[-10%] left-[-10%] h-[60%] w-[60%] rounded-full opacity-15 blur-[120px]" />
 
       {/* Top Header Row with Consistent Brand and ThemeToggle */}
-      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 pt-4 sm:px-8 sm:pt-6">
+      <header className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-5 pt-4 sm:px-8 sm:pt-6">
         <div className="flex items-center gap-2.5">
           <div className="rounded-glass-sm bg-sage text-background flex h-8 w-8 items-center justify-center font-mono text-sm font-bold shadow-xs sm:h-9 sm:w-9 sm:text-base">
             M
@@ -99,7 +99,8 @@ export default function LandingPage() {
         <ThemeToggle />
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-8 sm:pt-10 sm:pb-24">
+      {/* On desktop the content block is centered in the space under the header; mobile keeps the top-aligned flow */}
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pt-6 pb-16 sm:px-8 sm:pt-10 sm:pb-24 lg:justify-center lg:py-12">
         <div className="grid grid-cols-1 items-start gap-8 sm:gap-12 lg:grid-cols-12 lg:gap-16 xl:gap-24">
 
           {/* Left Side: Branding and Context */}

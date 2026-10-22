@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 
 export default function JoinSessionForm() {
   const router = useRouter();
+  const inputId = useId();
   const [sessionId, setSessionId] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -29,11 +30,12 @@ export default function JoinSessionForm() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3">
         <div className="space-y-1.5">
-          <label className="text-foreground/75 font-sans text-xs font-medium">
+          <label htmlFor={inputId} className="text-foreground/75 block font-sans text-xs font-medium">
             Kode atau Link Sesi
           </label>
-          <Input 
-            type="text" 
+          <Input
+            id={inputId}
+            type="text"
             value={sessionId}
             onChange={(e) => {
               setSessionId(e.target.value);
@@ -43,7 +45,7 @@ export default function JoinSessionForm() {
               if (e.key === "Enter") handleJoinSession();
             }}
             placeholder="Tempel link atau ketik kode sesi..." 
-            className="text-base"
+            className="block w-full text-base"
           />
         </div>
         <p className="text-foreground/45 font-sans text-xs leading-relaxed">
