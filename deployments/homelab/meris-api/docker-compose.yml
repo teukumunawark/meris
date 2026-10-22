@@ -18,8 +18,9 @@ services:
     environment:
       OTEL_SERVICE_NAME: meris-api
       OTEL_RESOURCE_ATTRIBUTES: deployment.environment.name=homelab,service.version=${APP_VERSION:-dev}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      # The API uses the OTLP gRPC trace exporter, which takes host:port (no scheme) and Alloy's gRPC port 4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: alloy:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_METRIC_EXPORT_INTERVAL: "30000"
       OTEL_TRACES_SAMPLER: parentbased_always_on
       # Logs go to stdout (JSON), NOT through OTLP: Alloy already collects stdout from every container
