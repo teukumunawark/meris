@@ -21,6 +21,10 @@ RUN bun run build
 
 # Stage 3: Runner
 FROM oven/bun:1-alpine AS runner
+
+# Links the GHCR package to the repo so it inherits the repo's (public) visibility
+LABEL org.opencontainers.image.source="https://github.com/teukumunawark/meris"
+
 WORKDIR /app
 
 ENV NODE_ENV=production

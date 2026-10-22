@@ -16,6 +16,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /meris-api .
 # Runtime stage
 FROM alpine:3.20
 
+# Links the GHCR package to the repo so it inherits the repo's (public) visibility
+LABEL org.opencontainers.image.source="https://github.com/teukumunawark/meris"
+
 WORKDIR /app
 
 RUN apk add --no-cache ca-certificates wget tzdata \
