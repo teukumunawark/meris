@@ -3,8 +3,10 @@ package httpserver
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,8 +136,22 @@ func limiterKey(limitType, ip string) string {
 	return fmt.Sprintf("%s:%s:%s", limiterKeyPrefix, limitType, ip)
 }
 
+// retryAfterSeconds rounds the remaining lifetime of a limiter key up to whole seconds, never below 1.
+func retryAfterSeconds(ttl time.Duration) int {
+	if ttl <= 0 {
+		return 1
+	}
+	return int(math.Ceil(ttl.Seconds()))
+}
+
+// RateLimiter allows `limit` requests per client IP inside `duration`. A limit of 0 or less turns it off.
+// When Redis is unavailable it fails open, so an outage never blocks users.
 func RateLimiter(limitType string, limit int, duration time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
+		if limit <= 0 {
+			return next
+		}
+
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {
@@ -162,6 +178,14 @@ func RateLimiter(limitType string, limit int, duration time.Duration) func(http.
 			}
 
 			if count > int64(limit) {
+				ttl := redis.RDB.TTL(ctx, key).Val()
+				if ttl <= 0 {
+					// The key lost its expiry (for example the process died between INCR and EXPIRE); restore it
+					// so the client is not blocked forever.
+					redis.RDB.Expire(ctx, key, duration)
+					ttl = duration
+				}
+				w.Header().Set("Retry-After", strconv.Itoa(retryAfterSeconds(ttl)))
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 				return
 			}

@@ -19,7 +19,15 @@ type Config struct {
 	AI              AIConfig
 	Telemetry       TelemetryConfig
 	CORS            CORSConfig
+	RateLimit       RateLimitConfig
 	ShutdownTimeout time.Duration
+}
+
+// RateLimitConfig limits how many sessions one client IP can create inside a window.
+// SessionMax = 0 turns the limiter off.
+type RateLimitConfig struct {
+	SessionMax    int
+	SessionWindow time.Duration
 }
 
 type HTTPConfig struct {
@@ -97,10 +105,30 @@ func Load() (Config, error) {
 		CORS: CORSConfig{
 			AllowedOrigins: getEnv("ALLOWED_ORIGINS", "*"),
 		},
+		RateLimit: RateLimitConfig{
+			SessionMax:    5,
+			SessionWindow: 8 * time.Hour,
+		},
 		ShutdownTimeout: 5 * time.Second,
 	}
 
 	var err error
+
+	if cfg.RateLimit.SessionMax, err = getInt("RATE_LIMIT_SESSION_MAX", cfg.RateLimit.SessionMax); err != nil {
+		return Config{}, err
+	}
+
+	if cfg.RateLimit.SessionWindow, err = getDuration("RATE_LIMIT_SESSION_WINDOW", cfg.RateLimit.SessionWindow); err != nil {
+		return Config{}, err
+	}
+
+	if cfg.RateLimit.SessionMax < 0 {
+		return Config{}, fmt.Errorf("RATE_LIMIT_SESSION_MAX must be 0 (off) or greater, got %d", cfg.RateLimit.SessionMax)
+	}
+
+	if cfg.RateLimit.SessionMax > 0 && cfg.RateLimit.SessionWindow <= 0 {
+		return Config{}, fmt.Errorf("RATE_LIMIT_SESSION_WINDOW must be greater than zero, got %s", cfg.RateLimit.SessionWindow)
+	}
 
 	if cfg.Database.MaxConns, err = getInt32("DB_MAX_CONNS", cfg.Database.MaxConns); err != nil {
 		return Config{}, err
@@ -136,6 +164,20 @@ func getInt32(key string, fallback int32) (int32, error) {
 	}
 
 	return int32(value), nil
+}
+
+func getDuration(key string, fallback time.Duration) (time.Duration, error) {
+	raw, ok := os.LookupEnv(key)
+	if !ok || raw == "" {
+		return fallback, nil
+	}
+
+	value, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+
+	return value, nil
 }
 
 func getInt(key string, fallback int) (int, error) {

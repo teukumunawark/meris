@@ -99,7 +99,8 @@ func main() {
 
 	httpserver.RegisterSystemRoutes(r, hub)
 
-	sessionRateLimiter := httpserver.RateLimiter("session", 5, 8*time.Hour)
+	sessionRateLimiter := httpserver.RateLimiter("session", cfg.RateLimit.SessionMax, cfg.RateLimit.SessionWindow)
+	slog.Info("Session rate limiter configured", "max", cfg.RateLimit.SessionMax, "window", cfg.RateLimit.SessionWindow.String())
 
 	openAPIServer := httpserver.NewOpenAPIServer(sessionHandler)
 	generated.HandlerWithOptions(openAPIServer, generated.ChiServerOptions{
