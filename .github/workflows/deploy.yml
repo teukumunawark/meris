@@ -95,7 +95,7 @@ jobs:
         with:
           context: ./client
           file: ./deployments/client/Dockerfile
-          # Same-origin: Caddy routes meris.teukumunawark.my.id/_api/* to meris-api (deployments/homelab/caddy).
+          # Same-origin: Caddy routes meris.munawar.my.id/_api/* to meris-api (deployments/homelab/caddy).
           build-args: |
             NEXT_PUBLIC_BACKEND_URL=/_api
           push: true
