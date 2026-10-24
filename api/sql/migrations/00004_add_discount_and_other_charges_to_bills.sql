@@ -1,0 +1,7 @@
+-- +goose Up
+ALTER TABLE bills ADD COLUMN discount DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE bills ADD COLUMN other_charges DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- +goose Down
+ALTER TABLE bills DROP COLUMN other_charges;
+ALTER TABLE bills DROP COLUMN discount;

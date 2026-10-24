@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -9,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -20,10 +20,16 @@ var (
 	ErrInvalidJSON = errors.New("invalid JSON format")
 )
 
+const (
+	defaultModel           = "ag/gemini-3.8-flash-low"
+	defaultEscalationModel = "ag/gemini-3.8-flash-high"
+)
+
 type Config struct {
-	APIKey   string
-	Endpoint string
-	Model    string
+	APIKey          string
+	Endpoint        string
+	Model           string
+	EscalationModel string
 }
 
 var currentConfig Config
@@ -32,19 +38,37 @@ func SetConfig(cfg Config) {
 	currentConfig = cfg
 }
 
-func (r *ExtractedReceipt) Validate() error {
-	var sum float64
-	for _, item := range r.Items {
-		sum += item.Price * float64(item.Quantity)
-	}
+var delayBeforeRetry = 1 * time.Second
 
-	if math.Abs(r.Subtotal-sum) > 0.01 {
-		slog.Warn("AI receipt subtotal mismatch, adjusting to sum of items", "original_subtotal", r.Subtotal, "sum_of_items", sum)
-		r.Subtotal = sum
-		r.GrandTotal = sum + r.Tax + r.ServiceCharge
+func resolveConfig() (Config, error) {
+	cfg := currentConfig
+	if cfg.APIKey == "" {
+		cfg.APIKey = os.Getenv("AI_API_KEY")
 	}
+	if cfg.Endpoint == "" {
+		cfg.Endpoint = os.Getenv("AI_ENDPOINT")
+	}
+	if cfg.Endpoint == "" {
+		return Config{}, errors.New("AI_ENDPOINT environment variable is not set")
+	}
+	if cfg.Model == "" {
+		cfg.Model = cmp.Or(os.Getenv("AI_MODEL"), defaultModel)
+	}
+	if cfg.EscalationModel == "" {
+		cfg.EscalationModel = cmp.Or(os.Getenv("AI_ESCALATION_MODEL"), defaultEscalationModel)
+	}
+	return cfg, nil
+}
 
-	return nil
+func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
+	var transcribed transcribedReceipt
+	if err := json.Unmarshal(cleanJSON(rawJSON), &transcribed); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
+	}
+	if err := transcribed.normalize(); err != nil {
+		return nil, err
+	}
+	return transcribed.reconcile(), nil
 }
 
 func cleanJSON(content []byte) []byte {
@@ -70,20 +94,6 @@ func cleanJSON(content []byte) []byte {
 	}
 
 	return []byte(str)
-}
-
-func ParseReceipt(rawJSON []byte) (*ExtractedReceipt, error) {
-	cleaned := cleanJSON(rawJSON)
-	var receipt ExtractedReceipt
-	if err := json.Unmarshal(cleaned, &receipt); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
-	}
-
-	if err := receipt.Validate(); err != nil {
-		return nil, err
-	}
-
-	return &receipt, nil
 }
 
 type ChatCompletionRequest struct {
@@ -121,100 +131,106 @@ type ChatImageURL struct {
 }
 
 func ExtractReceiptData(ctx context.Context, imageBytes []byte) (*ExtractedReceipt, error) {
+	cfg, err := resolveConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	primary, primaryErr := extractWithRetry(ctx, cfg, cfg.Model, imageBytes)
+	if primaryErr == nil && primary.MatchesPrintedTotal {
+		return primary, nil
+	}
+	if cfg.EscalationModel == cfg.Model {
+		if primaryErr != nil {
+			return nil, primaryErr
+		}
+		slog.WarnContext(ctx, "AI receipt amounts do not add up to the printed total", "model", primary.ExtractedByModel)
+		return primary, nil
+	}
+
+	reason := "amounts do not add up"
+	if primaryErr != nil {
+		reason = primaryErr.Error()
+	}
+	slog.InfoContext(ctx, "Escalating AI receipt extraction", "from", cfg.Model, "to", cfg.EscalationModel, "reason", reason)
+
+	escalated, escalatedErr := extractWithRetry(ctx, cfg, cfg.EscalationModel, imageBytes)
+	switch {
+	case escalatedErr == nil:
+		if !escalated.MatchesPrintedTotal {
+			slog.WarnContext(ctx, "AI receipt amounts do not add up to the printed total", "model", escalated.ExtractedByModel)
+		}
+		return escalated, nil
+	case primaryErr == nil:
+		slog.WarnContext(ctx, "AI escalation failed, keeping the unreconciled reading", "model", primary.ExtractedByModel, "error", escalatedErr)
+		return primary, nil
+	default:
+		return nil, fmt.Errorf("AI extraction failed: %w; escalation: %w", primaryErr, escalatedErr)
+	}
+}
+
+func extractWithRetry(ctx context.Context, cfg Config, model string, imageBytes []byte) (*ExtractedReceipt, error) {
 	var lastErr error
 	for attempt := 1; attempt <= 2; attempt++ {
-		receipt, err := executeExtractionAttempt(ctx, imageBytes)
+		receipt, err := executeExtractionAttempt(ctx, cfg, model, imageBytes)
 		if err == nil {
+			receipt.ExtractedByModel = model
 			return receipt, nil
 		}
 		lastErr = err
-		slog.WarnContext(ctx, "AI extraction attempt failed, retrying...", "attempt", attempt, "error", err)
+		if !isRetryable(err) {
+			return nil, err
+		}
+		slog.WarnContext(ctx, "AI extraction attempt failed", "model", model, "attempt", attempt, "error", err)
 
+		if attempt == 2 {
+			break
+		}
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("AI extraction context cancelled: %w", ctx.Err())
-		case <-time.After(1 * time.Second):
+		case <-time.After(delayBeforeRetry):
 		}
 	}
-	return nil, fmt.Errorf("AI extraction failed after 2 attempts: %w", lastErr)
+	return nil, fmt.Errorf("AI extraction with %s failed after 2 attempts: %w", model, lastErr)
 }
 
-func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*ExtractedReceipt, error) {
-	apiKey := currentConfig.APIKey
-	if apiKey == "" {
-		apiKey = os.Getenv("AI_API_KEY")
-	}
+type statusError struct {
+	code int
+	body string
+}
 
-	endpoint := currentConfig.Endpoint
-	if endpoint == "" {
-		endpoint = os.Getenv("AI_ENDPOINT")
-	}
-	if endpoint == "" {
-		return nil, errors.New("AI_ENDPOINT environment variable is not set")
-	}
+func (e *statusError) Error() string {
+	return fmt.Sprintf("AI API returned status %d: %s", e.code, e.body)
+}
 
-	model := currentConfig.Model
-	if model == "" {
-		model = os.Getenv("AI_MODEL")
+func isRetryable(err error) bool {
+	if errors.Is(err, ErrUnreadableReceipt) || errors.Is(err, context.Canceled) {
+		return false
 	}
-	if model == "" {
-		model = "ag/gemini-3.8-flash-high"
+	if se, ok := errors.AsType[*statusError](err); ok {
+		return se.code == http.StatusTooManyRequests || se.code >= 500
 	}
+	return true
+}
 
-	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
-	dataURL := fmt.Sprintf("data:image/jpeg;base64,%s", base64Image)
-
-	prompt := "Extract receipt data into the requested JSON schema.\nStrict rules:\n1. All price, quantity, subtotal, tax, service_charge, and grand_total values must be raw numbers, do not wrap them in quotes.\n2. Do NOT use decimal points for thousands separators (e.g., 14.000 on an Indonesian receipt must be output as 14000).\n3. Ensure mathematical consistency: subtotal must exactly equal the sum of (price * quantity) of all items, and grand_total must exactly equal subtotal + tax + service_charge.\n4. If there are discounts, represent them as a line item with a negative price so the math remains perfectly consistent.\n5. Detect packages and their sub-items. If an item has sub-items listed below it (often indented or with '-' prefix), nest them under 'sub_items'. Sub-items should have a price of 0 if their cost is included in the parent package.\n6. Extract the merchant or store name from the receipt header if visible (e.g. restaurant name, cafe name, shop name). Output it as merchant_name. If not detectable, omit the field."
-
-	itemSchema := map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"name":     map[string]any{"type": "string"},
-			"price":    map[string]any{"type": "number"},
-			"quantity": map[string]any{"type": "integer"},
-			"sub_items": map[string]any{
-				"type": "array",
-				"items": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"name":     map[string]any{"type": "string"},
-						"price":    map[string]any{"type": "number"},
-						"quantity": map[string]any{"type": "integer"},
-					},
-					"required":             []string{"name", "price", "quantity"},
-					"additionalProperties": false,
-				},
-			},
-		},
-		"required":             []string{"name", "price", "quantity"},
-		"additionalProperties": false,
+func imageDataURL(imageBytes []byte) string {
+	mimeType := http.DetectContentType(imageBytes)
+	if !strings.HasPrefix(mimeType, "image/") {
+		mimeType = "image/jpeg"
 	}
+	return fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(imageBytes))
+}
 
-	schema := map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"merchant_name": map[string]any{"type": "string"},
-			"items": map[string]any{
-				"type":  "array",
-				"items": itemSchema,
-			},
-			"subtotal":       map[string]any{"type": "number"},
-			"tax":            map[string]any{"type": "number"},
-			"service_charge": map[string]any{"type": "number"},
-			"grand_total":    map[string]any{"type": "number"},
-		},
-		"required":             []string{"items", "subtotal", "tax", "service_charge", "grand_total"},
-		"additionalProperties": false,
-	}
-
+func executeExtractionAttempt(ctx context.Context, cfg Config, model string, imageBytes []byte) (*ExtractedReceipt, error) {
 	payload := ChatCompletionRequest{
 		Model: model,
 		Messages: []ChatMessage{
 			{
 				Role: "user",
 				Content: []ChatContent{
-					{Type: "text", Text: prompt},
-					{Type: "image_url", ImageURL: &ChatImageURL{URL: dataURL}},
+					{Type: "text", Text: transcriptionPrompt},
+					{Type: "image_url", ImageURL: &ChatImageURL{URL: imageDataURL(imageBytes)}},
 				},
 			},
 		},
@@ -223,7 +239,7 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 			JSONSchema: &ChatJSONSchemaConfig{
 				Name:   "receipt",
 				Strict: true,
-				Schema: schema,
+				Schema: transcribedReceiptSchema,
 			},
 		},
 		Temperature: 0.0,
@@ -234,12 +250,12 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", cfg.Endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.APIKey))
 
 	client := &http.Client{
 		Timeout: 45 * time.Second,
@@ -256,7 +272,7 @@ func executeExtractionAttempt(ctx context.Context, imageBytes []byte) (*Extracte
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("AI API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, &statusError{code: resp.StatusCode, body: string(body)}
 	}
 
 	var completion struct {

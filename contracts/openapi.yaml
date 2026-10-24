@@ -441,6 +441,10 @@ paths:
                   type: number
                 serviceCharge:
                   type: number
+                discount:
+                  type: number
+                otherCharges:
+                  type: number
                 grandTotal:
                   type: number
                 token:
@@ -589,6 +593,10 @@ components:
           type: number
         serviceCharge:
           type: number
+        discount:
+          type: number
+        otherCharges:
+          type: number
         grandTotal:
           type: number
         createdAt:
@@ -627,6 +635,10 @@ components:
         tax:
           type: number
         serviceCharge:
+          type: number
+        discount:
+          type: number
+        otherCharges:
           type: number
         grandTotal:
           type: number
@@ -688,6 +700,10 @@ components:
           type: number
         serviceCharge:
           type: number
+        discount:
+          type: number
+        otherCharges:
+          type: number
         claims:
           type: array
           items:
@@ -741,6 +757,10 @@ components:
           type: number
         serviceCharge:
           type: number
+        discount:
+          type: number
+        otherCharges:
+          type: number
         grandTotal:
           type: number
         createdAt:
@@ -751,6 +771,8 @@ components:
         - name
         - tax
         - serviceCharge
+        - discount
+        - otherCharges
         - grandTotal
         - createdAt
     Transfer:

@@ -17,6 +17,8 @@ type Bill struct {
 	ServiceCharge float64            `db:"service_charge" json:"service_charge"`
 	GrandTotal    float64            `db:"grand_total" json:"grand_total"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	Discount      float64            `db:"discount" json:"discount"`
+	OtherCharges  float64            `db:"other_charges" json:"other_charges"`
 }
 
 type Claim struct {

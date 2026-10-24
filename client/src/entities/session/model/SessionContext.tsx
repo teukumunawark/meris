@@ -1,17 +1,23 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { ReceiptItem } from "@/shared/types";
 import { apiFetch, ApiError } from "@/shared/api/client";
+import { useI18n } from "@/shared/i18n";
 
 export type SessionLoadState = "loading" | "ready" | "notFound" | "error";
 
-export interface Bill {
+export interface BillCharges {
+  tax: number;
+  serviceCharge: number;
+  discount: number;
+  otherCharges: number;
+}
+
+export interface Bill extends BillCharges {
   id: string;
   payerName: string;
   name: string;
-  tax: number;
-  serviceCharge: number;
   grandTotal: number;
   createdAt: string;
 }
@@ -23,9 +29,9 @@ export interface Transfer {
 }
 
 export interface BilateralTransfer {
-  from: string;     // consumer
-  to: string;       // payer
-  billName: string; // stop name
+  from: string;
+  to: string;
+  billName: string;
   amount: number;
 }
 
@@ -49,6 +55,8 @@ export interface SSEServerUpdatePayload {
   }>;
   tax?: number;
   serviceCharge?: number;
+  discount?: number;
+  otherCharges?: number;
   payerName?: string;
   payerBankName?: string;
   payerBankAccount?: string;
@@ -59,6 +67,8 @@ export interface SSEServerUpdatePayload {
     subtotal?: number;
     tax?: number;
     serviceCharge?: number;
+    discount?: number;
+    otherCharges?: number;
     bankName?: string;
     bankAccount?: string;
   }>;
@@ -70,13 +80,12 @@ export interface SSEServerUpdatePayload {
 interface SessionContextType {
   sessionId: string;
   loadState: SessionLoadState;
+  retryLoad: () => void;
   userName: string;
   setUserName: (name: string) => void;
   participantId: number | null;
   participantToken: string;
   isJoined: boolean;
-  // Your name exactly as the server stores it ("" until joined). Transfers, claims and payer checks
-  // all match on this exact string, so never compare names case-insensitively.
   myName: string;
   isPayer: boolean;
   setIsJoined: (val: boolean) => void;
@@ -86,6 +95,8 @@ interface SessionContextType {
   setItems: React.Dispatch<React.SetStateAction<ReceiptItem[]>>;
   tax: number;
   serviceCharge: number;
+  discount: number;
+  otherCharges: number;
   payerName: string;
   payerBankName: string;
   payerBankAccount: string;
@@ -96,6 +107,8 @@ interface SessionContextType {
     subtotal?: number;
     tax?: number;
     serviceCharge?: number;
+    discount?: number;
+    otherCharges?: number;
     bankName?: string;
     bankAccount?: string;
   }>;
@@ -107,6 +120,11 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export function SessionProvider({ sessionId, children }: { sessionId: string, children: React.ReactNode }) {
+  const { m } = useI18n();
+  const itemLabels = useRef(m.item);
+  useEffect(() => {
+    itemLabels.current = m.item;
+  }, [m]);
   const [loadState, setLoadState] = useState<SessionLoadState>("loading");
   const [userName, setUserName] = useState<string>("");
   const [participantId, setParticipantId] = useState<number | null>(null);
@@ -117,6 +135,8 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [tax, setTax] = useState<number>(0);
   const [serviceCharge, setServiceCharge] = useState<number>(0);
+  const [discount, setDiscount] = useState<number>(0);
+  const [otherCharges, setOtherCharges] = useState<number>(0);
   const [payerName, setPayerName] = useState<string>("");
   const [payerBankName, setPayerBankName] = useState<string>("");
   const [payerBankAccount, setPayerBankAccount] = useState<string>("");
@@ -127,6 +147,8 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     subtotal?: number;
     tax?: number;
     serviceCharge?: number;
+    discount?: number;
+    otherCharges?: number;
     bankName?: string;
     bankAccount?: string;
   }>>([]);
@@ -136,7 +158,6 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8091";
 
-  // Prefer the server's record by id; the locally stored name can be stale (renamed elsewhere, typed with extra spaces)
   const myName = isJoined
     ? participants.find((p) => p.id === participantId)?.name ?? userName
     : "";
@@ -174,14 +195,14 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     if (Array.isArray(data.items)) {
       const updatedItems = data.items.map((item, idx: number) => ({
         id: item.id || `item-${idx}`,
-        name: item.name || "Unnamed Item",
+        name: item.name || itemLabels.current.unnamed,
         price: typeof item.price === "number" ? item.price : 0,
         quantity: typeof item.quantity === "number" ? item.quantity : 1,
         parentId: item.parentId,
         billId: item.billId,
         claims: Array.isArray(item.claims)
           ? item.claims.map((claim) => ({
-              name: claim.participant?.name || claim.name || "Unknown",
+              name: claim.participant?.name || claim.name || itemLabels.current.unknownPerson,
               shares: typeof claim?.shares === "number" ? claim.shares : 0,
             })).filter(c => c.shares > 0)
           : [],
@@ -190,13 +211,15 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     }
     if (typeof data.tax === "number") setTax(data.tax);
     if (typeof data.serviceCharge === "number") setServiceCharge(data.serviceCharge);
+    if (typeof data.discount === "number") setDiscount(data.discount);
+    if (typeof data.otherCharges === "number") setOtherCharges(data.otherCharges);
 
     const currentPayerName = data.payerName;
     if (currentPayerName) {
       setPayerName(currentPayerName);
       if (typeof window !== "undefined") {
         const totalSub = Array.isArray(data.items) ? data.items.reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0) : 0;
-        const computedGrand = totalSub + (data.tax || 0) + (data.serviceCharge || 0);
+        const computedGrand = totalSub - (data.discount || 0) + (data.tax || 0) + (data.serviceCharge || 0) + (data.otherCharges || 0);
 
         const stored = localStorage.getItem("meris_recent_sessions");
         let list: Array<{ id: string; payerName: string; grandTotal: number; joinedAt: number }> = [];
@@ -244,36 +267,41 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
     }
   }, [participants, isJoined, participantId, justJoined, sessionId]);
 
+  const loadSession = useCallback(async () => {
+    try {
+      const data = await apiFetch<SSEServerUpdatePayload>(`/session/${sessionId}`);
+      if (data) mapBackendState(data);
+      setLoadState("ready");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        try {
+          const stored = localStorage.getItem("meris_recent_sessions");
+          if (stored) {
+            const list = JSON.parse(stored);
+            if (Array.isArray(list)) {
+              localStorage.setItem(
+                "meris_recent_sessions",
+                JSON.stringify(list.filter((item: { id?: string }) => item?.id !== sessionId))
+              );
+            }
+          }
+        } catch {}
+        setLoadState("notFound");
+        return;
+      }
+      console.error("Initial fetch error:", err);
+      setLoadState((previous) => (previous === "ready" ? previous : "error"));
+    }
+  }, [sessionId, mapBackendState]);
+
+  const retryLoad = useCallback(() => {
+    setLoadState("loading");
+    void loadSession();
+  }, [loadSession]);
+
   useEffect(() => {
     if (!sessionId) return;
-    const fetchInitialState = async () => {
-      try {
-        const data = await apiFetch<SSEServerUpdatePayload>(`/session/${sessionId}`);
-        if (data) mapBackendState(data);
-        setLoadState("ready");
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 404) {
-          // Drop the expired session from the landing page's recent list so it stops linking here
-          try {
-            const stored = localStorage.getItem("meris_recent_sessions");
-            if (stored) {
-              const list = JSON.parse(stored);
-              if (Array.isArray(list)) {
-                localStorage.setItem(
-                  "meris_recent_sessions",
-                  JSON.stringify(list.filter((item: { id?: string }) => item?.id !== sessionId))
-                );
-              }
-            }
-          } catch {}
-          setLoadState("notFound");
-          return;
-        }
-        console.error("Initial fetch error:", err);
-        setLoadState("error");
-      }
-    };
-    fetchInitialState();
+    void loadSession();
 
     let eventSource: EventSource | null = null;
     try {
@@ -295,12 +323,13 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
       console.error("EventSource construction failed:", err);
     }
     return () => { if (eventSource) eventSource.close(); };
-  }, [sessionId, backendUrl, mapBackendState]);
+  }, [sessionId, backendUrl, mapBackendState, loadSession]);
 
   return (
     <SessionContext.Provider value={{
       sessionId,
       loadState,
+      retryLoad,
       userName,
       setUserName,
       participantId,
@@ -314,6 +343,8 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
       setItems,
       tax,
       serviceCharge,
+      discount,
+      otherCharges,
       payerName,
       payerBankName,
       payerBankAccount,

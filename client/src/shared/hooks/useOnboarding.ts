@@ -2,22 +2,22 @@
 
 import { useState, useEffect } from "react";
 
+const HINT_DELAY_AFTER_MOUNT_MS = 1000;
+
 export function useOnboarding() {
   const [showJoinHint, setShowJoinHint] = useState(false);
   const [showClaimHint, setShowClaimHint] = useState(false);
 
   useEffect(() => {
-    // Only run on client side
     if (typeof window !== "undefined") {
       const hasSeenJoin = localStorage.getItem("meris_onboarding_join");
       const hasSeenClaim = localStorage.getItem("meris_onboarding_claim");
       
-      // Delay slightly so it doesn't flash immediately on mount and gives time for initial render
       if (!hasSeenJoin) {
-        setTimeout(() => setShowJoinHint(true), 1000);
+        setTimeout(() => setShowJoinHint(true), HINT_DELAY_AFTER_MOUNT_MS);
       }
       if (!hasSeenClaim) {
-        setTimeout(() => setShowClaimHint(true), 1000);
+        setTimeout(() => setShowClaimHint(true), HINT_DELAY_AFTER_MOUNT_MS);
       }
     }
   }, []);

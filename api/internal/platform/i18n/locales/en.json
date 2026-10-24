@@ -1,20 +1,56 @@
 {
   "errors.unauthorized": {
-    "other": "Unauthorized: the token does not match the expected participant."
+    "other": "You don't have permission to change this."
   },
   "errors.name_conflict": {
-    "other": "Conflict: participant name '{{.name}}' is already taken in this session."
+    "other": "The name {{.name}} is already taken in this session. Pick another one."
   },
   "errors.quantity_exceeded": {
-    "other": "Bad Request: claimed shares exceed available item quantity."
+    "other": "There isn't enough of this item left. Someone may have just claimed it."
   },
   "errors.item_not_found": {
-    "other": "Not Found: item with ID '{{.itemId}}' was not found."
+    "other": "This item no longer exists. It may have just been deleted."
+  },
+  "errors.receipt_unreadable": {
+    "other": "The receipt couldn't be read. Retake the photo in good light with the whole receipt in frame."
   },
   "errors.session_not_found": {
-    "other": "Not Found: session with ID '{{.sessionId}}' was not found."
+    "other": "Session not found. Check the link or session code."
   },
   "errors.internal_error": {
-    "other": "An unexpected error occurred. Please try again later."
+    "other": "Something failed on the server. Try again in a moment."
+  },
+  "errors.invalid_request": {
+    "other": "That request wasn't valid. Reload the page and try again."
+  },
+  "errors.missing_token": {
+    "other": "You haven't joined this session yet. Open the link again and join with your name."
+  },
+  "errors.invalid_id": {
+    "other": "The ID in the request isn't valid."
+  },
+  "errors.invalid_name": {
+    "other": "The name can't be empty."
+  },
+  "errors.bill_not_found": {
+    "other": "This receipt no longer exists. It may have just been deleted."
+  },
+  "errors.cannot_remove_owner": {
+    "other": "The session payer can't be removed."
+  },
+  "errors.file_too_large": {
+    "other": "The photo is over 5 MB. Use a smaller one."
+  },
+  "errors.invalid_file": {
+    "other": "The receipt photo didn't come through. Pick the photo again."
+  },
+  "errors.invalid_content_type": {
+    "other": "That file isn't an image. Pick a photo of the receipt."
+  },
+  "errors.too_many_requests": {
+    "other": "Too many sessions were created from this network. Try again later."
+  },
+  "errors.receipt_service_unavailable": {
+    "other": "The receipt reader is having trouble. Try again in a moment."
   }
 }

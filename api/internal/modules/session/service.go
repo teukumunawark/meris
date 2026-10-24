@@ -19,6 +19,8 @@ import (
 	"meris-backend/internal/store/sqlcutil"
 )
 
+const postgresUniqueViolation = "23505"
+
 type Service struct {
 	repo *Repository
 	hub  *sse.Hub
@@ -29,9 +31,9 @@ func NewService(repo *Repository, hub *sse.Hub) *Service {
 }
 
 func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte, payerName, payerBankName, payerBankAccount string) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, uint, string, error) {
-	extracted, err := ai.ExtractReceiptData(ctx, imageBytes)
+	extracted, err := extractReceipt(ctx, imageBytes)
 	if err != nil {
-		return nil, nil, nil, 0, "", fmt.Errorf("AI extraction failed: %w", err)
+		return nil, nil, nil, 0, "", err
 	}
 
 	sessionID := uuid.New().String()
@@ -55,18 +57,21 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 			return err
 		}
 
+		initialBillID := sessionID
 		billName := extracted.MerchantName
 		if billName == "" {
 			billName = "Initial Stop"
 		}
 
 		err = q.CreateBill(ctx, sqlc.CreateBillParams{
-			ID:            sessionID, // Default bill ID is the session ID
+			ID:            initialBillID,
 			SessionID:     sessionID,
 			PayerName:     payerName,
 			Name:          billName,
 			Tax:           extracted.Tax,
 			ServiceCharge: extracted.ServiceCharge,
+			Discount:      extracted.Discount,
+			OtherCharges:  extracted.OtherCharges,
 			GrandTotal:    extracted.GrandTotal,
 			CreatedAt:     sqlcutil.Timestamptz(now),
 		})
@@ -110,7 +115,6 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 		return nil, nil, nil, 0, "", err
 	}
 
-	// We return a simplified session object as it's mostly used for ID
 	createdSession := &sqlc.Session{
 		ID:               sessionID,
 		PayerName:        payerName,
@@ -123,6 +127,17 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 	}
 
 	return createdSession, nil, nil, payerID, payerToken, nil
+}
+
+func extractReceipt(ctx context.Context, imageBytes []byte) (*ai.ExtractedReceipt, error) {
+	extracted, err := ai.ExtractReceiptData(ctx, imageBytes)
+	if errors.Is(err, ai.ErrUnreadableReceipt) {
+		return nil, NewUnreadableReceiptError()
+	}
+	if err != nil {
+		return nil, NewReceiptServiceError(fmt.Errorf("extract receipt: %w", err))
+	}
+	return extracted, nil
 }
 
 func (s *Service) saveItemsRecursive(ctx context.Context, q *sqlc.Queries, sessionID string, billID string, parentID *string, extractedItems []ai.ExtractedItem) error {
@@ -156,7 +171,6 @@ func (s *Service) saveItemsRecursive(ctx context.Context, q *sqlc.Queries, sessi
 func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken string) (*sqlc.Participant, error) {
 	q := s.repo.GetQueries()
 
-	// Names identify people in transfers and payer checks, so "budi" and "Budi" must not coexist
 	existing, err := q.GetParticipantByNameFold(ctx, sqlc.GetParticipantByNameFoldParams{
 		SessionID: sessionID,
 		Name:      name,
@@ -178,11 +192,11 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 	})
 	if err != nil {
 		return nil, err
-
 	}
-	// If session has no payer yet, this first participant becomes the payer
+
 	sess, err := q.GetSession(ctx, sessionID)
-	if err == nil && sess.PayerName == "" {
+	sessionHasNoPayerYet := err == nil && sess.PayerName == ""
+	if sessionHasNoPayerYet {
 		_ = q.UpdateSessionPayerName(ctx, sqlc.UpdateSessionPayerNameParams{
 			PayerName: name,
 			ID:        sessionID,
@@ -338,7 +352,7 @@ func (s *Service) DeleteParticipant(ctx context.Context, sessionID string, targe
 		}
 
 		if targetParticipantID == uint(payer.ID) {
-			return fmt.Errorf("cannot delete the session owner")
+			return ErrCannotRemoveOwner
 		}
 
 		return q.DeleteParticipant(ctx, sqlc.DeleteParticipantParams{
@@ -528,15 +542,22 @@ func (s *Service) broadcastFullState(ctx context.Context, sessionID string) {
 	s.hub.Broadcast(sessionID, string(data))
 }
 
+func fetchSessionError(sessionID string, err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return NewSessionNotFoundError(sessionID)
+	}
+	return fmt.Errorf("fetch session %s: %w", sessionID, err)
+}
+
 func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (CompiledSession, error) {
 	session, items, participants, claims, err := s.repo.FetchFullSession(ctx, sessionID)
 	if err != nil {
-		return CompiledSession{}, err
+		return CompiledSession{}, fetchSessionError(sessionID, err)
 	}
 
 	dbBills, err := s.repo.GetQueries().GetBillsBySession(ctx, sessionID)
 	if err != nil {
-		return CompiledSession{}, err
+		return CompiledSession{}, fmt.Errorf("fetch bills of session %s: %w", sessionID, err)
 	}
 
 	participantNameMap := make(map[int64]string)
@@ -572,6 +593,8 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 	pSubtotalMap := make(map[int64]float64)
 	pTaxMap := make(map[int64]float64)
 	pServiceChargeMap := make(map[int64]float64)
+	pDiscountMap := make(map[int64]float64)
+	pOtherChargesMap := make(map[int64]float64)
 	pTotalOwedMap := make(map[int64]float64)
 	pTotalPaidMap := make(map[int64]float64)
 
@@ -590,11 +613,15 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 
 	var sessionTax float64
 	var sessionServiceCharge float64
+	var sessionDiscount float64
+	var sessionOtherCharges float64
 	var sessionGrandTotal float64
 
 	for _, bill := range dbBills {
 		sessionTax += bill.Tax
 		sessionServiceCharge += bill.ServiceCharge
+		sessionDiscount += bill.Discount
+		sessionOtherCharges += bill.OtherCharges
 		sessionGrandTotal += bill.GrandTotal
 
 		billItems := billItemsMap[bill.ID]
@@ -613,11 +640,13 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 
 		for _, p := range participants {
 			pBillSubtotal := pBillSubtotalMap[p.ID]
-			share := CalculateShare(pBillSubtotal, billSubtotal, bill.Tax, bill.ServiceCharge)
+			share := CalculateShare(pBillSubtotal, billSubtotal, chargesOf(bill))
 
 			pSubtotalMap[p.ID] += share.Subtotal
 			pTaxMap[p.ID] += share.Tax
 			pServiceChargeMap[p.ID] += share.ServiceCharge
+			pDiscountMap[p.ID] += share.Discount
+			pOtherChargesMap[p.ID] += share.OtherCharges
 			pTotalOwedMap[p.ID] += share.Total
 
 			if bill.PayerName == p.Name {
@@ -659,6 +688,8 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 			Subtotal:      pSubtotalMap[p.ID],
 			Tax:           pTaxMap[p.ID],
 			ServiceCharge: pServiceChargeMap[p.ID],
+			Discount:      pDiscountMap[p.ID],
+			OtherCharges:  pOtherChargesMap[p.ID],
 			BankName:      p.BankName,
 			BankAccount:   p.BankAccount,
 			Claims:        claims,
@@ -671,8 +702,6 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 	}
 	transfers := SimplifyDebts(balances)
 
-	// Build bilateral (pre-simplification) debts per bill stop.
-	// Each entry: consumer owes payer for their share at that stop.
 	var rawDebts []BilateralTransfer
 	for _, bill := range dbBills {
 		billItems := billItemsMap[bill.ID]
@@ -688,17 +717,13 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		}
 		for _, p := range participants {
 			if p.Name == bill.PayerName {
-				continue // payer doesn't owe themselves
+				continue
 			}
-			pSub := pBillSubtotalMap2[p.ID]
-			if pSub <= 0 {
-				continue // consumed nothing at this stop
+			consumedAtStop := pBillSubtotalMap2[p.ID]
+			if consumedAtStop <= 0 {
+				continue
 			}
-			var proportion float64
-			if billSubtotal > 0 {
-				proportion = pSub / billSubtotal
-			}
-			amount := math.Round(pSub + proportion*bill.Tax + proportion*bill.ServiceCharge)
+			amount := math.Round(CalculateShare(consumedAtStop, billSubtotal, chargesOf(bill)).Total)
 			rawDebts = append(rawDebts, BilateralTransfer{
 				From:     p.Name,
 				To:       bill.PayerName,
@@ -717,6 +742,8 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 			Name:          b.Name,
 			Tax:           b.Tax,
 			ServiceCharge: b.ServiceCharge,
+			Discount:      b.Discount,
+			OtherCharges:  b.OtherCharges,
 			GrandTotal:    b.GrandTotal,
 			CreatedAt:     sqlcutil.Time(b.CreatedAt).Format(time.RFC3339),
 		})
@@ -729,6 +756,8 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 		PayerBankAccount: session.PayerBankAccount,
 		Tax:              sessionTax,
 		ServiceCharge:    sessionServiceCharge,
+		Discount:         sessionDiscount,
+		OtherCharges:     sessionOtherCharges,
 		GrandTotal:       sessionGrandTotal,
 		CreatedAt:        sqlcutil.Time(session.CreatedAt).Format(time.RFC3339),
 		Items:            compiledItems,
@@ -740,9 +769,9 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 }
 
 func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageBytes []byte, payerName string, billName string, token string) error {
-	extracted, err := ai.ExtractReceiptData(ctx, imageBytes)
+	extracted, err := extractReceipt(ctx, imageBytes)
 	if err != nil {
-		return fmt.Errorf("AI extraction failed: %w", err)
+		return err
 	}
 
 	if billName == "" {
@@ -785,6 +814,8 @@ func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageB
 			Name:          billName,
 			Tax:           extracted.Tax,
 			ServiceCharge: extracted.ServiceCharge,
+			Discount:      extracted.Discount,
+			OtherCharges:  extracted.OtherCharges,
 			GrandTotal:    extracted.GrandTotal,
 			CreatedAt:     sqlcutil.Timestamptz(now),
 		})
@@ -807,14 +838,13 @@ func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageB
 	return nil
 }
 
-func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID string, name string, payerName string, tax float64, serviceCharge float64, grandTotal float64, token string) error {
+func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID string, name string, payerName string, charges BillCharges, grandTotal float64, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		targetBill, caller, session, err := s.loadBillAndCaller(ctx, q, sessionID, billID, token)
 		if err != nil {
 			return err
 		}
 
-		// Only the people who paid may change a bill's payer, tax or service charge
 		if !canManageBill(caller.Name, targetBill.PayerName, session.PayerName) {
 			return ErrUnauthorized
 		}
@@ -824,8 +854,10 @@ func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID strin
 			SessionID:     sessionID,
 			PayerName:     payerName,
 			Name:          name,
-			Tax:           tax,
-			ServiceCharge: serviceCharge,
+			Tax:           charges.Tax,
+			ServiceCharge: charges.ServiceCharge,
+			Discount:      charges.Discount,
+			OtherCharges:  charges.OtherCharges,
 			GrandTotal:    grandTotal,
 		})
 	})
@@ -838,13 +870,10 @@ func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID strin
 	return nil
 }
 
-// canManageBill reports whether a participant may edit or delete a bill: its own payer or the session payer.
-// Names are compared exactly, matching how payer names are stored and how settlement matches them.
 func canManageBill(callerName, billPayerName, sessionPayerName string) bool {
 	return callerName == billPayerName || callerName == sessionPayerName
 }
 
-// loadBillAndCaller fetches the bill, the participant holding token, and the session for a bill mutation.
 func (s *Service) loadBillAndCaller(ctx context.Context, q *sqlc.Queries, sessionID, billID, token string) (*sqlc.Bill, *sqlc.Participant, *sqlc.Session, error) {
 	bills, err := q.GetBillsBySession(ctx, sessionID)
 	if err != nil {
@@ -859,7 +888,7 @@ func (s *Service) loadBillAndCaller(ctx context.Context, q *sqlc.Queries, sessio
 		}
 	}
 	if targetBill == nil {
-		return nil, nil, nil, errors.New("bill not found")
+		return nil, nil, nil, ErrBillNotFound
 	}
 
 	participants, err := q.GetParticipantsBySession(ctx, sessionID)
@@ -938,9 +967,6 @@ func (s *Service) UpdateParticipantBankInfo(ctx context.Context, sessionID strin
 	return nil
 }
 
-// RenameParticipant changes a participant's display name in place, so their claims, token and
-// bank info stay attached. Payer names are stored as text on the session and its bills, so
-// those are carried over to the new name in the same transaction.
 func (s *Service) RenameParticipant(ctx context.Context, sessionID string, participantID int64, newName, token string) (*sqlc.Participant, error) {
 	var renamed sqlc.Participant
 
@@ -962,7 +988,6 @@ func (s *Service) RenameParticipant(ctx context.Context, sessionID string, parti
 			return nil
 		}
 
-		// Case-insensitive so a rename cannot produce "budi" next to "Budi"; a case-only change of your own name is fine
 		existing, err := q.GetParticipantByNameFold(ctx, sqlc.GetParticipantByNameFoldParams{
 			SessionID: sessionID,
 			Name:      newName,
@@ -978,8 +1003,7 @@ func (s *Service) RenameParticipant(ctx context.Context, sessionID string, parti
 			ID:        participantID,
 			SessionID: sessionID,
 		}); err != nil {
-			// 23505 is unique_violation: another request took the name between the check and the update
-			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == postgresUniqueViolation {
 				return NewNameConflictError(newName)
 			}
 			return err

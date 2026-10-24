@@ -15,6 +15,7 @@ import { useRemoveParticipant } from "@/features/remove-participant";
 import { RenameParticipantForm } from "@/features/rename-participant";
 import { useMounted, useOnboarding } from "@/shared/hooks";
 import type { ReceiptItem } from "@/shared/types";
+import { useI18n } from "@/shared/i18n";
 import { BillGroupCard } from "./BillGroupCard";
 import { AddBillButton } from "./AddBillButton";
 import { ParticipantsSheet } from "./ParticipantsSheet";
@@ -31,6 +32,8 @@ export default function ClaimBoard() {
     items,
     tax,
     serviceCharge,
+    discount,
+    otherCharges,
     payerName,
     participants,
     bills
@@ -44,6 +47,8 @@ export default function ClaimBoard() {
   const { showJoinHint, showClaimHint, completeJoinHint, completeClaimHint } = useOnboarding();
 
   const mounted = useMounted();
+  const { m } = useI18n();
+  const t = m.claimBoard;
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [copyFailed, setCopyFailed] = useState<boolean>(false);
   const [copyCodeSuccess, setCopyCodeSuccess] = useState<boolean>(false);
@@ -82,7 +87,6 @@ export default function ClaimBoard() {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch {
-      // Clipboard can be denied (no permission, plain http); only claim success when it worked
       setCopyFailed(true);
       setTimeout(() => setCopyFailed(false), 2000);
     }
@@ -126,11 +130,11 @@ export default function ClaimBoard() {
 
   const isMultiStop = bills.length > 1;
   const stopPayerCount = new Set(bills.map((b) => b.payerName)).size;
-  const sessionTitle = isMultiStop ? "Tagihan Bersama" : bills[0]?.name?.trim() || "Tagihan Bersama";
-  const sessionGrandTotal = totalSubtotal + tax + serviceCharge;
+  const sessionTitle = isMultiStop ? t.sharedBill : bills[0]?.name?.trim() || t.sharedBill;
+  const sessionGrandTotal = totalSubtotal - discount + tax + serviceCharge + otherCharges;
   const sessionSubtitle = isMultiStop
-    ? `${bills.length} tempat · ${stopPayerCount} pembayar · Total ${formatRupiah(sessionGrandTotal)}`
-    : `${payerName ? `Dibayar oleh ${payerName}` : "Belum ditentukan pembayar"} · Total ${formatRupiah(sessionGrandTotal)}`;
+    ? t.multiStopSummary(bills.length, stopPayerCount, sessionGrandTotal)
+    : `${payerName ? t.paidBy(payerName) : t.noPayerYet} · ${t.totalSuffix(sessionGrandTotal)}`;
 
   const sortedItems = React.useMemo(() => {
     const result: Array<ReceiptItem & { depth: number }> = [];
@@ -149,13 +153,8 @@ export default function ClaimBoard() {
 
     addRecursive(undefined, 0);
 
-    // Add any remaining items (safety for orphans or cycles)
-    items.forEach(item => {
-      if (!visited.has(item.id)) {
-        visited.add(item.id);
-        result.push({ ...item, depth: 0 });
-      }
-    });
+    const itemsWithMissingOrCyclicParent = items.filter(item => !visited.has(item.id));
+    itemsWithMissingOrCyclicParent.forEach(item => result.push({ ...item, depth: 0 }));
 
     return result;
   }, [items]);
@@ -195,7 +194,6 @@ export default function ClaimBoard() {
 
   return (
     <div className="space-y-8 sm:space-y-12">
-      {/* Cinematic Spotlight Backdrop */}
       <AnimatePresence>
         {isSpotlightActive && (
           <motion.div
@@ -213,7 +211,6 @@ export default function ClaimBoard() {
         )}
       </AnimatePresence>
 
-      {/* Mobile Header: Store Title, Payer Subtitle & Clean User Status */}
       <section className="flex flex-col gap-3 md:hidden">
         <div className="space-y-1">
           <h1 className="text-foreground font-serif text-2xl font-normal tracking-tight sm:text-3xl">
@@ -224,7 +221,6 @@ export default function ClaimBoard() {
           </p>
         </div>
 
-        {/* User Status Bar if Joined */}
         {isJoined && isRenaming ? (
           <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2.5">
             <RenameParticipantForm onDone={() => setIsRenaming(false)} />
@@ -237,14 +233,13 @@ export default function ClaimBoard() {
               </div>
               <p className="text-foreground/85 truncate font-sans text-xs">
                 <span className="text-foreground font-semibold">{userName}</span>
-                <span className="text-foreground/40 ml-1">(Anda)</span>
+                <span className="text-foreground/40 ml-1">{m.common.youTag}</span>
               </p>
               <button
                 onClick={() => setIsRenaming(true)}
                 className="text-foreground/40 hover:text-sage ml-1 cursor-pointer text-[11px] underline transition-colors"
-                title="Ganti Nama"
               >
-                Ganti
+                {t.rename}
               </button>
             </div>
 
@@ -257,7 +252,7 @@ export default function ClaimBoard() {
                   <svg className="text-sage h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
-                  <span>Tersalin</span>
+                  <span>{m.common.copied}</span>
                 </>
               ) : (
                 <>
@@ -265,22 +260,19 @@ export default function ClaimBoard() {
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
-                  <span>Bagikan</span>
+                  <span>{t.share}</span>
                 </>
               )}
             </button>
           </div>
         ) : (
-          /* Prominent Onboarding Card if not joined */
           <div className={`border-sage/30 bg-sage/5 rounded-2xl border p-4 transition-all duration-500 sm:p-5 ${isShowJoinSpotlight ? "ring-sage/40 relative z-50 ring-2" : ""}`}>
             <div className="mb-2.5 flex flex-col gap-0.5">
               <span className="text-sage text-xs font-bold tracking-wider uppercase">
-                {payerName ? "Mulai Klaim Menu" : "Siapa yang membayar struk ini?"}
+                {payerName ? t.joinToClaimTitle : t.whoPaidTitle}
               </span>
               <p className="text-foreground/60 text-xs">
-                {payerName 
-                  ? "Masukkan namamu untuk memilih makanan atau minuman pesananmu." 
-                  : "Masukkan namamu untuk memulai pembagian tagihan."}
+                {payerName ? t.joinToClaimBody : t.whoPaidBody}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -289,7 +281,7 @@ export default function ClaimBoard() {
                 ref={mobileInputRef}
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="Ketik namamu..."
+                placeholder={t.namePlaceholder}
                 maxLength={20}
                 className="text-foreground placeholder:text-foreground/30 focus:border-sage flex-1 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2 text-base transition-colors focus:outline-none"
                 onKeyDown={(e) => {
@@ -302,7 +294,7 @@ export default function ClaimBoard() {
                 disabled={!userName.trim()}
                 className="bg-sage text-background hover:bg-sage/90 flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold tracking-wider uppercase shadow-sm transition-all active:scale-95 disabled:opacity-30"
               >
-                <span>Gabung</span>
+                <span>{payerName ? t.join : t.iPaid}</span>
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -315,10 +307,9 @@ export default function ClaimBoard() {
         )}
       </section>
 
-      {/* Desktop Header Banner */}
       <GlassPanel className={`hidden p-8 transition-all duration-700 md:block ${isShowJoinSpotlight ? 'relative z-50 bg-(--glass-bg-solid)' : ''}`}>
         <div className="bg-orb-sage pointer-events-none absolute top-0 right-0 h-96 w-96 opacity-10 blur-[150px]" />
-        
+
         <div className="relative z-10 flex flex-col gap-6">
           <div className="flex items-center justify-between gap-6">
             <div>
@@ -329,7 +320,7 @@ export default function ClaimBoard() {
                 {sessionSubtitle}
               </p>
             </div>
-            
+
             <Button
               onClick={handleCopyLink}
               variant="ghost"
@@ -340,7 +331,7 @@ export default function ClaimBoard() {
                   <svg className="text-sage h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6 9 17l-5-5"/>
                   </svg>
-                  <span className="text-sage">Copied</span>
+                  <span className="text-sage">{m.common.copied}</span>
                 </>
               ) : (
                 <>
@@ -348,7 +339,7 @@ export default function ClaimBoard() {
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                   </svg>
-                  <span className="whitespace-nowrap">Share Session</span>
+                  <span className="whitespace-nowrap">{t.shareLink}</span>
                 </>
               )}
             </Button>
@@ -362,14 +353,14 @@ export default function ClaimBoard() {
               <button
                 onClick={handleCopyCode}
                 className="text-foreground/40 hover:text-sage flex cursor-pointer items-center gap-1 rounded-sm border border-(--glass-border) bg-(--glass-bg) px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors"
-                title="Copy Session Code"
+                title={t.copyCodeTitle}
               >
                 {copyCodeSuccess ? (
                   <>
                     <svg className="text-sage h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M20 6 9 17l-5-5"/>
                     </svg>
-                    <span className="text-sage">Copied!</span>
+                    <span className="text-sage">{m.common.copied}</span>
                   </>
                 ) : (
                   <>
@@ -377,7 +368,7 @@ export default function ClaimBoard() {
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                     </svg>
-                    <span>Copy Code</span>
+                    <span>{t.copyCode}</span>
                   </>
                 )}
               </button>
@@ -391,20 +382,20 @@ export default function ClaimBoard() {
               ) : isJoined ? (
                 <div className="flex min-w-0 flex-row items-center gap-4">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div 
+                    <div
                       className="bg-sage text-background flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-inner"
                     >
                       {getInitials(userName)}
                     </div>
                     <p className="text-foreground/70 truncate whitespace-nowrap">
-                      You are participating as <span className="text-foreground font-bold">{userName}</span>
+                      {t.joinedAs} <span className="text-foreground font-bold">{userName}</span>
                     </p>
                   </div>
                   <button
                     onClick={() => setIsRenaming(true)}
                     className="text-foreground/60 shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-1.5 text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-[var(--glass-highlight)] active:scale-95"
                   >
-                    Rename
+                    {t.rename}
                   </button>
                 </div>
               ) : (
@@ -413,19 +404,19 @@ export default function ClaimBoard() {
                     <div className="absolute -top-6 -right-0.5 z-20 animate-[bounce_2s_infinite]">
                       <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)]">
                         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M19 12l-7 7-7-7"/></svg>
-                        Start Here
+                        {t.startHere}
                       </div>
                     </div>
                   )}
                   <div className="flex min-w-[320px] flex-row items-end gap-4">
                     <div className="flex flex-1 flex-col gap-1">
-                      <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">{payerName ? "Who are you?" : "Who paid this bill?"}</p>
+                      <p className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">{payerName ? t.whoAreYou : t.whoPaidTitle}</p>
                       <input
                         type="text"
                         ref={desktopInputRef}
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
-                        placeholder={payerName ? "Enter Your Name..." : "Enter your name (Payer)..."}
+                        placeholder={t.namePlaceholder}
                         maxLength={20}
                         className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b bg-transparent pb-1.5 font-serif text-2xl font-light tracking-tight transition-colors focus:outline-none"
                         onKeyDown={(e) => {
@@ -438,9 +429,8 @@ export default function ClaimBoard() {
                       onClick={() => joinSession(userName)}
                       disabled={!userName.trim()}
                       className="bg-foreground text-background hover:bg-sage flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-full px-6 text-[10px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-md transition-all active:scale-95 disabled:opacity-30"
-                      aria-label="Join Session"
                     >
-                      {payerName ? "Join" : "Claim as Payer"}
+                      {payerName ? t.join : t.iPaid}
                       <svg className="ml-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </button>
                   </div>
@@ -454,10 +444,9 @@ export default function ClaimBoard() {
         </div>
       </GlassPanel>
 
-      {/* Modern Continuous Progress Bar */}
       <section className="space-y-2">
         <div className="flex items-center justify-between font-sans text-xs">
-          <span className="text-foreground/70 font-medium">Progres Klaim</span>
+          <span className="text-foreground/70 font-medium">{t.claimProgress}</span>
           <span className="text-foreground/85 font-mono">
             <strong className="text-sage font-bold">{claimProgressPercent}%</strong>
             <span className="text-foreground/40 ml-1.5 text-[11px]">
@@ -473,11 +462,10 @@ export default function ClaimBoard() {
         </div>
       </section>
 
-      {/* Mobile Participants Bar (Compact Avatar Chips + Kelola Peserta) */}
       <section className="space-y-2 md:hidden">
         <div className="flex items-center justify-between border-b border-[var(--glass-border)] pb-2">
           <div className="flex items-center gap-1.5">
-            <h2 className="text-foreground font-sans text-xs font-semibold">Peserta</h2>
+            <h2 className="text-foreground font-sans text-xs font-semibold">{t.people}</h2>
             <span className="text-foreground/40 font-mono text-[11px]">
               ({participants.length})
             </span>
@@ -486,7 +474,6 @@ export default function ClaimBoard() {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="text-sage hover:bg-sage/10 border-sage/30 flex min-h-[36px] cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors active:scale-95"
-            aria-label="Kelola Peserta"
           >
             <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -494,11 +481,10 @@ export default function ClaimBoard() {
               <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            Kelola Peserta
+            {t.managePeople}
           </button>
         </div>
 
-        {/* Horizontal Participant Avatar Chips (Max 4 displayed, then +N lainnya) */}
         <div className="flex flex-wrap items-center gap-1.5">
           {participants.slice(0, 4).map((p) => {
             const isMe = isJoined && p.id === participantId;
@@ -517,7 +503,7 @@ export default function ClaimBoard() {
                 <span className="max-w-[90px] truncate font-medium">
                   {p.name}
                 </span>
-                {isMe && <span className="text-[10px] opacity-75">(Anda)</span>}
+                {isMe && <span className="text-[10px] opacity-75">{m.common.youTag}</span>}
               </div>
             );
           })}
@@ -527,13 +513,12 @@ export default function ClaimBoard() {
               onClick={() => setShowManageModal(true)}
               className="text-foreground/60 hover:text-foreground flex min-h-[30px] cursor-pointer items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 text-xs font-medium transition-colors hover:bg-[var(--glass-highlight)] active:scale-95"
             >
-              +{participants.length - 4} lainnya
+              {t.morePeople(participants.length - 4)}
             </button>
           )}
         </div>
       </section>
 
-      {/* Modern Bottom Sheet & Confirm Dialog Portaled to Document Body (Bypasses Stacking Contexts) */}
       {mounted && typeof document !== "undefined" && createPortal(
         <>
           <AnimatePresence>
@@ -555,14 +540,12 @@ export default function ClaimBoard() {
             )}
           </AnimatePresence>
 
-          {/* Konfirmasi Keluarkan Peserta Centered Dialog */}
           <AnimatePresence>
             {participantToDelete && (
               <div
                 className="fixed inset-0 z-[110] flex items-center justify-center p-4"
                 onKeyDown={(e) => {
                   if (e.key !== "Escape") return;
-                  // Mark it handled so the participant sheet underneath stays open
                   e.preventDefault();
                   if (removingId === null) setParticipantToDelete(null);
                 }}
@@ -587,10 +570,10 @@ export default function ClaimBoard() {
                   className="bg-background text-foreground relative z-10 w-full max-w-sm rounded-2xl border border-[var(--glass-border)] p-5 shadow-2xl sm:p-6"
                 >
                   <h4 id="kick-participant-title" className="text-foreground font-serif text-xl leading-tight">
-                    Keluarkan {participantToDelete.name}?
+                    {t.removeTitle(participantToDelete.name)}
                   </h4>
                   <p className="text-foreground/75 mt-2 font-sans text-sm leading-relaxed">
-                    Menu yang sudah diklaim {participantToDelete.name} kembali jadi belum diklaim dan bisa dipilih peserta lain.
+                    {t.removeBody(participantToDelete.name)}
                   </p>
 
                   <div className="mt-5 grid grid-cols-2 gap-2">
@@ -601,7 +584,7 @@ export default function ClaimBoard() {
                       disabled={removingId !== null}
                       className="text-foreground rounded-glass-sm focus-visible:outline-sage min-h-11 cursor-pointer border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 font-sans text-sm font-semibold transition-colors hover:bg-[var(--glass-highlight)] focus-visible:outline-2 focus-visible:outline-offset-2"
                     >
-                      Batal
+                      {m.common.cancel}
                     </button>
                     <button
                       type="button"
@@ -609,7 +592,7 @@ export default function ClaimBoard() {
                       onClick={handleConfirmRemoveParticipant}
                       className="rounded-glass-sm min-h-11 cursor-pointer bg-rose-600 px-4 font-sans text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50"
                     >
-                      {removingId !== null ? "Mengeluarkan..." : "Ya, keluarkan"}
+                      {removingId !== null ? m.common.removing : t.removeConfirm}
                     </button>
                   </div>
                 </motion.div>
@@ -620,12 +603,11 @@ export default function ClaimBoard() {
         document.body
       )}
 
-      {/* Desktop Participants Roster Grid */}
       <section className="hidden space-y-4 sm:space-y-6 md:block">
         <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
-          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Participants</h2>
+          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">{t.people}</h2>
           <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">
-            {participants.length} people
+            {t.peopleCount(participants.length)}
           </span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -640,10 +622,10 @@ export default function ClaimBoard() {
                     </div>
                     <div>
                       <h3 className="text-foreground font-sans text-sm font-bold">
-                        {p.name} {isMe && <span className="text-sage ml-1 font-sans text-xs font-normal">(You)</span>}
+                        {p.name} {isMe && <span className="text-sage ml-1 font-sans text-xs font-normal">{m.common.youTag}</span>}
                       </h3>
                       <p className="text-foreground/40 font-mono text-[10px]">
-                        Subtotal: {formatRupiah(p.subtotal || 0)} | Total Owed: {formatRupiah(p.totalOwed || 0)}
+                        {t.personShare(p.subtotal || 0, p.totalOwed || 0)}
                       </p>
                     </div>
                   </div>
@@ -653,23 +635,23 @@ export default function ClaimBoard() {
                       disabled={removingId === p.id}
                       onClick={() => setParticipantToDelete({ id: p.id, name: p.name })}
                       className="flex min-h-[30px] shrink-0 cursor-pointer items-center gap-1 rounded-md bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-400 transition-all hover:bg-rose-500/20 hover:text-rose-300 active:scale-95 disabled:opacity-50"
-                      title={`Keluarkan ${p.name}`}
-                      aria-label={`Keluarkan ${p.name}`}
+                      title={m.common.removeName(p.name)}
+                      aria-label={m.common.removeName(p.name)}
                     >
                       <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 6h18" />
                         <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                         <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                       </svg>
-                      <span>{removingId === p.id ? "Menghapus..." : "Keluarkan"}</span>
+                      <span>{removingId === p.id ? m.common.removing : m.common.remove}</span>
                     </button>
                   )}
                 </div>
-                
+
                 {p.bankName && (
                   <div className="border-t border-[var(--glass-border)] pt-2 text-xs">
-                    <span className="text-foreground/40 font-mono text-[10px] uppercase">Rekening: </span>
-                    <span className="text-foreground/80 font-medium">{p.bankName} - {p.bankAccount}</span>
+                    <span className="text-foreground/40 font-mono text-[10px] uppercase">{t.account} </span>
+                    <span className="text-foreground/80 font-medium">{p.bankName} · {p.bankAccount}</span>
                   </div>
                 )}
               </GlassPanel>
@@ -678,12 +660,11 @@ export default function ClaimBoard() {
         </div>
       </section>
 
-      {/* Inventory Items List */}
       <div className={`space-y-4 transition-all duration-700 sm:space-y-6 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[var(--glass-border)] pb-3 sm:pb-4">
           <h2 className="text-foreground font-sans text-lg font-normal tracking-tight whitespace-nowrap sm:text-xl md:text-2xl">
-            Bill Items
-            <span className="text-foreground/65 ml-2 font-sans text-sm tabular-nums">{items.length} items</span>
+            {t.itemsTitle}
+            <span className="text-foreground/65 ml-2 font-sans text-sm tabular-nums">{t.itemsCount(items.length)}</span>
           </h2>
           <div className="-mr-2 flex flex-wrap items-center gap-1">
             {isJoined && (
@@ -697,7 +678,7 @@ export default function ClaimBoard() {
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14M5 12h14" />
                 </svg>
-                Add Item
+                {t.addItem}
               </button>
             )}
           </div>
@@ -706,22 +687,22 @@ export default function ClaimBoard() {
         {isAdding && (
           <GlassPanel className="animate-in fade-in slide-in-from-top-4 relative overflow-hidden p-5 sm:p-8">
             <div className="from-sage/10 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-50" />
-            
+
             <div className="relative z-10 flex flex-1 flex-col gap-5 py-2 sm:gap-8">
               <div className="group/input relative w-full">
                 <input
                   type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="New Item Name..."
+                  placeholder={t.itemNamePlaceholder}
                   className="text-foreground placeholder:text-foreground/20 border-foreground/20 focus:border-sage w-full border-b border-dashed bg-transparent pb-1.5 font-sans text-xl font-normal tracking-tight transition-all focus:border-solid focus:outline-none sm:text-2xl md:text-3xl"
                   autoFocus
                 />
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
                 <div className="group/input relative flex items-center gap-3">
-                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Qty</span>
+                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">{t.quantity}</span>
                   <input
                     type="number"
                     value={newItemQty}
@@ -730,9 +711,9 @@ export default function ClaimBoard() {
                     className="text-foreground border-foreground/20 focus:border-sage w-12 border-b border-dashed bg-transparent pb-1 text-center font-mono text-lg transition-all focus:border-solid focus:outline-none sm:text-xl"
                   />
                 </div>
-                
+
                 <div className="group/input relative flex items-center gap-3">
-                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Price</span>
+                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">{t.price}</span>
                   <div className="border-foreground/20 focus-within:border-sage flex items-center gap-1 border-b border-dashed pb-1 transition-all focus-within:border-solid">
                     <span className="text-foreground/40 font-mono text-lg sm:text-xl">Rp</span>
                     <input
@@ -746,7 +727,7 @@ export default function ClaimBoard() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">Total</span>
+                  <span className="text-foreground/30 text-[10px] font-bold tracking-[0.2em] uppercase">{m.common.total}</span>
                   <span className="text-sage text-glow-sage font-mono text-lg font-bold sm:text-xl">
                     {formatRupiah((parseFloat(newItemPrice) || 0) * (parseInt(newItemQty) || 0))}
                   </span>
@@ -754,19 +735,19 @@ export default function ClaimBoard() {
               </div>
 
               <div className="flex items-center gap-3 pt-2">
-                <button 
-                  onClick={handleAddItem} 
+                <button
+                  onClick={handleAddItem}
                   disabled={isSaving}
                   className="bg-foreground text-background hover:bg-sage cursor-pointer rounded-full px-6 py-2.5 text-[10px] font-bold tracking-[0.2em] uppercase shadow-md transition-all hover:text-white active:scale-95 disabled:opacity-50"
                 >
-                  {isSaving ? "Adding..." : "Add to Inventory"}
+                  {isSaving ? t.adding : t.addItemSubmit}
                 </button>
-                <button 
-                  onClick={() => setIsAdding(false)} 
+                <button
+                  onClick={() => setIsAdding(false)}
                   disabled={isSaving}
                   className="text-foreground/40 hover:text-foreground cursor-pointer px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-colors"
                 >
-                  Cancel
+                  {m.common.cancel}
                 </button>
               </div>
             </div>
@@ -776,15 +757,14 @@ export default function ClaimBoard() {
         {bills.length === 0 && unassignedItems.length === 0 && !isAdding ? (
           <GlassPanel className="border-dashed border-[var(--glass-border)] p-12 text-center sm:p-20">
             <div className="mx-auto max-w-sm space-y-2">
-              <p className="text-foreground/70 font-sans text-base font-medium">No items in this session yet</p>
+              <p className="text-foreground/70 font-sans text-base font-medium">{t.emptyTitle}</p>
               <p className="text-foreground/30 font-sans text-xs leading-relaxed">
-                Add a bill receipt or enter items manually to start splitting with your group.
+                {t.emptyBody}
               </p>
             </div>
           </GlassPanel>
         ) : (
           <div className="space-y-6">
-            {/* Render items grouped by Bill */}
             {bills.map((bill) => {
               const billItems = sortedItems.filter(item => item.billId === bill.id);
               return (
@@ -807,15 +787,16 @@ export default function ClaimBoard() {
               );
             })}
 
-            {/* Render unassigned items if any */}
             {unassignedItems.length > 0 && (
               <BillGroupCard
                 bill={{
                   id: "",
-                  name: "Other Unassigned Items",
+                  name: t.unassignedBill,
                   payerName,
                   tax: 0,
                   serviceCharge: 0,
+                  discount: 0,
+                  otherCharges: 0,
                   grandTotal: unassignedItems.reduce((s, it) => s + it.price * it.quantity, 0),
                   createdAt: ""
                 }}

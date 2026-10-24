@@ -36,9 +36,10 @@ func main() {
 	slog.SetDefault(appLogger)
 
 	ai.SetConfig(ai.Config{
-		APIKey:   cfg.AI.APIKey,
-		Endpoint: cfg.AI.Endpoint,
-		Model:    cfg.AI.Model,
+		APIKey:          cfg.AI.APIKey,
+		Endpoint:        cfg.AI.Endpoint,
+		Model:           cfg.AI.Model,
+		EscalationModel: cfg.AI.EscalationModel,
 	})
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

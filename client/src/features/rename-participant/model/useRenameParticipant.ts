@@ -3,12 +3,14 @@
 import { useCallback, useState } from "react";
 import { useSession } from "@/entities/session/model/SessionContext";
 import { apiFetch } from "@/shared/api/client";
+import { apiErrorMessage, useI18n } from "@/shared/i18n";
 import type { components } from "@/shared/api/generated/api";
 
 type ParticipantResponse = components["schemas"]["ParticipantResponse"];
 
 export function useRenameParticipant() {
   const { sessionId, participantId, participantToken, setUserName } = useSession();
+  const { m } = useI18n();
   const [renameError, setRenameError] = useState<string | null>(null);
 
   const renameParticipant = useCallback(async (newName: string): Promise<boolean> => {
@@ -34,10 +36,10 @@ export function useRenameParticipant() {
       );
       return true;
     } catch (err: unknown) {
-      setRenameError(err instanceof Error ? err.message : "Gagal mengganti nama. Coba lagi.");
+      setRenameError(apiErrorMessage(err, m, m.renameParticipant.failed));
       return false;
     }
-  }, [sessionId, participantId, participantToken, setUserName]);
+  }, [sessionId, participantId, participantToken, setUserName, m]);
 
   const clearRenameError = useCallback(() => setRenameError(null), []);
 

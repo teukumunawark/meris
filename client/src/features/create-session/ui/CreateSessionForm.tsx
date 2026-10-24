@@ -3,15 +3,17 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import imageCompression from "browser-image-compression";
+import { prepareReceiptImage } from "@/shared/lib/receiptImage";
 
 import { apiFetch } from "@/shared/api/client";
+import { apiErrorMessage, useI18n } from "@/shared/i18n";
 import type { components } from "@/shared/api/generated/api";
 
 type SessionCreationResponse = components["schemas"]["SessionCreationResponse"];
 
 export default function CreateSessionForm() {
   const router = useRouter();
+  const { m } = useI18n();
   const [savedName, setSavedName] = useState<string>("");
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
@@ -35,12 +37,7 @@ export default function CreateSessionForm() {
 
       try {
         setIsUploading(true);
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1600,
-          useWebWorker: true,
-        };
-        const compressedFile = await imageCompression(file, options);
+        const compressedFile = await prepareReceiptImage(file);
 
         const formData = new FormData();
         formData.append("receipt", compressedFile);
@@ -71,8 +68,7 @@ export default function CreateSessionForm() {
         }
       } catch (err: unknown) {
         console.error("Upload failed:", err);
-        const message = err instanceof Error ? err.message : "Struk tidak terbaca jelas. Pastikan foto terang dan daftar menu terlihat, lalu coba lagi.";
-        setErrorMsg(message);
+        setErrorMsg(apiErrorMessage(err, m, m.createSession.errorFallback));
         setIsUploading(false);
       }
     }
@@ -83,7 +79,7 @@ export default function CreateSessionForm() {
       {savedName && !isEditingName ? (
         <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2">
           <p className="text-foreground/75 font-sans text-xs">
-            Nama Anda: <strong className="text-foreground font-semibold">{savedName}</strong>
+            {m.createSession.yourName} <strong className="text-foreground font-semibold">{savedName}</strong>
           </p>
           <button
             type="button"
@@ -93,7 +89,7 @@ export default function CreateSessionForm() {
             }}
             className="text-sage cursor-pointer text-xs font-semibold hover:underline"
           >
-            Ganti
+            {m.createSession.changeName}
           </button>
         </div>
       ) : isEditingName ? (
@@ -102,7 +98,7 @@ export default function CreateSessionForm() {
             type="text"
             value={tempName}
             onChange={(e) => setTempName(e.target.value)}
-            placeholder="Ketik namamu..."
+            placeholder={m.createSession.namePlaceholder}
             className="text-foreground flex-1 bg-transparent px-2.5 py-1 text-xs focus:outline-none"
             autoFocus
           />
@@ -121,14 +117,14 @@ export default function CreateSessionForm() {
             }}
             className="bg-sage text-background cursor-pointer rounded-lg px-3 py-1 text-xs font-semibold"
           >
-            Simpan
+            {m.common.save}
           </button>
           <button
             type="button"
             onClick={() => setIsEditingName(false)}
             className="text-foreground/50 hover:text-foreground cursor-pointer px-2 py-1 text-xs"
           >
-            Batal
+            {m.common.cancel}
           </button>
         </div>
       ) : null}
@@ -161,12 +157,10 @@ export default function CreateSessionForm() {
           </div>
           <div className="space-y-1 text-center">
             <p className="text-foreground font-sans text-base font-semibold tracking-tight sm:text-lg">
-              {isUploading ? "Membaca struk..." : "Foto atau Unggah Struk"}
+              {isUploading ? m.createSession.readingTitle : m.createSession.uploadTitle}
             </p>
             <p className="text-foreground/50 mx-auto max-w-xs font-sans text-xs leading-relaxed">
-              {isUploading
-                ? "Mengekstrak daftar menu dan harga..."
-                : "Ambil foto struk langsung atau pilih gambar dari galeri perangkatmu."}
+              {isUploading ? m.createSession.readingHint : m.createSession.uploadHint}
             </p>
           </div>
         </div>
@@ -184,7 +178,7 @@ export default function CreateSessionForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <div>
-            <p className="font-semibold text-rose-200">Struk Tidak Terbaca</p>
+            <p className="font-semibold text-rose-200">{m.createSession.errorTitle}</p>
             <p className="mt-1 text-xs leading-relaxed text-rose-300/80">{errorMsg}</p>
           </div>
         </motion.div>

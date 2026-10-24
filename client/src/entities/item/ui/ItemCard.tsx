@@ -6,6 +6,7 @@ import type { ReceiptItem } from "@/shared/types";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah, formatShares, roundShares } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
+import { intlLocale, useI18n } from "@/shared/i18n";
 
 interface ItemCardProps {
   item: ReceiptItem;
@@ -32,7 +33,9 @@ export default function ItemCard({
   onUpdateClaim,
   onRenameItem,
 }: ItemCardProps) {
-  // userName is the exact server name (myName); trimming would miss legacy names with stray spaces
+  const { locale, m } = useI18n();
+  const t = m.item;
+  const numberLocale = intlLocale(locale);
   const targetUser = userName;
   const userClaim = targetUser ? item.claims.find((c) => c.name === targetUser) : undefined;
   const userClaimAmt = isJoined ? (userClaim?.shares ?? 0) : 0;
@@ -53,7 +56,7 @@ export default function ItemCard({
     setEditPrice(item.price.toString());
     setEditQty(item.quantity.toString());
   }, [item.name, item.price, item.quantity]);
-  
+
   const totalClaimed = item.claims.reduce((sum, c) => sum + c.shares, 0);
   const remainingQty = Math.max(0, roundShares(item.quantity - totalClaimed));
   const isFullyClaimed = remainingQty <= 0;
@@ -85,7 +88,7 @@ export default function ItemCard({
   };
 
   const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+    if (confirm(t.deleteConfirm(item.name))) {
       await deleteItem(item.id);
     }
   };
@@ -131,7 +134,6 @@ export default function ItemCard({
     }
   };
 
-  // Indentation logic based on depth
   const indentationClass = depth > 0 ? (depth === 1 ? "ml-3 sm:ml-6" : depth === 2 ? "ml-6 sm:ml-12" : "ml-9 sm:ml-18") : "";
   const borderPaddingClass = depth > 0 ? "pl-4 sm:pl-8 border-l-2 border-sage/15" : "";
 
@@ -142,30 +144,30 @@ export default function ItemCard({
       animate={{ opacity: 1, y: 0 }}
       className={`${showClaimHint && isFirstUnclaimed && isJoined ? "relative z-[101]" : "relative z-0"} ${indentationClass}`}
     >
-      <GlassPanel 
+      <GlassPanel
         className={`group relative p-4 transition-all duration-700 sm:p-6 ${
           userClaimAmt > 0 ? "border-sage/40 bg-sage/4" : ""
         } ${showClaimHint && isFirstUnclaimed && isJoined ? "ring-sage/30 bg-background shadow-[0_0_40px_rgba(var(--sage-rgb),0.15)] ring-1" : ""} ${borderPaddingClass}`}
       >
         <div className="from-sage/3 pointer-events-none absolute inset-0 bg-linear-to-r to-transparent opacity-0 transition-opacity duration-1000 group-hover:opacity-100" />
-        
+
         {isEditing && isPayer ? (
           <div className="animate-in fade-in zoom-in-95 relative z-10 w-full duration-300">
             <div className="mb-5 space-y-1">
-              <span className="text-sage text-[9px] font-bold tracking-[0.3em] uppercase">Edit Item</span>
+              <span className="text-sage text-[9px] font-bold tracking-[0.3em] uppercase">{t.editTitle}</span>
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="Item Name"
+                placeholder={t.namePlaceholder}
                 className="text-foreground placeholder:text-foreground/20 border-foreground/10 focus:border-sage w-full border-b bg-transparent pb-2 font-sans text-xl font-normal tracking-tight transition-colors focus:outline-none sm:text-2xl"
                 autoFocus
               />
             </div>
-            
+
             <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-foreground/40 text-[10px] font-bold tracking-[0.2em] uppercase">Qty</label>
+                <label className="text-foreground/40 text-[10px] font-bold tracking-[0.2em] uppercase">{t.quantity}</label>
                 <input
                   type="number"
                   value={editQty}
@@ -174,9 +176,9 @@ export default function ItemCard({
                   className="border-foreground/20 focus:border-sage text-foreground w-16 border-b bg-transparent pb-1 text-center font-mono text-lg transition-colors focus:outline-none"
                 />
               </div>
-              
+
               <div className="flex flex-col gap-1.5">
-                <label className="text-foreground/40 text-[10px] font-bold tracking-[0.2em] uppercase">Price</label>
+                <label className="text-foreground/40 text-[10px] font-bold tracking-[0.2em] uppercase">{t.price}</label>
                 <div className="border-foreground/20 focus-within:border-sage flex items-center gap-1.5 border-b pb-1 transition-colors">
                   <span className="text-foreground/40 font-mono text-sm">Rp</span>
                   <input
@@ -190,7 +192,7 @@ export default function ItemCard({
               </div>
 
               <div className="flex min-w-[120px] flex-1 flex-col gap-1.5">
-                <label className="text-foreground/40 text-[10px] font-bold tracking-[0.2em] uppercase">Total</label>
+                <label className="text-foreground/40 text-[10px] font-bold tracking-[0.2em] uppercase">{t.total}</label>
                 <div className="flex h-8 items-center pb-1">
                   <span className="text-sage text-glow-sage font-mono text-xl font-bold">
                     {formatRupiah((parseFloat(editPrice) || 0) * (parseInt(editQty) || 0))}
@@ -200,26 +202,26 @@ export default function ItemCard({
             </div>
 
             <div className="border-foreground/5 mt-4 flex items-center justify-end gap-3 border-t pt-5">
-              <button 
-                onClick={() => setIsEditing(false)} 
+              <button
+                onClick={() => setIsEditing(false)}
                 disabled={isSaving}
                 className="text-foreground/40 hover:text-foreground cursor-pointer px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-colors"
               >
-                Cancel
+                {m.common.cancel}
               </button>
-              <button 
-                onClick={handleSave} 
+              <button
+                onClick={handleSave}
                 disabled={isSaving}
                 className="bg-sage text-background hover:bg-sage/90 flex cursor-pointer items-center gap-2 rounded-full px-6 py-2.5 text-[10px] font-bold tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] transition-all active:scale-95 disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Confirm"}
+                {isSaving ? m.common.saving : m.common.save}
               </button>
             </div>
           </div>
         ) : isEditing && !isPayer ? (
           <div className="animate-in fade-in zoom-in-95 relative z-10 w-full duration-300">
             <div className="mb-5 space-y-1">
-              <span className="text-sage text-[9px] font-bold tracking-[0.3em] uppercase">Rename Item</span>
+              <span className="text-sage text-[9px] font-bold tracking-[0.3em] uppercase">{t.renameTitle}</span>
               <input
                 type="text"
                 value={editName}
@@ -233,39 +235,36 @@ export default function ItemCard({
                     setIsEditing(false);
                   }
                 }}
-                placeholder="Item Name"
+                placeholder={t.namePlaceholder}
                 className="text-foreground placeholder:text-foreground/20 border-foreground/10 focus:border-sage w-full border-b bg-transparent pb-2 font-sans text-xl font-normal tracking-tight transition-colors focus:outline-none sm:text-2xl"
                 autoFocus
               />
             </div>
 
             <div className="border-foreground/5 flex items-center justify-end gap-3 border-t pt-4">
-              <button 
+              <button
                 onClick={() => {
                   setEditName(item.name);
                   setIsEditing(false);
-                }} 
+                }}
                 disabled={isSaving}
                 className="text-foreground/40 hover:text-foreground cursor-pointer px-4 py-2 text-[10px] font-bold tracking-[0.2em] uppercase transition-colors"
               >
-                Cancel
+                {m.common.cancel}
               </button>
-              <button 
-                onClick={handleRenameSave} 
+              <button
+                onClick={handleRenameSave}
                 disabled={isSaving || !editName.trim() || editName.trim() === item.name}
                 className="bg-sage text-background hover:bg-sage/90 flex cursor-pointer items-center gap-2 rounded-full px-6 py-2.5 text-[10px] font-bold tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(var(--sage-rgb),0.3)] transition-all active:scale-95 disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Confirm"}
+                {isSaving ? m.common.saving : m.common.save}
               </button>
             </div>
           </div>
         ) : (
-          /* View Mode */
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
 
-            {/* Left: Item Information */}
             <div className="min-w-0 flex-1 space-y-2.5">
-              {/* Name + Badges */}
               <div className="flex min-h-[1.75rem] items-start justify-between gap-3">
                 <div className="group/title flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
                   <h3 className="text-foreground min-w-0 font-sans text-base font-normal tracking-tight [overflow-wrap:anywhere] sm:text-lg md:text-xl">
@@ -273,7 +272,7 @@ export default function ItemCard({
                   </h3>
                   {isSubItem && (
                     <span className="bg-sage/10 text-sage border-sage/20 rounded-full border px-2 py-0.5 text-[8px] font-bold tracking-widest uppercase">
-                      Sub-menu
+                      {t.subItemBadge}
                     </span>
                   )}
                   {isJoined && (
@@ -281,8 +280,8 @@ export default function ItemCard({
                       <button
                         onClick={() => setIsEditing(true)}
                         className="text-foreground/30 hover:text-sage flex h-8 w-8 cursor-pointer items-center justify-center transition-colors"
-                        title={isPayer ? "Edit Item" : "Rename Item"}
-                        aria-label={isPayer ? "Edit Item" : "Rename Item"}
+                        title={isPayer ? t.editTitle : t.renameTitle}
+                        aria-label={isPayer ? t.editTitle : t.renameTitle}
                       >
                         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9" />
@@ -293,8 +292,8 @@ export default function ItemCard({
                         <button
                           onClick={handleDelete}
                           className="text-foreground/30 flex h-8 w-8 cursor-pointer items-center justify-center transition-colors hover:text-rose-400"
-                          title="Delete Item"
-                          aria-label="Delete Item"
+                          title={t.deleteLabel}
+                          aria-label={t.deleteLabel}
                         >
                           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -306,37 +305,35 @@ export default function ItemCard({
                 </div>
                 <AnimatePresence>
                   {isFullyClaimed && (
-                    <motion.span 
+                    <motion.span
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="rounded-glass-sm bg-sage/10 text-sage border-sage/20 shrink-0 border px-2.5 py-1 text-[9px] font-bold tracking-[0.2em] uppercase"
                     >
-                      Claimed
+                      {t.fullyClaimedBadge}
                     </motion.span>
                   )}
                 </AnimatePresence>
               </div>
 
-              {/* Stats row: qty, price, total */}
               <div className="text-foreground/40 flex flex-wrap items-center gap-x-5 gap-y-1 text-[10px] font-bold tracking-widest uppercase sm:gap-x-6 sm:text-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-foreground/25 font-sans lowercase">qty</span>
+                  <span className="text-foreground/25 font-sans lowercase">{t.statQuantity}</span>
                   <span className="text-foreground/60">{item.quantity}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-foreground/25 font-sans lowercase">price</span>
+                  <span className="text-foreground/25 font-sans lowercase">{t.statPrice}</span>
                   <span className="text-foreground/60">{formatRupiah(item.price)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-foreground/25 font-sans lowercase">total</span>
+                  <span className="text-foreground/25 font-sans lowercase">{t.statTotal}</span>
                   <span className="text-sage text-glow-sage">{formatRupiah(item.price * item.quantity)}</span>
                 </div>
               </div>
 
-              {/* Participants */}
               {item.claims.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--glass-border)] pt-2.5">
-                  <span className="text-foreground/25 text-[9px] font-bold tracking-widest uppercase">Claimed by:</span>
+                  <span className="text-foreground/25 text-[9px] font-bold tracking-widest uppercase">{t.claimedBy}</span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {item.claims.map((claim, idx) => (
                       <div
@@ -344,7 +341,7 @@ export default function ItemCard({
                         className="rounded-glass-sm text-foreground/70 flex items-center gap-1.5 border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 text-[10px] font-medium"
                       >
                         <span className="font-sans text-xs [overflow-wrap:anywhere]">{claim.name}</span>
-                        <span className="text-sage shrink-0 font-mono font-bold">{formatShares(claim.shares)}x</span>
+                        <span className="text-sage shrink-0 font-mono font-bold">{formatShares(claim.shares, numberLocale)}×</span>
                       </div>
                     ))}
                   </div>
@@ -352,26 +349,23 @@ export default function ItemCard({
               )}
             </div>
 
-            {/* Right: Action Column */}
             {!isZeroPriceSubItem && (
               <div className="flex shrink-0 flex-row flex-wrap items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-3 md:flex-col md:flex-nowrap md:items-end md:gap-3 md:border-none md:pt-0">
 
-                {/* Available count */}
                 <div className="flex flex-col gap-0.5 md:text-right">
-                  <span className="text-foreground/30 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Available</span>
+                  <span className="text-foreground/30 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">{t.remaining}</span>
                   <span className="text-foreground/60 font-mono text-xs font-bold sm:text-sm">
-                    {formatShares(remainingQty)} <span className="text-foreground/30 font-sans text-[10px] sm:text-xs">of</span> {item.quantity}
+                    {formatShares(remainingQty, numberLocale)} <span className="text-foreground/30 font-sans text-[10px] sm:text-xs">{t.remainingOf}</span> {item.quantity}
                   </span>
                 </div>
 
-                {/* Claim Interaction Controls */}
                 <div className="relative">
                   {showClaimHint && isFirstUnclaimed && isJoined && (
                     <>
                       <span className="rounded-glass-sm bg-sage/40 absolute inset-0 animate-ping" />
                       <div className="pointer-events-none absolute -top-8 right-0 z-20 animate-[bounce_2s_infinite] sm:-right-4">
                         <div className="bg-sage text-background flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] whitespace-nowrap uppercase shadow-[0_4px_15px_rgba(var(--sage-rgb),0.4)]">
-                          Claim Item
+                          {t.claimHint}
                           <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 19V5M5 12l7 7 7-7" />
                           </svg>
@@ -382,12 +376,12 @@ export default function ItemCard({
 
                   {!isJoined ? (
                     <span className="rounded-glass-sm text-foreground/30 border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2 text-xs font-medium">
-                      Join to claim
+                      {t.joinToClaim}
                     </span>
                   ) : userClaimAmt === 0 ? (
                     isFullyClaimed ? (
                       <span className="rounded-glass-sm text-foreground/30 border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2 text-xs font-medium">
-                        Fully Claimed
+                        {t.allClaimed}
                       </span>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -396,34 +390,33 @@ export default function ItemCard({
                             type="button"
                             onClick={handleClaimHalf}
                             className="rounded-glass-sm text-foreground/60 hover:text-sage hover:border-sage/40 flex h-10 cursor-pointer items-center justify-center border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 text-xs font-bold tracking-wider uppercase transition-all active:scale-95 sm:h-11 sm:px-3.5"
-                            title="Claim half portion (0.5x)"
-                            aria-label="Claim half portion"
+                            title={t.claimHalfTitle}
+                            aria-label={t.claimHalfTitle}
                           >
-                            ½ Split
+                            {t.claimHalf}
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={handleClaimFull}
                           className="bg-sage text-background hover:bg-sage/90 rounded-glass-sm flex h-10 cursor-pointer items-center justify-center gap-1.5 px-4 text-xs font-bold tracking-wider uppercase shadow-[0_2px_12px_rgba(var(--sage-rgb),0.25)] transition-all active:scale-95 sm:h-11 sm:px-5"
-                          aria-label={`Claim ${remainingQty >= 1 ? "1" : formatShares(remainingQty)} portion`}
+                          aria-label={t.claimShareLabel(remainingQty >= 1 ? "1" : formatShares(remainingQty, numberLocale))}
                         >
                           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 5v14M5 12h14" />
                           </svg>
-                          <span className="whitespace-nowrap">{remainingQty >= 1 ? "Claim 1x" : `Claim ${formatShares(remainingQty)}x`}</span>
+                          <span className="whitespace-nowrap">{t.claimShare(remainingQty >= 1 ? "1" : formatShares(remainingQty, numberLocale))}</span>
                         </button>
                       </div>
                     )
                   ) : (
-                    /* Claimed state with stepper */
                     <div className="glass-panel rounded-glass-sm flex items-center border-[var(--glass-border)] bg-[var(--glass-bg-solid)] p-1">
                       <button
                         type="button"
                         disabled={userClaimAmt <= 0}
                         onClick={handleDecrement}
                         className="rounded-glass-sm text-foreground/60 hover:text-foreground flex h-10 w-10 cursor-pointer items-center justify-center transition-all hover:bg-[var(--glass-highlight)] active:scale-90 disabled:opacity-20 sm:h-11 sm:w-11"
-                        aria-label="Decrease portion"
+                        aria-label={t.decrease}
                       >
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12h14" />
@@ -432,16 +425,15 @@ export default function ItemCard({
 
                       <div className="flex min-w-[3.5rem] flex-col items-center justify-center px-1 text-center select-none sm:min-w-[4rem]">
                         <span className="text-sage font-mono text-base font-bold sm:text-lg">
-                          {formatShares(userClaimAmt)}x
+                          {formatShares(userClaimAmt, numberLocale)}×
                         </span>
                         {userClaimAmt === 1 && remainingQty >= 0 && (
                           <button
                             type="button"
                             onClick={handleToggleHalf}
                             className="text-foreground/40 hover:text-sage cursor-pointer text-[9px] font-bold tracking-wider uppercase"
-                            title="Split to 0.5x"
                           >
-                            Split ½
+                            {t.makeHalf}
                           </button>
                         )}
                         {userClaimAmt === 0.5 && (
@@ -450,9 +442,8 @@ export default function ItemCard({
                             onClick={handleToggleHalf}
                             disabled={remainingQty < 0.5}
                             className="text-foreground/40 hover:text-sage cursor-pointer text-[9px] font-bold tracking-wider uppercase disabled:opacity-20"
-                            title="Make 1x"
                           >
-                            Make 1x
+                            {t.makeWhole}
                           </button>
                         )}
                       </div>
@@ -462,7 +453,7 @@ export default function ItemCard({
                         disabled={isFullyClaimed || remainingQty <= 0}
                         onClick={handleIncrement}
                         className="rounded-glass-sm text-sage hover:bg-sage/10 flex h-10 w-10 cursor-pointer items-center justify-center transition-all active:scale-90 disabled:opacity-20 sm:h-11 sm:w-11"
-                        aria-label="Increase portion"
+                        aria-label={t.increase}
                       >
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 5v14M5 12h14" />

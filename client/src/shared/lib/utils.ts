@@ -19,10 +19,8 @@ export const getInitials = (name: string) => {
 
 export const roundShares = (val: number) => Math.round(val * 1000) / 1000;
 
-export const formatShares = (val: number) => {
-  const rounded = Math.round(val * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0$/, "");
-};
+export const formatShares = (val: number, intlLocale = "id-ID") =>
+  new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 2 }).format(Math.round(val * 100) / 100);
 
 export const getAvatarBg = (name: string) => {
   const colors = [

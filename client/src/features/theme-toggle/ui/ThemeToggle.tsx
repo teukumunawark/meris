@@ -3,10 +3,12 @@
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMounted } from "@/shared/hooks";
+import { useI18n } from "@/shared/i18n";
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
+  const { m } = useI18n();
 
   if (!mounted) {
     return <div className="h-9 w-9" />;
@@ -18,7 +20,8 @@ export default function ThemeToggle() {
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="text-foreground/60 hover:text-foreground relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] transition-all duration-300 hover:bg-[var(--glass-highlight)] focus:outline-none active:scale-95"
-      aria-label="Toggle theme"
+      aria-label={isDark ? m.theme.useLight : m.theme.useDark}
+      title={isDark ? m.theme.useLight : m.theme.useDark}
     >
       <AnimatePresence mode="wait" initial={false}>
         {isDark ? (

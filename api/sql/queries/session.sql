@@ -83,16 +83,16 @@ SET payer_name = $1
 WHERE id = $2;
 
 -- name: CreateBill :exec
-INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, grand_total, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, discount, other_charges, grand_total, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: GetBillsBySession :many
 SELECT * FROM bills WHERE session_id = $1 ORDER BY created_at ASC;
 
 -- name: UpdateBill :exec
 UPDATE bills
-SET payer_name = $1, name = $2, tax = $3, service_charge = $4, grand_total = $5
-WHERE id = $6 AND session_id = $7;
+SET payer_name = $1, name = $2, tax = $3, service_charge = $4, discount = $5, other_charges = $6, grand_total = $7
+WHERE id = $8 AND session_id = $9;
 
 -- name: UpdateBillPayerName :exec
 UPDATE bills

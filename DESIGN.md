@@ -4,7 +4,7 @@ Drawn from what the client already ships (`client/app/globals.css`, `client/app/
 
 ## Identity
 - Product: split a restaurant receipt between friends without accounts. Indonesian audience, used on phones at the table.
-- Language: Indonesian UI copy, informal "kamu".
+- Language: Indonesian by default, English as the second language. Indonesian copy uses informal "kamu"; English copy uses plain, friendly "you". Every UI string lives in `client/src/shared/i18n/messages/{id,en}.ts`.
 
 ## Palette
 - Core: sage (`--primary-sage`, `#4a5d4e` light / `#8ba895` dark) on a neutral background (`#f7f8f6` light / `#111418` dark).

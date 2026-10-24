@@ -14,7 +14,7 @@ func TestLimiterKeyMatchesRedisACLPrefix(t *testing.T) {
 	if want := "meris-api:limiter:session:203.0.113.7"; key != want {
 		t.Errorf("limiterKey = %q, want %q", key, want)
 	}
-	// The homelab ACL user only allows keys that start with the service name.
+
 	if !strings.HasPrefix(key, "meris-api:") {
 		t.Errorf("key %q does not start with the service name, Redis would answer NOPERM", key)
 	}
@@ -78,7 +78,6 @@ func TestRateLimiterOffWhenLimitIsZero(t *testing.T) {
 }
 
 func TestRateLimiterFailsOpenWithoutRedis(t *testing.T) {
-	// redis.RDB is nil in unit tests, which is also what an unavailable Redis looks like to the limiter.
 	limiter := RateLimiter("session", 1, time.Hour)
 
 	for i := range 3 {

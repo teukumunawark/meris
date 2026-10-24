@@ -8,8 +8,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// New returns the application logger. Logs go to stdout only (Alloy collects them), and every record
-// logged with a context that carries a span also carries trace_id and span_id.
 func New(env string) *slog.Logger {
 	var handler slog.Handler
 	if env == "local" || env == "" {
@@ -21,8 +19,6 @@ func New(env string) *slog.Logger {
 	return slog.New(&traceHandler{Handler: handler})
 }
 
-// traceHandler copies the active span's IDs into the log record so logs can be joined with traces
-// (Loki to Tempo in Grafana). Calls without a context, such as slog.Info, carry no span and get no IDs.
 type traceHandler struct {
 	slog.Handler
 }

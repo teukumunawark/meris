@@ -238,6 +238,8 @@ export interface components {
             payerBankAccount?: string;
             tax?: number;
             serviceCharge?: number;
+            discount?: number;
+            otherCharges?: number;
             grandTotal?: number;
             createdAt?: string;
             items?: components["schemas"]["Item"][];
@@ -254,6 +256,8 @@ export interface components {
             payerBankAccount?: string;
             tax?: number;
             serviceCharge?: number;
+            discount?: number;
+            otherCharges?: number;
             grandTotal?: number;
             createdAt?: string;
             items?: components["schemas"]["Item"][];
@@ -280,6 +284,8 @@ export interface components {
             subtotal?: number;
             tax?: number;
             serviceCharge?: number;
+            discount?: number;
+            otherCharges?: number;
             claims?: components["schemas"]["Claim"][];
         };
         ParticipantResponse: {
@@ -307,6 +313,8 @@ export interface components {
             name: string;
             tax: number;
             serviceCharge: number;
+            discount: number;
+            otherCharges: number;
             grandTotal: number;
             createdAt: string;
         };
@@ -744,6 +752,8 @@ export interface operations {
                     name: string;
                     tax: number;
                     serviceCharge: number;
+                    discount?: number;
+                    otherCharges?: number;
                     grandTotal: number;
                     token: string;
                 };

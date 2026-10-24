@@ -28,7 +28,6 @@ export function useClaimItem() {
   }, [participantId, participantToken, sessionId]);
 
   const updateClaim = useCallback((itemId: string, increment: number) => {
-    // Claims carry the server's exact name, so match on that rather than a trimmed local copy
     const targetUser = myName;
     if (!isJoined || !targetUser) return;
 

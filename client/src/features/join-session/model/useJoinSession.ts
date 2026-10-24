@@ -3,12 +3,23 @@
 import { useState } from "react";
 import { useSession } from "@/entities/session/model/SessionContext";
 import { apiFetch } from "@/shared/api/client";
+import { apiErrorMessage, useI18n } from "@/shared/i18n";
 import type { components } from "@/shared/api/generated/api";
 
 type ParticipantResponse = components["schemas"]["ParticipantResponse"];
 
+function readCachedParticipant(raw: string | null): { name?: unknown; token?: string } | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function useJoinSession() {
   const { sessionId, setParticipantData } = useSession();
+  const { m } = useI18n();
   const [joinError, setJoinError] = useState<string | null>(null);
 
   const joinSession = async (name: string) => {
@@ -16,18 +27,10 @@ export function useJoinSession() {
     if (!trimmedName) return;
     setJoinError(null);
 
-    const stored = localStorage.getItem(`meris_session_${sessionId}_participant`);
-    let cachedToken = "";
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed.name === "string" && parsed.name.toLowerCase() === trimmedName.toLowerCase()) {
-          cachedToken = parsed.token;
-        }
-      } catch {
-        // Ignore JSON parse errors for corrupt cached session state
-      }
-    }
+    const cached = readCachedParticipant(localStorage.getItem(`meris_session_${sessionId}_participant`));
+    const isSamePersonRejoining =
+      !!cached && typeof cached.name === "string" && cached.name.toLowerCase() === trimmedName.toLowerCase();
+    const cachedToken = isSamePersonRejoining ? cached.token ?? "" : "";
 
     try {
       const participant = await apiFetch<ParticipantResponse>(`/session/${sessionId}/join`, {
@@ -36,7 +39,6 @@ export function useJoinSession() {
       });
 
       if (participant.id !== undefined && participant.token) {
-        // Rejoining as "MUNAWAR" returns the stored "Munawar"; keep the server's spelling
         const savedName = participant.name ?? trimmedName;
         setParticipantData(participant.id, savedName, participant.token);
         localStorage.setItem("meris_username", savedName);
@@ -50,8 +52,7 @@ export function useJoinSession() {
         );
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Could not join this session. Check your internet connection or verify the session code.";
-      setJoinError(message);
+      setJoinError(apiErrorMessage(err, m, m.join.failed));
     }
   };
 

@@ -12,8 +12,9 @@ func TestCalculateProportional(t *testing.T) {
 	personASubtotal := 60000.0
 	personBSubtotal := 40000.0
 
-	calcA := CalculateShare(personASubtotal, subtotal, tax, service)
-	calcB := CalculateShare(personBSubtotal, subtotal, tax, service)
+	charges := BillCharges{Tax: tax, ServiceCharge: service}
+	calcA := CalculateShare(personASubtotal, subtotal, charges)
+	calcB := CalculateShare(personBSubtotal, subtotal, charges)
 
 	expectedA := 60000.0 + (60000.0/100000.0)*(11000.0+5000.0)
 	expectedB := 40000.0 + (40000.0/100000.0)*(11000.0+5000.0)
@@ -69,7 +70,7 @@ func TestCalculateProportionalEdgeCases(t *testing.T) {
 			subtotal:       100.0,
 			tax:            -10.0,
 			service:        10.0,
-			expected:       50.0 + (50.0/100.0)*(0.0+10.0), // 50.0 + 5.0 = 55.0
+			expected:       50.0 + (50.0/100.0)*(0.0+10.0),
 		},
 		{
 			name:           "negative service (treated as zero)",
@@ -77,7 +78,7 @@ func TestCalculateProportionalEdgeCases(t *testing.T) {
 			subtotal:       100.0,
 			tax:            10.0,
 			service:        -10.0,
-			expected:       50.0 + (50.0/100.0)*(10.0+0.0), // 50.0 + 5.0 = 55.0
+			expected:       50.0 + (50.0/100.0)*(10.0+0.0),
 		},
 		{
 			name:           "all zeroes",
@@ -91,11 +92,37 @@ func TestCalculateProportionalEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CalculateShare(tt.personSubtotal, tt.subtotal, tt.tax, tt.service)
+			got := CalculateShare(tt.personSubtotal, tt.subtotal, BillCharges{Tax: tt.tax, ServiceCharge: tt.service})
 			if got.Total != tt.expected {
 				t.Errorf("CalculateShare(%f, %f, %f, %f).Total = %f; expected %f",
 					tt.personSubtotal, tt.subtotal, tt.tax, tt.service, got.Total, tt.expected)
 			}
 		})
+	}
+}
+
+func TestCalculateShareDiscountAndOtherCharges(t *testing.T) {
+	charges := BillCharges{Tax: 18000, Discount: 20000, OtherCharges: -500}
+
+	a := CalculateShare(100000, 200000, charges)
+	b := CalculateShare(100000, 200000, charges)
+
+	if a.Discount != 10000 {
+		t.Errorf("expected discount share 10000, got %f", a.Discount)
+	}
+	if a.OtherCharges != -250 {
+		t.Errorf("expected other charges share -250, got %f", a.OtherCharges)
+	}
+
+	grandTotal := 200000.0 - 20000 + 18000 - 500
+	if got := a.Total + b.Total; got != grandTotal {
+		t.Errorf("shares should add up to the grand total %f, got %f", grandTotal, got)
+	}
+}
+
+func TestCalculateShareNegativeDiscountIgnored(t *testing.T) {
+	got := CalculateShare(50, 100, BillCharges{Discount: -10})
+	if got.Total != 50 {
+		t.Errorf("negative discount should be treated as zero, got total %f", got.Total)
 	}
 }

@@ -12,8 +12,8 @@ import (
 )
 
 const createBill = `-- name: CreateBill :exec
-INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, grand_total, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, discount, other_charges, grand_total, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type CreateBillParams struct {
@@ -23,6 +23,8 @@ type CreateBillParams struct {
 	Name          string             `db:"name" json:"name"`
 	Tax           float64            `db:"tax" json:"tax"`
 	ServiceCharge float64            `db:"service_charge" json:"service_charge"`
+	Discount      float64            `db:"discount" json:"discount"`
+	OtherCharges  float64            `db:"other_charges" json:"other_charges"`
 	GrandTotal    float64            `db:"grand_total" json:"grand_total"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
@@ -35,6 +37,8 @@ func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) error {
 		arg.Name,
 		arg.Tax,
 		arg.ServiceCharge,
+		arg.Discount,
+		arg.OtherCharges,
 		arg.GrandTotal,
 		arg.CreatedAt,
 	)
@@ -198,7 +202,7 @@ func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantPa
 }
 
 const getBillsBySession = `-- name: GetBillsBySession :many
-SELECT id, session_id, payer_name, name, tax, service_charge, grand_total, created_at FROM bills WHERE session_id = $1 ORDER BY created_at ASC
+SELECT id, session_id, payer_name, name, tax, service_charge, grand_total, created_at, discount, other_charges FROM bills WHERE session_id = $1 ORDER BY created_at ASC
 `
 
 func (q *Queries) GetBillsBySession(ctx context.Context, sessionID string) ([]Bill, error) {
@@ -219,6 +223,8 @@ func (q *Queries) GetBillsBySession(ctx context.Context, sessionID string) ([]Bi
 			&i.ServiceCharge,
 			&i.GrandTotal,
 			&i.CreatedAt,
+			&i.Discount,
+			&i.OtherCharges,
 		); err != nil {
 			return nil, err
 		}
@@ -516,8 +522,8 @@ func (q *Queries) RenameSessionPayer(ctx context.Context, arg RenameSessionPayer
 
 const updateBill = `-- name: UpdateBill :exec
 UPDATE bills
-SET payer_name = $1, name = $2, tax = $3, service_charge = $4, grand_total = $5
-WHERE id = $6 AND session_id = $7
+SET payer_name = $1, name = $2, tax = $3, service_charge = $4, discount = $5, other_charges = $6, grand_total = $7
+WHERE id = $8 AND session_id = $9
 `
 
 type UpdateBillParams struct {
@@ -525,6 +531,8 @@ type UpdateBillParams struct {
 	Name          string  `db:"name" json:"name"`
 	Tax           float64 `db:"tax" json:"tax"`
 	ServiceCharge float64 `db:"service_charge" json:"service_charge"`
+	Discount      float64 `db:"discount" json:"discount"`
+	OtherCharges  float64 `db:"other_charges" json:"other_charges"`
 	GrandTotal    float64 `db:"grand_total" json:"grand_total"`
 	ID            string  `db:"id" json:"id"`
 	SessionID     string  `db:"session_id" json:"session_id"`
@@ -536,6 +544,8 @@ func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) error {
 		arg.Name,
 		arg.Tax,
 		arg.ServiceCharge,
+		arg.Discount,
+		arg.OtherCharges,
 		arg.GrandTotal,
 		arg.ID,
 		arg.SessionID,

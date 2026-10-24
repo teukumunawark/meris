@@ -23,9 +23,9 @@ func TestSimplifyDebts(t *testing.T) {
 		{
 			name: "Three-way circular reduction",
 			balances: map[string]float64{
-				"Alice":   30.0,  // Paid 100, consumed 70
-				"Bob":     -10.0, // Paid 50, consumed 60
-				"Charlie": -20.0, // Paid 0, consumed 20
+				"Alice":   100.0 - 70.0,
+				"Bob":     50.0 - 60.0,
+				"Charlie": 0.0 - 20.0,
 			},
 			expected: []Transfer{
 				{From: "Charlie", To: "Alice", Amount: 20.0},

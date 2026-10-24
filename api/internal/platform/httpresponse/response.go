@@ -1,14 +1,22 @@
 package httpresponse
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"meris-backend/internal/apperrors"
 	"meris-backend/internal/platform/i18n"
 
 	i18nPkg "github.com/nicksnyder/go-i18n/v2/i18n"
+)
+
+const (
+	statusClientClosedRequest = 499
+	internalErrorCode         = "errors.internal_error"
+	internalErrorFallback     = "An unexpected error occurred."
 )
 
 type ErrorBody struct {
@@ -37,44 +45,49 @@ func DecodeJSON(r *http.Request, target any) error {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(target); err != nil {
-		return errors.New("request body must be valid JSON")
+		return apperrors.NewInvalidRequestError(err)
 	}
 
 	return nil
 }
 
-func WriteLocalizedError(w http.ResponseWriter, r *http.Request, err error) {
-	localizer := i18n.GetLocalizer(r.Context())
-
-	if appErr, ok := errors.AsType[*apperrors.AppError](err); ok {
-		message := ""
-		if localizer != nil {
-			msg, locErr := localizer.Localize(&i18nPkg.LocalizeConfig{
-				MessageID:    appErr.Code,
-				TemplateData: appErr.Params,
-			})
-			if locErr == nil {
-				message = msg
-			}
-		}
-		if message == "" {
-			message = appErr.Error()
-		}
-
-		WriteError(w, appErr.HTTPStatus, appErr.Code, message)
+func RespondError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, context.Canceled) {
+		slog.InfoContext(r.Context(), "request canceled by client", "method", r.Method, "path", r.URL.Path)
+		w.WriteHeader(statusClientClosedRequest)
 		return
 	}
 
-	// Fallback for generic unexpected errors
-	genericMsg := "An unexpected error occurred."
-	if localizer != nil {
-		msg, locErr := localizer.Localize(&i18nPkg.LocalizeConfig{
-			MessageID: "errors.internal_error",
-		})
-		if locErr == nil {
-			genericMsg = msg
-		}
+	appErr, ok := errors.AsType[*apperrors.AppError](err)
+	if !ok {
+		appErr = apperrors.NewAppError(internalErrorCode, nil, http.StatusInternalServerError, err)
 	}
-	WriteError(w, http.StatusInternalServerError, "errors.internal_error", genericMsg)
+
+	if appErr.HTTPStatus >= http.StatusInternalServerError {
+		slog.ErrorContext(r.Context(), "request failed",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"code", appErr.Code,
+			"error", err,
+		)
+	}
+
+	WriteError(w, appErr.HTTPStatus, appErr.Code, localizedMessage(r, appErr))
 }
 
+func localizedMessage(r *http.Request, appErr *apperrors.AppError) string {
+	if localizer := i18n.GetLocalizer(r.Context()); localizer != nil {
+		message, err := localizer.Localize(&i18nPkg.LocalizeConfig{
+			MessageID:    appErr.Code,
+			TemplateData: appErr.Params,
+		})
+		if err == nil {
+			return message
+		}
+	}
+
+	if appErr.HTTPStatus >= http.StatusInternalServerError {
+		return internalErrorFallback
+	}
+	return http.StatusText(appErr.HTTPStatus)
+}

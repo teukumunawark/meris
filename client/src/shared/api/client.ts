@@ -1,3 +1,5 @@
+import { currentDocumentLocale } from "@/shared/i18n/locales";
+
 export type ApiFetchOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
@@ -26,7 +28,7 @@ export async function apiFetch<T>(
   }
 
   if (typeof window !== "undefined" && !requestHeaders.has("Accept-Language")) {
-    requestHeaders.set("Accept-Language", navigator.language);
+    requestHeaders.set("Accept-Language", currentDocumentLocale());
   }
 
   if (body !== undefined && !(body instanceof FormData) && !requestHeaders.has("Content-Type")) {
@@ -53,7 +55,7 @@ export async function apiFetch<T>(
     const message =
       typeof errorData === "object" && errorData !== null && "message" in errorData && typeof errorData.message === "string"
         ? errorData.message
-        : "API Request failed";
+        : response.statusText;
 
     throw new ApiError(message, response.status, errorData);
   }

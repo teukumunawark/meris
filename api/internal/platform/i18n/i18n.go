@@ -25,7 +25,6 @@ func NewTranslator() *Translator {
 	bundle := i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
-	// Load files from embedded FS
 	enBytes, _ := localesFS.ReadFile("locales/en.json")
 	idBytes, _ := localesFS.ReadFile("locales/id.json")
 

@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"meris-backend/internal/apperrors"
+	"meris-backend/internal/platform/httpresponse"
 	"meris-backend/internal/platform/redis"
 )
 
@@ -48,7 +51,6 @@ func (rw *responseWriter) Flush() {
 		flusher.Flush()
 	}
 }
-
 
 func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -128,15 +130,16 @@ func CORS(allowedOrigins string) func(http.Handler) http.Handler {
 	}
 }
 
-// limiterKeyPrefix must start with the service name: on the homelab the Redis ACL user `meris-api`
-// can only touch keys matching `meris-api:*`, and any other prefix fails with NOPERM.
-const limiterKeyPrefix = "meris-api:limiter"
+var ErrTooManyRequests = apperrors.NewAppError("errors.too_many_requests", nil, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
+
+const redisACLKeyNamespace = "meris-api"
+
+const limiterKeyPrefix = redisACLKeyNamespace + ":limiter"
 
 func limiterKey(limitType, ip string) string {
 	return fmt.Sprintf("%s:%s:%s", limiterKeyPrefix, limitType, ip)
 }
 
-// retryAfterSeconds rounds the remaining lifetime of a limiter key up to whole seconds, never below 1.
 func retryAfterSeconds(ttl time.Duration) int {
 	if ttl <= 0 {
 		return 1
@@ -144,8 +147,6 @@ func retryAfterSeconds(ttl time.Duration) int {
 	return int(math.Ceil(ttl.Seconds()))
 }
 
-// RateLimiter allows `limit` requests per client IP inside `duration`. A limit of 0 or less turns it off.
-// When Redis is unavailable it fails open, so an outage never blocks users.
 func RateLimiter(limitType string, limit int, duration time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if limit <= 0 {
@@ -179,14 +180,13 @@ func RateLimiter(limitType string, limit int, duration time.Duration) func(http.
 
 			if count > int64(limit) {
 				ttl := redis.RDB.TTL(ctx, key).Val()
-				if ttl <= 0 {
-					// The key lost its expiry (for example the process died between INCR and EXPIRE); restore it
-					// so the client is not blocked forever.
+				keyLostItsExpiry := ttl <= 0
+				if keyLostItsExpiry {
 					redis.RDB.Expire(ctx, key, duration)
 					ttl = duration
 				}
 				w.Header().Set("Retry-After", strconv.Itoa(retryAfterSeconds(ttl)))
-				http.Error(w, "Too many requests", http.StatusTooManyRequests)
+				httpresponse.RespondError(w, r, ErrTooManyRequests)
 				return
 			}
 

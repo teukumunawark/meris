@@ -1,35 +1,24 @@
 import { registerOTel } from '@vercel/otel';
 import { trace, type Attributes, type Context, type Link, type SpanKind } from '@opentelemetry/api';
 
+const TRACE_FLAG_SAMPLED = 1;
+const DROP = 0;
+const RECORD_AND_SAMPLE = 2;
+
+const HEALTH_AND_STATIC_PATHS = ['/healthz', '/health', '/metrics', '/favicon.ico', '/robots.txt'];
+
 const customSampler = {
   shouldSample(context: Context, traceId: string, name: string, spanKind: SpanKind, attributes: Attributes, _links: Link[]) {
-    // 1. Check parent span context (ParentBased sampler behavior)
     const parentSpanContext = trace.getSpanContext(context);
     if (parentSpanContext) {
-      const isSampled = (parentSpanContext.traceFlags & 1) !== 0;
-      return { decision: isSampled ? 2 : 0 };
+      const parentIsSampled = (parentSpanContext.traceFlags & TRACE_FLAG_SAMPLED) !== 0;
+      return { decision: parentIsSampled ? RECORD_AND_SAMPLE : DROP };
     }
 
-    // 2. Root span filtering (exclude system/health check paths)
     const target = (attributes?.['http.target'] || attributes?.['http.url'] || '').toString();
-    const isExcluded =
-      name.includes('/healthz') ||
-      name.includes('/health') ||
-      name.includes('/metrics') ||
-      name.includes('/favicon.ico') ||
-      name.includes('/robots.txt') ||
-      target.includes('/healthz') ||
-      target.includes('/health') ||
-      target.includes('/metrics') ||
-      target.includes('/favicon.ico') ||
-      target.includes('/robots.txt');
+    const isHealthOrStaticRequest = HEALTH_AND_STATIC_PATHS.some((path) => name.includes(path) || target.includes(path));
 
-    if (isExcluded) {
-      return { decision: 0 };
-    }
-
-    // 3. Fallback: Always sample normal business and API transactions
-    return { decision: 2 };
+    return { decision: isHealthOrStaticRequest ? DROP : RECORD_AND_SAMPLE };
   },
   toString() {
     return 'CustomHomelabSampler';

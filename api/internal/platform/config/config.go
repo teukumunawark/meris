@@ -23,8 +23,6 @@ type Config struct {
 	ShutdownTimeout time.Duration
 }
 
-// RateLimitConfig limits how many sessions one client IP can create inside a window.
-// SessionMax = 0 turns the limiter off.
 type RateLimitConfig struct {
 	SessionMax    int
 	SessionWindow time.Duration
@@ -49,9 +47,10 @@ type TelemetryConfig struct {
 }
 
 type AIConfig struct {
-	APIKey   string
-	Endpoint string
-	Model    string
+	APIKey          string
+	Endpoint        string
+	Model           string
+	EscalationModel string
 }
 
 type CORSConfig struct {
@@ -95,9 +94,10 @@ func Load() (Config, error) {
 			DB:       0,
 		},
 		AI: AIConfig{
-			APIKey:   getEnv("AI_API_KEY", ""),
-			Endpoint: getEnv("AI_ENDPOINT", ""),
-			Model:    getEnv("AI_MODEL", "ag/gemini-3.8-flash-high"),
+			APIKey:          getEnv("AI_API_KEY", ""),
+			Endpoint:        getEnv("AI_ENDPOINT", ""),
+			Model:           getEnv("AI_MODEL", "ag/gemini-3.8-flash-low"),
+			EscalationModel: getEnv("AI_ESCALATION_MODEL", "ag/gemini-3.8-flash-high"),
 		},
 		Telemetry: TelemetryConfig{
 			OTLPEndpoint: getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),

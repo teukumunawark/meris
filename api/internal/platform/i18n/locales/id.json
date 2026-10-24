@@ -1,20 +1,56 @@
 {
   "errors.unauthorized": {
-    "other": "Otorisasi gagal: token tidak sesuai dengan partisipan yang diharapkan."
+    "other": "Kamu tidak punya izin untuk mengubah ini."
   },
   "errors.name_conflict": {
-    "other": "Konflik: nama partisipan '{{.name}}' sudah terpakai di sesi ini."
+    "other": "Nama {{.name}} sudah dipakai di sesi ini. Pakai nama lain."
   },
   "errors.quantity_exceeded": {
-    "other": "Permintaan tidak valid: klaim patungan melebihi kuantitas barang yang tersedia."
+    "other": "Porsi yang tersisa tidak cukup. Mungkin ada yang baru saja mengklaimnya."
   },
   "errors.item_not_found": {
-    "other": "Tidak ditemukan: barang dengan ID '{{.itemId}}' tidak ditemukan."
+    "other": "Menu ini sudah tidak ada. Mungkin baru saja dihapus."
+  },
+  "errors.receipt_unreadable": {
+    "other": "Struk tidak terbaca. Foto ulang dengan cahaya cukup dan pastikan seluruh struk masuk ke foto."
   },
   "errors.session_not_found": {
-    "other": "Tidak ditemukan: sesi dengan ID '{{.sessionId}}' tidak ditemukan."
+    "other": "Sesi tidak ditemukan. Cek lagi link atau kode sesinya."
   },
   "errors.internal_error": {
-    "other": "Terjadi kesalahan internal. Silakan coba beberapa saat lagi."
+    "other": "Ada yang gagal di server. Coba lagi sebentar lagi."
+  },
+  "errors.invalid_request": {
+    "other": "Permintaan tidak valid. Muat ulang halaman, lalu coba lagi."
+  },
+  "errors.missing_token": {
+    "other": "Kamu belum gabung di sesi ini. Buka lagi link sesinya dan gabung dengan namamu."
+  },
+  "errors.invalid_id": {
+    "other": "ID yang dikirim tidak valid."
+  },
+  "errors.invalid_name": {
+    "other": "Nama tidak boleh kosong."
+  },
+  "errors.bill_not_found": {
+    "other": "Struk ini sudah tidak ada. Mungkin baru saja dihapus."
+  },
+  "errors.cannot_remove_owner": {
+    "other": "Pembayar sesi tidak bisa dikeluarkan."
+  },
+  "errors.file_too_large": {
+    "other": "Fotonya lebih dari 5 MB. Pakai foto yang lebih kecil."
+  },
+  "errors.invalid_file": {
+    "other": "Foto struk tidak ikut terkirim. Pilih fotonya lagi."
+  },
+  "errors.invalid_content_type": {
+    "other": "File itu bukan gambar. Pilih foto struknya."
+  },
+  "errors.too_many_requests": {
+    "other": "Terlalu banyak sesi dibuat dari jaringan ini. Coba lagi nanti."
+  },
+  "errors.receipt_service_unavailable": {
+    "other": "Pembaca struk sedang bermasalah. Coba lagi sebentar lagi."
   }
 }

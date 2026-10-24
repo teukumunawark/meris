@@ -27,6 +27,8 @@ type CompiledParticipant struct {
 	Subtotal      float64         `json:"subtotal"`
 	Tax           float64         `json:"tax"`
 	ServiceCharge float64         `json:"serviceCharge"`
+	Discount      float64         `json:"discount"`
+	OtherCharges  float64         `json:"otherCharges"`
 	BankName      string          `json:"bankName"`
 	BankAccount   string          `json:"bankAccount"`
 	Claims        []CompiledClaim `json:"claims"`
@@ -39,17 +41,16 @@ type CompiledBill struct {
 	Name          string  `json:"name"`
 	Tax           float64 `json:"tax"`
 	ServiceCharge float64 `json:"serviceCharge"`
+	Discount      float64 `json:"discount"`
+	OtherCharges  float64 `json:"otherCharges"`
 	GrandTotal    float64 `json:"grandTotal"`
 	CreatedAt     string  `json:"createdAt"`
 }
 
-// BilateralTransfer represents a direct debt between two participants at one bill stop,
-// before any debt-simplification is applied. Used by the UI to show the intuitive
-// "who owes who per bill" breakdown.
 type BilateralTransfer struct {
-	From     string  `json:"from"`     // consumer
-	To       string  `json:"to"`       // payer (who fronted the bill)
-	BillName string  `json:"billName"` // name of the stop
+	From     string  `json:"from"`
+	To       string  `json:"to"`
+	BillName string  `json:"billName"`
 	Amount   float64 `json:"amount"`
 }
 
@@ -60,13 +61,15 @@ type CompiledSession struct {
 	PayerBankAccount string                `json:"payerBankAccount"`
 	Tax              float64               `json:"tax"`
 	ServiceCharge    float64               `json:"serviceCharge"`
+	Discount         float64               `json:"discount"`
+	OtherCharges     float64               `json:"otherCharges"`
 	GrandTotal       float64               `json:"grandTotal"`
 	CreatedAt        string                `json:"createdAt"`
 	Items            []CompiledItem        `json:"items"`
 	Participants     []CompiledParticipant `json:"participants"`
 	Bills            []CompiledBill        `json:"bills"`
 	Transfers        []Transfer            `json:"transfers"`
-	RawDebts         []BilateralTransfer   `json:"rawDebts"` // pre-simplification bilateral debts
+	RawDebts         []BilateralTransfer   `json:"rawDebts"`
 }
 
 type CreateSessionResult struct {

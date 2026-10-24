@@ -4,6 +4,7 @@ import React, { useState, useMemo, useId, useRef, useEffect, useCallback } from 
 import { createPortal } from "react-dom";
 import { formatRupiah, getInitials } from "@/shared/lib";
 import type { Transfer, BilateralTransfer } from "@/entities/session";
+import { useI18n } from "@/shared/i18n";
 
 interface Participant {
   id: number;
@@ -20,20 +21,18 @@ interface MoneyFlowGraphProps {
 
 
 
-// Theme tokens instead of per-name hues: one neutral for everyone, sage only for flows that involve you
 const INK = "var(--foreground)";
 const PAPER = "var(--background)";
 const ACCENT = "var(--primary-sage)";
 
 type TabMode = "optimized" | "intuitive";
 
-// ─── Shared SVG graph ────────────────────────────────────────────────────────
 
 interface Edge {
   from: string;
   to: string;
   amount: number;
-  label?: string; // optional subtitle (bill name)
+  label?: string;
 }
 
 interface GraphProps {
@@ -63,6 +62,7 @@ function shortLabel(name: string) {
 
 function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: GraphProps) {
   const markerPrefix = useId();
+  const { flow } = useI18n().m;
   const n = names.length;
   const { R, CX, CY, width, height } = graphGeometry(n);
 
@@ -75,7 +75,6 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
     return m;
   }, [names, n, R, CX, CY]);
 
-  // Net balance per node from edges
   const balanceMap = useMemo(() => {
     const map: Record<string, number> = {};
     names.forEach((n) => (map[n] = 0));
@@ -99,7 +98,7 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
       height={pixelScale ? height * pixelScale : undefined}
       className={pixelScale ? "block max-w-none" : "w-full max-w-xs sm:max-w-sm"}
       role="group"
-      aria-label="Alur transfer antar peserta"
+      aria-label={flow.graphLabel}
     >
       <defs>
         {edges.map((e, idx) => (
@@ -109,7 +108,6 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
         ))}
       </defs>
 
-      {/* Edges */}
       {edges.map((edge, idx) => {
         const a = posMap[edge.from];
         const b = posMap[edge.to];
@@ -122,7 +120,6 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
         const mx = (x1 + x2) / 2 - uy * 18, my = (y1 + y2) / 2 + ux * 18;
         const faded = isFaded(edge.from, edge.to);
         const color = edgeColor(edge);
-        // label midpoint along quadratic bezier at t=0.5
         const lx = (x1 + 2 * mx + x2) / 4;
         const ly = (y1 + 2 * my + y2) / 4 - 5;
         return (
@@ -143,7 +140,6 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
                 fontSize="10"
                 fontWeight="600"
                 className="font-sans tabular-nums"
-                // Background-colored halo keeps the amount readable where it crosses a line
                 style={{ fill: INK, stroke: PAPER, strokeWidth: 3, paintOrder: "stroke" }}
               >
                 {formatRupiah(Math.round(edge.amount))}
@@ -153,7 +149,6 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
         );
       })}
 
-      {/* Nodes */}
       {names.map((name) => {
         const pos = posMap[name];
         const bal = balanceMap[name] || 0;
@@ -168,7 +163,7 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
             role="button"
             tabIndex={0}
             aria-pressed={isSelected}
-            aria-label={`${name}${isMe ? " (kamu)" : ""}, lihat rincian`}
+            aria-label={flow.nodeLabel(name, isMe)}
             onClick={toggle}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -203,7 +198,6 @@ function FlowGraph({ names, edges, selected, onSelect, userName, pixelScale }: G
   );
 }
 
-// ─── Pan & zoom surface (fullscreen only) ─────────────────────────────────────
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 4;
@@ -340,9 +334,9 @@ function PanZoomSurface({ contentWidth, contentHeight, children }: { contentWidt
   );
 }
 
-// ─── Shared pieces ─────────────────────────────────────────────────────────────
 
 function TabSwitcher({ tab, onChange }: { tab: TabMode; onChange: (tab: TabMode) => void }) {
+  const { flow } = useI18n().m;
   return (
     <div className="flex overflow-hidden rounded-md border border-[var(--glass-border)] font-sans text-sm font-semibold" role="group" aria-label="Tampilan alur utang">
       {(["optimized", "intuitive"] as TabMode[]).map((t) => (
@@ -357,7 +351,7 @@ function TabSwitcher({ tab, onChange }: { tab: TabMode; onChange: (tab: TabMode)
               : "text-foreground/70 hover:text-foreground"
           }`}
         >
-          {t === "optimized" ? "Setelah diringkas" : "Per struk"}
+          {t === "optimized" ? flow.tabSimplified : flow.tabPerReceipt}
         </button>
       ))}
     </div>
@@ -365,13 +359,14 @@ function TabSwitcher({ tab, onChange }: { tab: TabMode; onChange: (tab: TabMode)
 }
 
 function Legend() {
+  const { flow } = useI18n().m;
   return (
     <div className="text-foreground/75 flex justify-center gap-5 font-sans text-xs">
       <span className="flex items-center gap-1.5">
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#4ade80]" /> Menerima uang
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#4ade80]" /> {flow.legendReceives}
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#f87171]" /> Membayar
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#f87171]" /> {flow.legendPays}
       </span>
     </div>
   );
@@ -383,9 +378,8 @@ interface NarrativeData {
   netBal: number;
 }
 
-// The section heading, the +/− sign and the colour already say which way the money goes,
-// so each row shows who (initials, like the rest of the app) instead of a decorative arrow
 function CounterpartyRow({ name, billName, amount, incoming }: { name: string; billName?: string; amount: number; incoming: boolean }) {
+  const { flow } = useI18n().m;
   return (
     <li className="flex items-center gap-2.5">
       <span
@@ -396,7 +390,7 @@ function CounterpartyRow({ name, billName, amount, incoming }: { name: string; b
       </span>
       <span className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-sm font-medium" title={name}>{name}</span>
-        {billName && <span className="text-foreground/70 block truncate text-xs">di {billName}</span>}
+        {billName && <span className="text-foreground/70 block truncate text-xs">{flow.atBill(billName)}</span>}
       </span>
       <span className={`shrink-0 text-sm font-semibold tabular-nums ${incoming ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
         {incoming ? "+" : "−"}{formatRupiah(Math.round(amount))}
@@ -406,6 +400,8 @@ function CounterpartyRow({ name, billName, amount, incoming }: { name: string; b
 }
 
 function Narrative({ selected, narrative, userName, tab }: { selected: string; narrative: NarrativeData; userName: string; tab: TabMode }) {
+  const { m } = useI18n();
+  const flow = m.flow;
   return (
     <div className="space-y-3 rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 font-sans text-sm">
       <div className="flex flex-wrap items-center gap-2">
@@ -414,23 +410,23 @@ function Narrative({ selected, narrative, userName, tab }: { selected: string; n
         </div>
         <span className="text-foreground font-bold">{selected}</span>
         {userName !== "" && selected === userName && (
-          <span className="text-foreground/70 text-xs">(kamu)</span>
+          <span className="text-foreground/70 text-xs">{m.common.youTag}</span>
         )}
         {narrative.netBal > 0.5 && (
           <span className="ml-auto text-xs font-semibold text-green-700 tabular-nums dark:text-green-400">
-            Bersih +{formatRupiah(Math.round(narrative.netBal))}
+            {flow.net("+", Math.round(narrative.netBal))}
           </span>
         )}
         {narrative.netBal < -0.5 && (
           <span className="ml-auto text-xs font-semibold text-red-700 tabular-nums dark:text-red-400">
-            Bersih −{formatRupiah(Math.round(-narrative.netBal))}
+            {flow.net("−", Math.round(-narrative.netBal))}
           </span>
         )}
       </div>
 
       {narrative.receiving.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-green-700 dark:text-green-400">Menerima dari</p>
+          <p className="text-xs font-semibold text-green-700 dark:text-green-400">{flow.receivesFrom}</p>
           <ul className="space-y-2">
             {narrative.receiving.map((t, i) => (
               <CounterpartyRow key={i} name={t.from} billName={t.billName} amount={t.amount} incoming />
@@ -441,7 +437,7 @@ function Narrative({ selected, narrative, userName, tab }: { selected: string; n
 
       {narrative.paying.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-red-700 dark:text-red-400">Membayar ke</p>
+          <p className="text-xs font-semibold text-red-700 dark:text-red-400">{flow.paysTo}</p>
           <ul className="space-y-2">
             {narrative.paying.map((t, i) => (
               <CounterpartyRow key={i} name={t.to} billName={t.billName} amount={t.amount} incoming={false} />
@@ -451,7 +447,7 @@ function Narrative({ selected, narrative, userName, tab }: { selected: string; n
       )}
 
       {narrative.receiving.length === 0 && narrative.paying.length === 0 && (
-        <p className="text-foreground/75 text-xs">{selected} tidak perlu transfer atau menerima apa pun.</p>
+        <p className="text-foreground/75 text-xs">{flow.settled(selected)}</p>
       )}
 
       {(narrative.receiving.length > 0 || narrative.paying.length > 0) && (
@@ -459,11 +455,11 @@ function Narrative({ selected, narrative, userName, tab }: { selected: string; n
           <p className="text-foreground/75 text-xs leading-relaxed">
             {tab === "optimized"
               ? narrative.netBal > 0.5
-                ? `${selected} menalangi pembayaran grup. Yang lain berutang ${formatRupiah(Math.round(narrative.netBal))} ke ${selected}.`
+                ? flow.creditorStory(selected, Math.round(narrative.netBal))
                 : narrative.netBal < -0.5
-                ? `${selected} memesan lebih banyak dari yang dia bayar di awal, jadi berutang ${formatRupiah(Math.round(-narrative.netBal))}.`
-                : `Pembayaran dan pesanan ${selected} sudah seimbang.`
-              : `Pilih "Setelah diringkas" untuk melihat jumlah transfer paling sedikit.`}
+                ? flow.debtorStory(selected, Math.round(-narrative.netBal))
+                : flow.balancedStory(selected)
+              : flow.perReceiptHint}
           </p>
         </div>
       )}
@@ -471,7 +467,6 @@ function Narrative({ selected, narrative, userName, tab }: { selected: string; n
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
 
 const FULLSCREEN_SCALE = 1.4;
 
@@ -480,6 +475,7 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
   const [selected, setSelected] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fullscreenTitleId = useId();
+  const { flow } = useI18n().m;
 
   const names = useMemo(() => participants.map((p) => p.name), [participants]);
 
@@ -544,14 +540,13 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
     <div className="space-y-4">
       <TabSwitcher tab={tab} onChange={changeTab} />
 
-      {/* Context caption */}
       <p className="text-foreground/75 px-1 text-center font-sans text-xs leading-relaxed">
         {tab === "optimized"
-          ? "Utang digabung supaya jumlah transfer paling sedikit."
-          : "Utang asli di tiap struk sebelum diringkas."}{" "}
+          ? flow.simplifiedCaption
+          : flow.perReceiptCaption}{" "}
         {isCrowded
-          ? `${involvedNames.length} orang terlibat. Buka layar penuh untuk menggeser dan memperbesar.`
-          : "Ketuk nama untuk melihat rinciannya."}
+          ? flow.crowdedHint(involvedNames.length)
+          : flow.tapHint}
       </p>
 
       <div className="relative flex justify-center">
@@ -574,7 +569,7 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
           </svg>
-          Layar penuh
+          {flow.fullscreen}
         </button>
       </div>
 
@@ -591,14 +586,14 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
         >
           <header className="flex items-center justify-between gap-3 border-b border-[var(--glass-border)] px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
             <div className="min-w-0">
-              <h2 id={fullscreenTitleId} className="font-serif text-xl leading-tight">Alur utang</h2>
-              <p className="text-foreground/70 font-sans text-xs">Geser untuk berpindah, cubit atau scroll untuk zoom</p>
+              <h2 id={fullscreenTitleId} className="font-serif text-xl leading-tight">{flow.fullscreenTitle}</h2>
+              <p className="text-foreground/70 font-sans text-xs">{flow.fullscreenHint}</p>
             </div>
             <button
               type="button"
               autoFocus
               onClick={() => setIsFullscreen(false)}
-              aria-label="Tutup layar penuh"
+              aria-label={flow.closeFullscreen}
               className="text-foreground/80 hover:text-foreground rounded-glass-sm focus-visible:outline-sage -mr-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center hover:bg-[var(--glass-highlight)] focus-visible:outline-2"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -634,7 +629,7 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
                 <Narrative selected={selected} narrative={narrative} userName={userName} tab={tab} />
               </div>
             ) : (
-              <p className="text-foreground/75 text-center font-sans text-xs">Ketuk nama untuk melihat rinciannya.</p>
+              <p className="text-foreground/75 text-center font-sans text-xs">{flow.tapHint}</p>
             )}
             <Legend />
           </div>

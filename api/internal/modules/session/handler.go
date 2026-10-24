@@ -2,14 +2,15 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"meris-backend/internal/apperrors"
-	"meris-backend/internal/platform/httpserver/generated"
 	"meris-backend/internal/platform/httpresponse"
+	"meris-backend/internal/platform/httpserver/generated"
 )
 
 type Handler struct {
@@ -22,51 +23,89 @@ func NewHandler(service *Service) *Handler {
 
 const maxReceiptUploadSize = 5 * 1024 * 1024
 
-func (h *Handler) readReceiptImage(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+func (h *Handler) readReceiptImage(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxReceiptUploadSize)
 
 	file, _, err := r.FormFile("receipt")
 	if err != nil {
-		if err.Error() == "http: request body too large" || strings.Contains(err.Error(), "too large") {
-			httpresponse.WriteError(w, http.StatusRequestEntityTooLarge, "file_too_large", "Upload size exceeded the 5MB limit")
-			return nil, false
+		if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
+			return nil, ErrFileTooLarge
 		}
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_file", "Invalid receipt image")
-		return nil, false
+		return nil, apperrors.NewAppError(ErrInvalidFile.Code, nil, ErrInvalidFile.HTTPStatus, err)
 	}
 	defer func() { _ = file.Close() }()
 
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusInternalServerError, "read_failed", "Failed to read image")
-		return nil, false
+		return nil, fmt.Errorf("read receipt upload: %w", err)
 	}
 
-	contentType := http.DetectContentType(imageBytes)
-	if !strings.HasPrefix(contentType, "image/") {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_content_type", "Uploaded file must be a valid image")
-		return nil, false
+	if !strings.HasPrefix(http.DetectContentType(imageBytes), "image/") {
+		return nil, ErrNotAnImage
 	}
 
-	return imageBytes, true
+	return imageBytes, nil
 }
 
-func (h *Handler) writeServiceError(w http.ResponseWriter, err error) {
-	if errors.Is(err, ErrUnauthorized) {
-		httpresponse.WriteError(w, http.StatusUnauthorized, "unauthorized", err.Error())
-	} else {
-		httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
-	}
+type claimPayload struct {
+	ParticipantID uint    `json:"participantId"`
+	ItemID        string  `json:"itemId"`
+	Shares        float64 `json:"shares"`
+	Token         string  `json:"token"`
 }
 
-func (h *Handler) executeDelete(w http.ResponseWriter, token string, deleteFn func() error) {
+type paymentInfoPayload struct {
+	PayerBankName    string `json:"payerBankName"`
+	PayerBankAccount string `json:"payerBankAccount"`
+	Token            string `json:"token"`
+}
+
+type itemPayload struct {
+	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
+	Quantity int32   `json:"quantity"`
+	Token    string  `json:"token"`
+}
+
+type billPayload struct {
+	PayerName     string  `json:"payerName"`
+	Name          string  `json:"name"`
+	Tax           float64 `json:"tax"`
+	ServiceCharge float64 `json:"serviceCharge"`
+	Discount      float64 `json:"discount"`
+	OtherCharges  float64 `json:"otherCharges"`
+	GrandTotal    float64 `json:"grandTotal"`
+	Token         string  `json:"token"`
+}
+
+func handleJSON[P any](w http.ResponseWriter, r *http.Request, successStatus int, call func(P) error) {
+	var payload P
+	if !decodeBody(w, r, &payload) {
+		return
+	}
+	if err := call(payload); err != nil {
+		httpresponse.RespondError(w, r, err)
+		return
+	}
+	w.WriteHeader(successStatus)
+}
+
+func decodeBody(w http.ResponseWriter, r *http.Request, target any) bool {
+	if err := httpresponse.DecodeJSON(r, target); err != nil {
+		httpresponse.RespondError(w, r, err)
+		return false
+	}
+	return true
+}
+
+func (h *Handler) executeDelete(w http.ResponseWriter, r *http.Request, token string, deleteFn func() error) {
 	if token == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		httpresponse.RespondError(w, r, apperrors.ErrMissingToken)
 		return
 	}
 
 	if err := deleteFn(); err != nil {
-		h.writeServiceError(w, err)
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -74,8 +113,9 @@ func (h *Handler) executeDelete(w http.ResponseWriter, token string, deleteFn fu
 }
 
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
-	imageBytes, ok := h.readReceiptImage(w, r)
-	if !ok {
+	imageBytes, err := h.readReceiptImage(w, r)
+	if err != nil {
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -91,13 +131,13 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		payerBankAccount,
 	)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusInternalServerError, "creation_failed", err.Error())
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
 	resp, err := h.service.GetCompiledSession(r.Context(), session.ID)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusInternalServerError, "fetch_failed", err.Error())
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -113,7 +153,7 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetSession(w http.ResponseWriter, r *http.Request, id string) {
 	resp, err := h.service.GetCompiledSession(r.Context(), id)
 	if err != nil {
-		httpresponse.WriteLocalizedError(w, r, NewSessionNotFoundError(id))
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -125,21 +165,19 @@ func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string)
 		Name  string `json:"name"`
 		Token string `json:"token"`
 	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+	if !decodeBody(w, r, &payload) {
 		return
 	}
 
 	name := strings.TrimSpace(payload.Name)
 	if name == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_name", "Name cannot be empty")
+		httpresponse.RespondError(w, r, apperrors.ErrInvalidName)
 		return
 	}
 
-	// The conflict error already names the participant who holds the name
 	p, err := h.service.JoinSession(r.Context(), id, name, payload.Token)
 	if err != nil {
-		httpresponse.WriteLocalizedError(w, r, err)
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -152,56 +190,27 @@ func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string)
 }
 
 func (h *Handler) ClaimItem(w http.ResponseWriter, r *http.Request, id string) {
-	var payload struct {
-		ParticipantID uint    `json:"participantId"`
-		ItemID        string  `json:"itemId"`
-		Shares        float64 `json:"shares"`
-		Token         string  `json:"token"`
-	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
-		return
-	}
-
-	err := h.service.ClaimItem(r.Context(), id, payload.ParticipantID, payload.ItemID, payload.Shares, payload.Token)
-	if err != nil {
-		if appErr, ok := errors.AsType[*apperrors.AppError](err); ok {
-			switch appErr.Code {
-			case "errors.unauthorized":
-				httpresponse.WriteLocalizedError(w, r, ErrUnauthorized)
-			case "errors.quantity_exceeded":
-				httpresponse.WriteLocalizedError(w, r, NewQuantityExceededError())
-			case "errors.item_not_found":
-				httpresponse.WriteLocalizedError(w, r, NewItemNotFoundError(payload.ItemID))
-			default:
-				httpresponse.WriteLocalizedError(w, r, err)
-			}
-		} else {
-			httpresponse.WriteLocalizedError(w, r, err)
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	handleJSON(w, r, http.StatusOK, func(p claimPayload) error {
+		return h.service.ClaimItem(r.Context(), id, p.ParticipantID, p.ItemID, p.Shares, p.Token)
+	})
 }
 
 func (h *Handler) RenameItem(w http.ResponseWriter, r *http.Request, id string, itemId string) {
 	var payload struct {
 		Name string `json:"name"`
 	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+	if !decodeBody(w, r, &payload) {
 		return
 	}
 
 	if strings.TrimSpace(payload.Name) == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_name", "Name cannot be empty")
+		httpresponse.RespondError(w, r, apperrors.ErrInvalidName)
 		return
 	}
 
 	err := h.service.RenameItem(r.Context(), id, itemId, payload.Name)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -211,19 +220,19 @@ func (h *Handler) RenameItem(w http.ResponseWriter, r *http.Request, id string, 
 func (h *Handler) DeleteParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string, params generated.DeleteParticipantParams) {
 	callerToken := params.Token
 	if callerToken == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		httpresponse.RespondError(w, r, apperrors.ErrMissingToken)
 		return
 	}
 
 	pID, err := strconv.ParseUint(participantId, 10, 32)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_id", "Invalid participant ID")
+		httpresponse.RespondError(w, r, apperrors.ErrInvalidID)
 		return
 	}
 
 	err = h.service.DeleteParticipant(r.Context(), id, uint(pID), callerToken)
 	if err != nil {
-		h.writeServiceError(w, err)
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -231,76 +240,33 @@ func (h *Handler) DeleteParticipant(w http.ResponseWriter, r *http.Request, id s
 }
 
 func (h *Handler) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string) {
-	var payload struct {
-		PayerBankName    string `json:"payerBankName"`
-		PayerBankAccount string `json:"payerBankAccount"`
-		Token            string `json:"token"`
-	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
-		return
-	}
-
-	err := h.service.UpdatePaymentInfo(r.Context(), id, payload.PayerBankName, payload.PayerBankAccount, payload.Token)
-	if err != nil {
-		h.writeServiceError(w, err)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	handleJSON(w, r, http.StatusOK, func(p paymentInfoPayload) error {
+		return h.service.UpdatePaymentInfo(r.Context(), id, p.PayerBankName, p.PayerBankAccount, p.Token)
+	})
 }
 
 func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request, id string) {
-	var payload struct {
-		Name     string  `json:"name"`
-		Price    float64 `json:"price"`
-		Quantity int32   `json:"quantity"`
-		Token    string  `json:"token"`
-	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
-		return
-	}
-
-	err := h.service.AddItem(r.Context(), id, payload.Name, payload.Price, payload.Quantity, payload.Token)
-	if err != nil {
-		h.writeServiceError(w, err)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
+	handleJSON(w, r, http.StatusCreated, func(p itemPayload) error {
+		return h.service.AddItem(r.Context(), id, p.Name, p.Price, p.Quantity, p.Token)
+	})
 }
 
 func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request, id string, itemId string) {
-	var payload struct {
-		Name     string  `json:"name"`
-		Price    float64 `json:"price"`
-		Quantity int32   `json:"quantity"`
-		Token    string  `json:"token"`
-	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
-		return
-	}
-
-	err := h.service.UpdateItem(r.Context(), id, itemId, payload.Name, payload.Price, payload.Quantity, payload.Token)
-	if err != nil {
-		h.writeServiceError(w, err)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	handleJSON(w, r, http.StatusOK, func(p itemPayload) error {
+		return h.service.UpdateItem(r.Context(), id, itemId, p.Name, p.Price, p.Quantity, p.Token)
+	})
 }
 
 func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, id string, itemId string, params generated.DeleteItemParams) {
-	h.executeDelete(w, params.Token, func() error {
+	h.executeDelete(w, r, params.Token, func() error {
 		return h.service.DeleteItem(r.Context(), id, itemId, params.Token)
 	})
 }
 
 func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
-	imageBytes, ok := h.readReceiptImage(w, r)
-	if !ok {
+	imageBytes, err := h.readReceiptImage(w, r)
+	if err != nil {
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -308,9 +274,9 @@ func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
 	billName := r.FormValue("name")
 	token := r.FormValue("token")
 
-	err := h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
+	err = h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
 	if err != nil {
-		h.writeServiceError(w, err)
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -318,38 +284,27 @@ func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func (h *Handler) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
-	h.executeDelete(w, params.Token, func() error {
+	h.executeDelete(w, r, params.Token, func() error {
 		return h.service.DeleteBill(r.Context(), id, billId, params.Token)
 	})
 }
 
 func (h *Handler) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
-	var payload struct {
-		PayerName     string  `json:"payerName"`
-		Name          string  `json:"name"`
-		Tax           float64 `json:"tax"`
-		ServiceCharge float64 `json:"serviceCharge"`
-		GrandTotal    float64 `json:"grandTotal"`
-		Token         string  `json:"token"`
-	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
-		return
-	}
-
-	err := h.service.UpdateBill(r.Context(), id, billId, payload.Name, payload.PayerName, payload.Tax, payload.ServiceCharge, payload.GrandTotal, payload.Token)
-	if err != nil {
-		h.writeServiceError(w, err)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	handleJSON(w, r, http.StatusOK, func(p billPayload) error {
+		charges := BillCharges{
+			Tax:           p.Tax,
+			ServiceCharge: p.ServiceCharge,
+			Discount:      p.Discount,
+			OtherCharges:  p.OtherCharges,
+		}
+		return h.service.UpdateBill(r.Context(), id, billId, p.Name, p.PayerName, charges, p.GrandTotal, p.Token)
+	})
 }
 
 func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
 	pID, err := strconv.ParseInt(participantId, 10, 64)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_id", "Invalid participant ID")
+		httpresponse.RespondError(w, r, apperrors.ErrInvalidID)
 		return
 	}
 
@@ -358,14 +313,13 @@ func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Reque
 		BankAccount string `json:"bankAccount"`
 		Token       string `json:"token"`
 	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+	if !decodeBody(w, r, &payload) {
 		return
 	}
 
 	err = h.service.UpdateParticipantBankInfo(r.Context(), id, pID, payload.BankName, payload.BankAccount, payload.Token)
 	if err != nil {
-		h.writeServiceError(w, err)
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -375,7 +329,7 @@ func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Reque
 func (h *Handler) RenameParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string) {
 	pID, err := strconv.ParseInt(participantId, 10, 64)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_id", "Invalid participant ID")
+		httpresponse.RespondError(w, r, apperrors.ErrInvalidID)
 		return
 	}
 
@@ -383,24 +337,23 @@ func (h *Handler) RenameParticipant(w http.ResponseWriter, r *http.Request, id s
 		Name  string `json:"name"`
 		Token string `json:"token"`
 	}
-	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+	if !decodeBody(w, r, &payload) {
 		return
 	}
 
 	name := strings.TrimSpace(payload.Name)
 	if name == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_name", "Name cannot be empty")
+		httpresponse.RespondError(w, r, apperrors.ErrInvalidName)
 		return
 	}
 	if payload.Token == "" {
-		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		httpresponse.RespondError(w, r, apperrors.ErrMissingToken)
 		return
 	}
 
 	p, err := h.service.RenameParticipant(r.Context(), id, pID, name, payload.Token)
 	if err != nil {
-		httpresponse.WriteLocalizedError(w, r, err)
+		httpresponse.RespondError(w, r, err)
 		return
 	}
 
@@ -411,4 +364,3 @@ func (h *Handler) RenameParticipant(w http.ResponseWriter, r *http.Request, id s
 		Token:     p.Token,
 	})
 }
-

@@ -15,9 +15,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// Init installs the global tracer and meter providers, both exporting over OTLP gRPC to the collector.
-// The export interval for metrics is read from OTEL_METRIC_EXPORT_INTERVAL by the SDK.
-// The returned function flushes and shuts both providers down.
 func Init(ctx context.Context, serviceName, env, otlpEndpoint string) (func(context.Context) error, error) {
 	if env == "" {
 		env = "production"
@@ -48,7 +45,7 @@ func Init(ctx context.Context, serviceName, env, otlpEndpoint string) (func(cont
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(traceExporter),
 		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()), // 100% trace sampling
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 
 	metricExporter, err := otlpmetricgrpc.New(ctx,

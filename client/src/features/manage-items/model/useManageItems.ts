@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback } from "react";
-import { useSession } from "@/entities/session";
+import { useSession, type BillCharges } from "@/entities/session";
 import { apiFetch } from "@/shared/api/client";
+import { prepareReceiptImage } from "@/shared/lib/receiptImage";
+import { apiErrorMessage, useI18n } from "@/shared/i18n";
 
 export function useManageItems() {
   const { sessionId, participantToken } = useSession();
+  const { m } = useI18n();
 
   const addItem = useCallback(async (name: string, price: number, quantity: number) => {
     try {
@@ -45,10 +48,10 @@ export function useManageItems() {
     }
   }, [sessionId, participantToken]);
 
-  const addBill = useCallback(async (file: File, payerName: string, billName: string) => {
+  const addBill = useCallback(async (file: File, payerName: string, billName: string): Promise<string | null> => {
     try {
       const formData = new FormData();
-      formData.append("receipt", file);
+      formData.append("receipt", await prepareReceiptImage(file));
       formData.append("payerName", payerName);
       formData.append("name", billName);
       formData.append("token", participantToken);
@@ -57,22 +60,21 @@ export function useManageItems() {
         method: "POST",
         body: formData,
       });
-      return true;
+      return null;
     } catch (err) {
       console.error("Failed to add bill stop:", err);
-      return false;
+      return apiErrorMessage(err, m, m.addBill.failed);
     }
-  }, [sessionId, participantToken]);
+  }, [sessionId, participantToken, m]);
 
-  const updateBill = useCallback(async (billId: string, name: string, payerName: string, tax: number, serviceCharge: number, grandTotal: number) => {
+  const updateBill = useCallback(async (billId: string, name: string, payerName: string, charges: BillCharges, grandTotal: number) => {
     try {
       await apiFetch(`/session/${sessionId}/bill/${billId}`, {
         method: "PUT",
         body: {
           name,
           payerName,
-          tax,
-          serviceCharge,
+          ...charges,
           grandTotal,
           token: participantToken,
         },

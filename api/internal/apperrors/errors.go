@@ -1,14 +1,16 @@
 package apperrors
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 )
 
 type AppError struct {
-	Code       string         // Translation Key, e.g. "errors.unauthorized"
-	Params     map[string]any // Interpolation parameters, e.g. {"name": "John"}
-	HTTPStatus int            // Status code mapping, e.g. 404
-	Err        error          // Internal original error for server logs
+	Code       string
+	Params     map[string]any
+	HTTPStatus int
+	Err        error
 }
 
 func (e *AppError) Error() string {
@@ -22,6 +24,11 @@ func (e *AppError) Unwrap() error {
 	return e.Err
 }
 
+func (e *AppError) Is(target error) bool {
+	other, ok := target.(*AppError)
+	return ok && other.Code == e.Code
+}
+
 func NewAppError(code string, params map[string]any, httpStatus int, err error) *AppError {
 	return &AppError{
 		Code:       code,
@@ -30,3 +37,13 @@ func NewAppError(code string, params map[string]any, httpStatus int, err error) 
 		Err:        err,
 	}
 }
+
+func NewInvalidRequestError(cause error) *AppError {
+	return NewAppError("errors.invalid_request", nil, http.StatusBadRequest, cause)
+}
+
+var (
+	ErrMissingToken = NewAppError("errors.missing_token", nil, http.StatusBadRequest, errors.New("missing token"))
+	ErrInvalidID    = NewAppError("errors.invalid_id", nil, http.StatusBadRequest, errors.New("invalid id"))
+	ErrInvalidName  = NewAppError("errors.invalid_name", nil, http.StatusBadRequest, errors.New("name cannot be empty"))
+)

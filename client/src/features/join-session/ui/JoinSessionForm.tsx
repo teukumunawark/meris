@@ -4,9 +4,11 @@ import React, { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
+import { useI18n } from "@/shared/i18n";
 
 export default function JoinSessionForm() {
   const router = useRouter();
+  const { m } = useI18n();
   const inputId = useId();
   const [sessionId, setSessionId] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -14,10 +16,9 @@ export default function JoinSessionForm() {
   const handleJoinSession = () => {
     let trimmed = sessionId.trim();
     if (!trimmed) {
-      setValidationError("Masukkan kode sesi atau tempel link yang dibagikan temanmu.");
+      setValidationError(m.joinForm.required);
       return;
     }
-    // Automatically extract session ID if user pastes a full URL (e.g. from WhatsApp)
     if (trimmed.includes("/session/")) {
       const parts = trimmed.split("/session/");
       trimmed = parts[parts.length - 1].split(/[?#]/)[0];
@@ -31,7 +32,7 @@ export default function JoinSessionForm() {
       <div className="flex flex-col gap-3">
         <div className="space-y-1.5">
           <label htmlFor={inputId} className="text-foreground/75 block font-sans text-xs font-medium">
-            Kode atau Link Sesi
+            {m.joinForm.label}
           </label>
           <Input
             id={inputId}
@@ -44,18 +45,18 @@ export default function JoinSessionForm() {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleJoinSession();
             }}
-            placeholder="Tempel link atau ketik kode sesi..." 
+            placeholder={m.joinForm.placeholder}
             className="block w-full text-base"
           />
         </div>
         <p className="text-foreground/45 font-sans text-xs leading-relaxed">
-          Temanmu bisa membagikan link sesi secara langsung lewat WhatsApp atau pesan lainnya.
+          {m.joinForm.help}
         </p>
         {validationError && (
           <p className="font-sans text-xs text-rose-400">{validationError}</p>
         )}
         <Button onClick={handleJoinSession} className="min-h-[44px] w-full">
-          Masuk ke Sesi
+          {m.joinForm.submit}
         </Button>
       </div>
     </div>
