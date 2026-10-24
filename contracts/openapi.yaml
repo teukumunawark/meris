@@ -506,6 +506,60 @@ paths:
       responses:
         '200':
           description: Bank info updated
+  /session/{id}/participant/{participantId}/name:
+    put:
+      summary: Rename a participant, keeping their claims and token
+      operationId: RenameParticipant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: participantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                token:
+                  type: string
+              required:
+                - name
+                - token
+      responses:
+        '200':
+          description: Participant renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '400':
+          description: Invalid participant ID, empty name, or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Token does not match the participant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Name already taken in this session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     SessionCreationResponse:

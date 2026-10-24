@@ -108,3 +108,38 @@ func TestReadReceiptImage_TooLarge(t *testing.T) {
 		t.Errorf("expected file_too_large in response, got %s", w.Body.String())
 	}
 }
+
+func TestRenameParticipant_RejectsBadInput(t *testing.T) {
+	// Every case fails validation before the service is reached, so a nil service is safe
+	h := &Handler{}
+
+	cases := []struct {
+		name          string
+		participantID string
+		body          string
+		wantCode      string
+	}{
+		{"non-numeric participant ID", "abc", `{"name":"Andika","token":"t"}`, "invalid_id"},
+		{"malformed JSON", "7", `{"name":`, "invalid_request"},
+		{"empty name", "7", `{"name":"","token":"t"}`, "invalid_name"},
+		{"whitespace-only name", "7", `{"name":"   ","token":"t"}`, "invalid_name"},
+		{"missing token", "7", `{"name":"Andika"}`, "missing_token"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPut, "/session/s1/participant/"+tc.participantID+"/name", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			h.RenameParticipant(w, req, "s1", tc.participantID)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+			}
+			if !strings.Contains(w.Body.String(), tc.wantCode) {
+				t.Errorf("expected %s in response, got %s", tc.wantCode, w.Body.String())
+			}
+		})
+	}
+}

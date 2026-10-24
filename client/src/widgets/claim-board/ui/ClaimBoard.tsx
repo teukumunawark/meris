@@ -12,6 +12,7 @@ import { GlassPanel } from "@/shared/ui/GlassPanel";
 import { formatRupiah, getInitials } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
 import { useRemoveParticipant } from "@/features/remove-participant";
+import { RenameParticipantForm } from "@/features/rename-participant";
 import { useMounted, useOnboarding } from "@/shared/hooks";
 import type { ReceiptItem } from "@/shared/types";
 import { BillGroupCard } from "./BillGroupCard";
@@ -29,7 +30,7 @@ export default function ClaimBoard() {
     bills
   } = useSession();
 
-  const { joinSession, changeName, joinError } = useJoinSession();
+  const { joinSession, joinError } = useJoinSession();
   const { updateClaim } = useClaimItem();
   const { renameItem } = useRenameItem();
   const { addItem, addBill, updateBill, deleteBill } = useManageItems();
@@ -47,6 +48,7 @@ export default function ClaimBoard() {
   const [newItemPrice, setNewItemPrice] = useState("");
   const [newItemQty, setNewItemQty] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const handleConfirmRemoveParticipant = async () => {
     if (!participantToDelete) return;
@@ -205,7 +207,11 @@ export default function ClaimBoard() {
         </div>
 
         {/* User Status Bar if Joined */}
-        {isJoined ? (
+        {isJoined && isRenaming ? (
+          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2.5">
+            <RenameParticipantForm onDone={() => setIsRenaming(false)} />
+          </div>
+        ) : isJoined ? (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
               <div className="bg-sage text-background flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
@@ -216,7 +222,7 @@ export default function ClaimBoard() {
                 <span className="text-foreground/40 ml-1">(Anda)</span>
               </p>
               <button
-                onClick={changeName}
+                onClick={() => setIsRenaming(true)}
                 className="text-foreground/40 hover:text-sage ml-1 cursor-pointer text-[11px] underline transition-colors"
                 title="Ganti Nama"
               >
@@ -362,7 +368,9 @@ export default function ClaimBoard() {
             <div className="hidden h-4 w-px bg-(--glass-border) md:block" />
 
             <div className="flex min-w-0 justify-start md:justify-end">
-              {isJoined ? (
+              {isJoined && isRenaming ? (
+                <RenameParticipantForm onDone={() => setIsRenaming(false)} className="w-full md:w-[360px]" />
+              ) : isJoined ? (
                 <div className="flex min-w-0 flex-row items-center gap-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div 
@@ -375,10 +383,10 @@ export default function ClaimBoard() {
                     </p>
                   </div>
                   <button
-                    onClick={changeName}
+                    onClick={() => setIsRenaming(true)}
                     className="text-foreground/60 shrink-0 cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3.5 py-1.5 text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-all hover:bg-[var(--glass-highlight)] active:scale-95"
                   >
-                    Switch Account
+                    Rename
                   </button>
                 </div>
               ) : (

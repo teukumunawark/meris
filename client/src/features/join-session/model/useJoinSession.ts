@@ -8,7 +8,7 @@ import type { components } from "@/shared/api/generated/api";
 type ParticipantResponse = components["schemas"]["ParticipantResponse"];
 
 export function useJoinSession() {
-  const { sessionId, setParticipantData, setIsJoined } = useSession();
+  const { sessionId, setParticipantData } = useSession();
   const [joinError, setJoinError] = useState<string | null>(null);
 
   const joinSession = async (name: string) => {
@@ -53,9 +53,5 @@ export function useJoinSession() {
     }
   };
 
-  const changeName = () => {
-    setIsJoined(false);
-  };
-
-  return { joinSession, changeName, joinError };
+  return { joinSession, joinError };
 }

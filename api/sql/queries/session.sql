@@ -100,3 +100,18 @@ DELETE FROM bills WHERE id = $1 AND session_id = $2;
 UPDATE participants
 SET bank_name = $1, bank_account = $2
 WHERE id = $3 AND session_id = $4;
+
+-- name: UpdateParticipantName :exec
+UPDATE participants
+SET name = $1
+WHERE id = $2 AND session_id = $3;
+
+-- name: RenameSessionPayer :exec
+UPDATE sessions
+SET payer_name = sqlc.arg(new_name)
+WHERE id = sqlc.arg(session_id) AND payer_name = sqlc.arg(old_name);
+
+-- name: RenameBillsPayer :exec
+UPDATE bills
+SET payer_name = sqlc.arg(new_name)
+WHERE session_id = sqlc.arg(session_id) AND payer_name = sqlc.arg(old_name);

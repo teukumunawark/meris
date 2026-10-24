@@ -369,3 +369,43 @@ func (h *Handler) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *Handler) RenameParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string) {
+	pID, err := strconv.ParseInt(participantId, 10, 64)
+	if err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_id", "Invalid participant ID")
+		return
+	}
+
+	var payload struct {
+		Name  string `json:"name"`
+		Token string `json:"token"`
+	}
+	if err := httpresponse.DecodeJSON(r, &payload); err != nil {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_name", "Name cannot be empty")
+		return
+	}
+	if payload.Token == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "missing_token", "Missing token parameter")
+		return
+	}
+
+	p, err := h.service.RenameParticipant(r.Context(), id, pID, name, payload.Token)
+	if err != nil {
+		httpresponse.WriteLocalizedError(w, r, err)
+		return
+	}
+
+	httpresponse.WriteJSON(w, http.StatusOK, JoinSessionResult{
+		ID:        p.ID,
+		SessionID: p.SessionID,
+		Name:      p.Name,
+		Token:     p.Token,
+	})
+}
+

@@ -75,3 +75,8 @@ func (s *OpenAPIServer) UpdateParticipantBankInfo(w http.ResponseWriter, r *http
 	s.sessionHandler.UpdateParticipantBankInfo(w, r, id, participantId)
 }
 
+// RenameParticipant delegates to sessionHandler to rename a participant in place.
+func (s *OpenAPIServer) RenameParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string) {
+	s.sessionHandler.RenameParticipant(w, r, id, participantId)
+}
+

@@ -454,6 +454,40 @@ func (q *Queries) GetSessionForUpdate(ctx context.Context, id string) (Session, 
 	return i, err
 }
 
+const renameBillsPayer = `-- name: RenameBillsPayer :exec
+UPDATE bills
+SET payer_name = $1
+WHERE session_id = $2 AND payer_name = $3
+`
+
+type RenameBillsPayerParams struct {
+	NewName   string `db:"new_name" json:"new_name"`
+	SessionID string `db:"session_id" json:"session_id"`
+	OldName   string `db:"old_name" json:"old_name"`
+}
+
+func (q *Queries) RenameBillsPayer(ctx context.Context, arg RenameBillsPayerParams) error {
+	_, err := q.db.Exec(ctx, renameBillsPayer, arg.NewName, arg.SessionID, arg.OldName)
+	return err
+}
+
+const renameSessionPayer = `-- name: RenameSessionPayer :exec
+UPDATE sessions
+SET payer_name = $1
+WHERE id = $2 AND payer_name = $3
+`
+
+type RenameSessionPayerParams struct {
+	NewName   string `db:"new_name" json:"new_name"`
+	SessionID string `db:"session_id" json:"session_id"`
+	OldName   string `db:"old_name" json:"old_name"`
+}
+
+func (q *Queries) RenameSessionPayer(ctx context.Context, arg RenameSessionPayerParams) error {
+	_, err := q.db.Exec(ctx, renameSessionPayer, arg.NewName, arg.SessionID, arg.OldName)
+	return err
+}
+
 const updateBill = `-- name: UpdateBill :exec
 UPDATE bills
 SET payer_name = $1, name = $2, tax = $3, service_charge = $4, grand_total = $5
@@ -574,6 +608,23 @@ func (q *Queries) UpdateParticipantBankInfo(ctx context.Context, arg UpdateParti
 		arg.ID,
 		arg.SessionID,
 	)
+	return err
+}
+
+const updateParticipantName = `-- name: UpdateParticipantName :exec
+UPDATE participants
+SET name = $1
+WHERE id = $2 AND session_id = $3
+`
+
+type UpdateParticipantNameParams struct {
+	Name      string `db:"name" json:"name"`
+	ID        int64  `db:"id" json:"id"`
+	SessionID string `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) UpdateParticipantName(ctx context.Context, arg UpdateParticipantNameParams) error {
+	_, err := q.db.Exec(ctx, updateParticipantName, arg.Name, arg.ID, arg.SessionID)
 	return err
 }
 

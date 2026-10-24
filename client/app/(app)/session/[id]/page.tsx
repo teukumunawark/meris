@@ -26,15 +26,15 @@ export default function ClaimSessionPage({ params }: PageProps) {
 }
 
 function SessionPageContent() {
-  const { loadState, isJoined, participants, userName } = useSession();
+  const { loadState, isJoined, participants, participantId } = useSession();
   const mounted = useMounted();
   const [mobileTab, setMobileTab] = useState<"claims" | "settlement">("claims");
 
   const currentUserTotal = useMemo(() => {
-    if (!isJoined || !userName) return 0;
-    const match = participants.find(p => p.name.trim() === userName.trim());
+    if (!isJoined || participantId === null) return 0;
+    const match = participants.find(p => p.id === participantId);
     return match?.totalOwed || 0;
-  }, [isJoined, userName, participants]);
+  }, [isJoined, participantId, participants]);
 
   if (loadState === "notFound") {
     notFound();

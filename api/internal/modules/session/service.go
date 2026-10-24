@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"meris-backend/internal/platform/ai"
@@ -925,4 +926,78 @@ func (s *Service) UpdateParticipantBankInfo(ctx context.Context, sessionID strin
 
 	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
 	return nil
+}
+
+// RenameParticipant changes a participant's display name in place, so their claims, token and
+// bank info stay attached. Payer names are stored as text on the session and its bills, so
+// those are carried over to the new name in the same transaction.
+func (s *Service) RenameParticipant(ctx context.Context, sessionID string, participantID int64, newName, token string) (*sqlc.Participant, error) {
+	var renamed sqlc.Participant
+
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+		p, err := q.GetParticipant(ctx, participantID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrUnauthorized
+		}
+		if err != nil {
+			return err
+		}
+
+		if p.Token != token || p.SessionID != sessionID {
+			return ErrUnauthorized
+		}
+
+		renamed = p
+		if p.Name == newName {
+			return nil
+		}
+
+		existing, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      newName,
+		})
+		if err == nil && existing.ID != p.ID {
+			return NewNameConflictError(newName)
+		} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+
+		if err := q.UpdateParticipantName(ctx, sqlc.UpdateParticipantNameParams{
+			Name:      newName,
+			ID:        participantID,
+			SessionID: sessionID,
+		}); err != nil {
+			// 23505 is unique_violation: another request took the name between the check and the update
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
+				return NewNameConflictError(newName)
+			}
+			return err
+		}
+
+		if err := q.RenameSessionPayer(ctx, sqlc.RenameSessionPayerParams{
+			NewName:   newName,
+			SessionID: sessionID,
+			OldName:   p.Name,
+		}); err != nil {
+			return err
+		}
+
+		if err := q.RenameBillsPayer(ctx, sqlc.RenameBillsPayerParams{
+			NewName:   newName,
+			SessionID: sessionID,
+			OldName:   p.Name,
+		}); err != nil {
+			return err
+		}
+
+		renamed.Name = newName
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return &renamed, nil
 }

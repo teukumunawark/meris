@@ -232,6 +232,12 @@ type UpdateParticipantBankInfoJSONBody struct {
 	Token       string `json:"token"`
 }
 
+// RenameParticipantJSONBody defines parameters for RenameParticipant.
+type RenameParticipantJSONBody struct {
+	Name  string `json:"name"`
+	Token string `json:"token"`
+}
+
 // UpdatePaymentInfoJSONBody defines parameters for UpdatePaymentInfo.
 type UpdatePaymentInfoJSONBody struct {
 	PayerBankAccount string `json:"payerBankAccount"`
@@ -265,6 +271,9 @@ type JoinSessionJSONRequestBody JoinSessionJSONBody
 
 // UpdateParticipantBankInfoJSONRequestBody defines body for UpdateParticipantBankInfo for application/json ContentType.
 type UpdateParticipantBankInfoJSONRequestBody UpdateParticipantBankInfoJSONBody
+
+// RenameParticipantJSONRequestBody defines body for RenameParticipant for application/json ContentType.
+type RenameParticipantJSONRequestBody RenameParticipantJSONBody
 
 // UpdatePaymentInfoJSONRequestBody defines body for UpdatePaymentInfo for application/json ContentType.
 type UpdatePaymentInfoJSONRequestBody UpdatePaymentInfoJSONBody
@@ -310,6 +319,9 @@ type ServerInterface interface {
 	// Update bank details for a participant
 	// (PUT /session/{id}/participant/{participantId}/bank)
 	UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string)
+	// Rename a participant, keeping their claims and token
+	// (PUT /session/{id}/participant/{participantId}/name)
+	RenameParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string)
 	// Update payment information for a session
 	// (PUT /session/{id}/payment-info)
 	UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id string)
@@ -394,6 +406,12 @@ func (_ Unimplemented) DeleteParticipant(w http.ResponseWriter, r *http.Request,
 // Update bank details for a participant
 // (PUT /session/{id}/participant/{participantId}/bank)
 func (_ Unimplemented) UpdateParticipantBankInfo(w http.ResponseWriter, r *http.Request, id string, participantId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename a participant, keeping their claims and token
+// (PUT /session/{id}/participant/{participantId}/name)
+func (_ Unimplemented) RenameParticipant(w http.ResponseWriter, r *http.Request, id string, participantId string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -948,6 +966,41 @@ func (siw *ServerInterfaceWrapper) UpdateParticipantBankInfo(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// RenameParticipant operation middleware
+func (siw *ServerInterfaceWrapper) RenameParticipant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "participantId" -------------
+	var participantId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "participantId", chi.URLParam(r, "participantId"), &participantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "participantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameParticipant(w, r, id, participantId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdatePaymentInfo operation middleware
 func (siw *ServerInterfaceWrapper) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -1127,6 +1180,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/session/{id}/participant/{participantId}/bank", wrapper.UpdateParticipantBankInfo)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/session/{id}/participant/{participantId}/name", wrapper.RenameParticipant)
+	})
+	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/session/{id}/payment-info", wrapper.UpdatePaymentInfo)
 	})
 
@@ -1138,34 +1194,35 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"ocqDQ4PK/ZfAg6AoAgM8NtbUc3v7XwAAAP//",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
