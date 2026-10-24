@@ -83,7 +83,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./api
-          file: ./deployments/api/Dockerfile
+          file: ./api/Dockerfile
           push: true
           tags: |
             ${{ env.API_IMAGE }}:${{ github.sha }}
@@ -96,7 +96,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./client
-          file: ./deployments/client/Dockerfile
+          file: ./client/Dockerfile
           # Same-origin: Caddy routes meris.munawar.my.id/_api/* to meris-api (deployments/homelab/caddy).
           build-args: |
             NEXT_PUBLIC_BACKEND_URL=/_api

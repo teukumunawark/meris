@@ -16,7 +16,7 @@ The repository enforces a strict physical separation between runtimes:
 ├── /client              # Next.js App Router frontend application (TS/React)
 ├── /contracts           # Shared OpenAPI/Swagger YAML specifications
 │   └── openapi.yaml     # Single source of truth for API contracts
-├── /deployments         # Dockerfiles and infrastructure configs
+├── /deployments         # Infrastructure configs (homelab Caddy & compose)
 ├── Makefile             # Root orchestration (make dev, make build-all, etc.)
 ├── docker-compose.yml   # Standalone local Docker Compose (API + Client + DB + Redis)
 │   └── homelab/         # Per-app compose files for /srv/apps/<meris-api|meris-client> on zoro

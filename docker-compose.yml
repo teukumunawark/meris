@@ -20,9 +20,7 @@ services:
     restart: unless-stopped
 
   api:
-    build:
-      context: ./api
-      dockerfile: ../deployments/api/Dockerfile
+    build: ./api
     container_name: meris-api
     restart: unless-stopped
     ports:
@@ -44,7 +42,6 @@ services:
   client:
     build:
       context: ./client
-      dockerfile: ../deployments/client/Dockerfile
       args:
         - NEXT_PUBLIC_BACKEND_URL=http://localhost:8091
     container_name: meris-client
