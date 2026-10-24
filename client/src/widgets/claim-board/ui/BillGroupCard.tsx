@@ -48,9 +48,10 @@ export function BillGroupCard({
   const [grandTotal, setGrandTotal] = useState(bill.grandTotal.toString());
   const [isSaving, setIsSaving] = useState(false);
 
-  const isAuthorized = isJoined && (
-    userName.trim().toLowerCase() === bill.payerName.trim().toLowerCase() ||
-    userName.trim().toLowerCase() === sessionPayerName.trim().toLowerCase()
+  // Mirrors the server's canManageBill: exact names, so "budi" never gets Budi's controls
+  const isAuthorized = isJoined && userName !== "" && (
+    userName === bill.payerName ||
+    userName === sessionPayerName
   );
 
   const billSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);

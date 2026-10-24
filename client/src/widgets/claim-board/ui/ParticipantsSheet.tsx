@@ -54,8 +54,6 @@ export function ParticipantsSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [closeOnEscape, onClose]);
 
-  const isSamePerson = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
   // You first, so the row you can act on is never below the fold
   const ordered = [...participants].sort((a, b) => {
     if (a.id === currentParticipantId) return -1;
@@ -146,7 +144,8 @@ export function ParticipantsSheet({
         <ul className="divide-y divide-[var(--glass-border)] overflow-y-auto overscroll-contain px-5">
           {ordered.map((p) => {
             const isMe = p.id === currentParticipantId;
-            const isTargetPayer = isSamePerson(p.name, payerName);
+            // Exact match, like the server: "munawar" is not the payer "Munawar"
+            const isTargetPayer = p.name === payerName;
             const canKick = isPayer && !isTargetPayer;
             const claimedCount = items.filter((item) => item.claims.some((c) => c.name === p.name && c.shares > 0)).length;
             const subtotal = p.subtotal || 0;

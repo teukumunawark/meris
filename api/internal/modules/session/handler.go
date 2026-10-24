@@ -130,13 +130,16 @@ func (h *Handler) JoinSession(w http.ResponseWriter, r *http.Request, id string)
 		return
 	}
 
-	p, err := h.service.JoinSession(r.Context(), id, payload.Name, payload.Token)
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		httpresponse.WriteError(w, http.StatusBadRequest, "invalid_name", "Name cannot be empty")
+		return
+	}
+
+	// The conflict error already names the participant who holds the name
+	p, err := h.service.JoinSession(r.Context(), id, name, payload.Token)
 	if err != nil {
-		if appErr, ok := errors.AsType[*apperrors.AppError](err); ok && appErr.Code == "errors.name_conflict" {
-			httpresponse.WriteLocalizedError(w, r, NewNameConflictError(payload.Name))
-		} else {
-			httpresponse.WriteLocalizedError(w, r, err)
-		}
+		httpresponse.WriteLocalizedError(w, r, err)
 		return
 	}
 

@@ -36,6 +36,12 @@ SELECT * FROM participants WHERE id = $1;
 -- name: GetParticipantByName :one
 SELECT * FROM participants WHERE session_id = $1 AND name = $2;
 
+-- name: GetParticipantByNameFold :one
+-- Case-insensitive lookup so "budi" cannot join next to "Budi"; oldest row wins if old data already has both
+SELECT * FROM participants
+WHERE session_id = sqlc.arg(session_id) AND lower(name) = lower(sqlc.arg(name)::text)
+ORDER BY id LIMIT 1;
+
 -- name: GetParticipantsBySession :many
 SELECT * FROM participants WHERE session_id = $1;
 

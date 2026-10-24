@@ -448,6 +448,15 @@ export interface operations {
                     "application/json": components["schemas"]["ParticipantResponse"];
                 };
             };
+            /** @description Name is empty after trimming */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Session not found */
             404: {
                 headers: {
@@ -457,7 +466,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Name already taken in this session */
+            /** @description Name already taken in this session, compared case-insensitively */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -748,6 +757,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Token does not belong to this bill's payer or the session payer */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     DeleteBill: {
@@ -848,7 +866,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Name already taken in this session */
+            /** @description Name already taken in this session, compared case-insensitively */
             409: {
                 headers: {
                     [name: string]: unknown;

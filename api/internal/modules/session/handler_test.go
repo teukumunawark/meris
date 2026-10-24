@@ -109,6 +109,26 @@ func TestReadReceiptImage_TooLarge(t *testing.T) {
 	}
 }
 
+func TestJoinSession_RejectsBlankName(t *testing.T) {
+	// Validation runs before the service, so a nil service is safe
+	h := &Handler{}
+
+	for _, body := range []string{`{"name":""}`, `{"name":"   "}`} {
+		req := httptest.NewRequest(http.MethodPost, "/session/s1/join", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		h.JoinSession(w, req, "s1")
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("body %s: expected status %d, got %d", body, http.StatusBadRequest, w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "invalid_name") {
+			t.Errorf("body %s: expected invalid_name in response, got %s", body, w.Body.String())
+		}
+	}
+}
+
 func TestRenameParticipant_RejectsBadInput(t *testing.T) {
 	// Every case fails validation before the service is reached, so a nil service is safe
 	h := &Handler{}

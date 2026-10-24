@@ -75,6 +75,10 @@ interface SessionContextType {
   participantId: number | null;
   participantToken: string;
   isJoined: boolean;
+  // Your name exactly as the server stores it ("" until joined). Transfers, claims and payer checks
+  // all match on this exact string, so never compare names case-insensitively.
+  myName: string;
+  isPayer: boolean;
   setIsJoined: (val: boolean) => void;
   setParticipantData: (id: number, name: string, token: string) => void;
 
@@ -131,6 +135,12 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
   const [rawDebts, setRawDebts] = useState<BilateralTransfer[]>([]);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8091";
+
+  // Prefer the server's record by id; the locally stored name can be stale (renamed elsewhere, typed with extra spaces)
+  const myName = isJoined
+    ? participants.find((p) => p.id === participantId)?.name ?? userName
+    : "";
+  const isPayer = myName !== "" && myName === payerName;
 
   const setParticipantData = useCallback((id: number, name: string, token: string) => {
     setUserName(name);
@@ -296,6 +306,8 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
       participantId,
       participantToken,
       isJoined,
+      myName,
+      isPayer,
       setIsJoined,
       setParticipantData,
       items,

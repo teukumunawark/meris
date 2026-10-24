@@ -70,7 +70,7 @@ function FlowGraph({ names, edges, selected, onSelect, userName }: GraphProps) {
 
   const isFaded = (from: string, to: string) =>
     !!selected && from !== selected && to !== selected;
-  const isMine = (name: string) => name.toLowerCase() === userName.toLowerCase();
+  const isMine = (name: string) => userName !== "" && name === userName;
   const edgeColor = (e: Edge) => (isMine(e.from) || isMine(e.to) ? ACCENT : INK);
 
   return (
@@ -277,7 +277,7 @@ export function MoneyFlowGraph({ transfers, rawDebts, participants, userName }: 
               {getInitials(selected)}
             </div>
             <span className="text-foreground font-bold">{selected}</span>
-            {selected.toLowerCase() === userName.toLowerCase() && (
+            {userName !== "" && selected === userName && (
               <span className="text-foreground/70 text-xs">(kamu)</span>
             )}
             {narrative.netBal > 0.5 && (

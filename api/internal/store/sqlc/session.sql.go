@@ -383,6 +383,32 @@ func (q *Queries) GetParticipantByName(ctx context.Context, arg GetParticipantBy
 	return i, err
 }
 
+const getParticipantByNameFold = `-- name: GetParticipantByNameFold :one
+SELECT id, session_id, name, token, bank_name, bank_account FROM participants
+WHERE session_id = $1 AND lower(name) = lower($2::text)
+ORDER BY id LIMIT 1
+`
+
+type GetParticipantByNameFoldParams struct {
+	SessionID string `db:"session_id" json:"session_id"`
+	Name      string `db:"name" json:"name"`
+}
+
+// Case-insensitive lookup so "budi" cannot join next to "Budi"; oldest row wins if old data already has both
+func (q *Queries) GetParticipantByNameFold(ctx context.Context, arg GetParticipantByNameFoldParams) (Participant, error) {
+	row := q.db.QueryRow(ctx, getParticipantByNameFold, arg.SessionID, arg.Name)
+	var i Participant
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.Name,
+		&i.Token,
+		&i.BankName,
+		&i.BankAccount,
+	)
+	return i, err
+}
+
 const getParticipantsBySession = `-- name: GetParticipantsBySession :many
 SELECT id, session_id, name, token, bank_name, bank_account FROM participants WHERE session_id = $1
 `

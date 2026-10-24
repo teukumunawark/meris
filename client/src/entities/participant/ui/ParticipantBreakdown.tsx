@@ -54,7 +54,7 @@ export default function ParticipantBreakdown({
         <ul className="mt-2 divide-y divide-[var(--glass-border)]">
           {participants.map((p) => {
             const isCurrentUser = currentParticipantId !== null && p.id === currentParticipantId;
-            const isTargetPayer = p.name.trim().toLowerCase() === payerName.trim().toLowerCase();
+            const isTargetPayer = p.name === payerName;
             const pSubtotal = p.subtotal || 0;
             const pExtras = (p.tax || 0) + (p.serviceCharge || 0);
             const percentOfReceipt = totalSubtotal > 0 ? Math.round((pSubtotal / totalSubtotal) * 100) : 0;

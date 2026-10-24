@@ -5,7 +5,7 @@ import { useSession } from "@/entities/session/model/SessionContext";
 import { apiFetch } from "@/shared/api/client";
 
 export function useClaimItem() {
-  const { sessionId, participantId, participantToken, isJoined, userName, items, setItems } = useSession();
+  const { sessionId, participantId, participantToken, isJoined, myName, items, setItems } = useSession();
 
   const syncClaimToBackend = useCallback(async (itemId: string, shares: number): Promise<boolean> => {
     if (!participantId || !participantToken) return false;
@@ -28,7 +28,8 @@ export function useClaimItem() {
   }, [participantId, participantToken, sessionId]);
 
   const updateClaim = useCallback((itemId: string, increment: number) => {
-    const targetUser = userName.trim();
+    // Claims carry the server's exact name, so match on that rather than a trimmed local copy
+    const targetUser = myName;
     if (!isJoined || !targetUser) return;
 
     const targetItem = items.find((item) => item.id === itemId);
@@ -80,7 +81,7 @@ export function useClaimItem() {
         );
       }
     });
-  }, [isJoined, userName, items, setItems, syncClaimToBackend]);
+  }, [isJoined, myName, items, setItems, syncClaimToBackend]);
 
   return { updateClaim };
 }

@@ -24,6 +24,8 @@ export default function ClaimBoard() {
     sessionId,
     isJoined,
     participantId,
+    myName,
+    isPayer,
     userName,
     setUserName,
     items,
@@ -120,7 +122,6 @@ export default function ClaimBoard() {
   }, 0);
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
 
-  const isPayer = isJoined && userName.trim().toLowerCase() === payerName.trim().toLowerCase();
   const sessionTitle = bills[0]?.name?.trim() || "Tagihan Bersama";
 
   const sortedItems = React.useMemo(() => {
@@ -492,7 +493,7 @@ export default function ClaimBoard() {
         {/* Horizontal Participant Avatar Chips (Max 4 displayed, then +N lainnya) */}
         <div className="flex flex-wrap items-center gap-1.5">
           {participants.slice(0, 4).map((p) => {
-            const isMe = isJoined && p.name === userName;
+            const isMe = isJoined && p.id === participantId;
             return (
               <div
                 key={p.id}
@@ -621,7 +622,7 @@ export default function ClaimBoard() {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {participants.map((p) => {
-            const isMe = isJoined && p.name === userName;
+            const isMe = isJoined && p.id === participantId;
             return (
               <GlassPanel key={p.id} className="flex flex-col gap-3 p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -638,7 +639,7 @@ export default function ClaimBoard() {
                       </p>
                     </div>
                   </div>
-                  {isPayer && p.name.trim().toLowerCase() !== payerName.trim().toLowerCase() && (
+                  {isPayer && p.name !== payerName && (
                     <button
                       type="button"
                       disabled={removingId === p.id}
@@ -783,7 +784,7 @@ export default function ClaimBoard() {
                   items={billItems}
                   isSingleBill={bills.length <= 1}
                   isJoined={isJoined}
-                  userName={userName}
+                  userName={myName}
                   sessionPayerName={payerName}
                   updateBill={updateBill}
                   deleteBill={deleteBill}
@@ -811,7 +812,7 @@ export default function ClaimBoard() {
                 items={unassignedItems}
                 isSingleBill={bills.length === 0}
                 isJoined={isJoined}
-                userName={userName}
+                userName={myName}
                 sessionPayerName={payerName}
                 updateBill={async () => false}
                 deleteBill={async () => false}

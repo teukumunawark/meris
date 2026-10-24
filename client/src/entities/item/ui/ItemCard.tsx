@@ -32,8 +32,9 @@ export default function ItemCard({
   onUpdateClaim,
   onRenameItem,
 }: ItemCardProps) {
-  const targetUser = userName.trim();
-  const userClaim = item.claims.find((c) => c.name === targetUser);
+  // userName is the exact server name (myName); trimming would miss legacy names with stray spaces
+  const targetUser = userName;
+  const userClaim = targetUser ? item.claims.find((c) => c.name === targetUser) : undefined;
   const userClaimAmt = isJoined ? (userClaim?.shares ?? 0) : 0;
 
   const isSubItem = !!item.parentId;

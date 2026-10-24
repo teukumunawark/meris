@@ -14,8 +14,6 @@ import { useManageItems } from "@/features/manage-items";
 const sectionClass = "rounded-glass border border-[var(--glass-border)] bg-[var(--glass-bg-solid)] p-4 sm:p-6";
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage";
 
-const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
 function CopyButton({ value, label, primary = false }: { value: string; label: string; primary?: boolean }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -98,7 +96,8 @@ export default function BillSummary() {
     items,
     tax,
     serviceCharge,
-    userName,
+    myName,
+    isPayer,
     isJoined,
     participantId,
     payerName,
@@ -116,11 +115,10 @@ export default function BillSummary() {
   const hasClaims = items.some((item) => item.claims.some((c) => c.shares > 0));
 
   const me = isJoined ? participants.find((p) => p.id === participantId) : undefined;
-  const myName = me?.name ?? userName.trim();
-  const isPayer = isJoined && sameName(myName, payerName);
 
-  const myOutgoing = isJoined ? transfers.filter((t) => sameName(t.from, myName)) : [];
-  const myIncoming = isJoined ? transfers.filter((t) => sameName(t.to, myName)) : [];
+  // Transfers name people exactly as stored, so "munawar" must not pick up Munawar's rows
+  const myOutgoing = isJoined ? transfers.filter((t) => t.from === myName) : [];
+  const myIncoming = isJoined ? transfers.filter((t) => t.to === myName) : [];
   const totalIncoming = myIncoming.reduce((sum, t) => sum + Math.round(t.amount), 0);
   const showPayoutAccount = !!me && (isPayer || myIncoming.length > 0);
 
@@ -223,8 +221,8 @@ export default function BillSummary() {
             <ul className="mt-3 divide-y divide-[var(--glass-border)]">
               {transfers.map((transfer, idx) => {
                 const recipient = participants.find((p) => p.name === transfer.to);
-                const fromMe = isJoined && sameName(transfer.from, myName);
-                const toMe = isJoined && sameName(transfer.to, myName);
+                const fromMe = isJoined && transfer.from === myName;
+                const toMe = isJoined && transfer.to === myName;
                 return (
                   <li key={idx} className="py-3 first:pt-1 last:pb-0">
                     <div className="flex items-baseline justify-between gap-3 font-sans text-sm">

@@ -156,7 +156,8 @@ func (s *Service) saveItemsRecursive(ctx context.Context, q *sqlc.Queries, sessi
 func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken string) (*sqlc.Participant, error) {
 	q := s.repo.GetQueries()
 
-	existing, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+	// Names identify people in transfers and payer checks, so "budi" and "Budi" must not coexist
+	existing, err := q.GetParticipantByNameFold(ctx, sqlc.GetParticipantByNameFoldParams{
 		SessionID: sessionID,
 		Name:      name,
 	})
@@ -164,7 +165,7 @@ func (s *Service) JoinSession(ctx context.Context, sessionID, name, clientToken 
 		if clientToken != "" && existing.Token == clientToken {
 			return &existing, nil
 		}
-		return nil, NewNameConflictError(name)
+		return nil, NewNameConflictError(existing.Name)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
@@ -808,20 +809,13 @@ func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageB
 
 func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID string, name string, payerName string, tax float64, serviceCharge float64, grandTotal float64, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
-		participants, err := q.GetParticipantsBySession(ctx, sessionID)
+		targetBill, caller, session, err := s.loadBillAndCaller(ctx, q, sessionID, billID, token)
 		if err != nil {
 			return err
 		}
 
-		var authorizedParticipant *sqlc.Participant
-		for _, p := range participants {
-			if p.Token == token {
-				authorizedParticipant = &p
-				break
-			}
-		}
-
-		if authorizedParticipant == nil {
+		// Only the people who paid may change a bill's payer, tax or service charge
+		if !canManageBill(caller.Name, targetBill.PayerName, session.PayerName) {
 			return ErrUnauthorized
 		}
 
@@ -844,46 +838,62 @@ func (s *Service) UpdateBill(ctx context.Context, sessionID string, billID strin
 	return nil
 }
 
+// canManageBill reports whether a participant may edit or delete a bill: its own payer or the session payer.
+// Names are compared exactly, matching how payer names are stored and how settlement matches them.
+func canManageBill(callerName, billPayerName, sessionPayerName string) bool {
+	return callerName == billPayerName || callerName == sessionPayerName
+}
+
+// loadBillAndCaller fetches the bill, the participant holding token, and the session for a bill mutation.
+func (s *Service) loadBillAndCaller(ctx context.Context, q *sqlc.Queries, sessionID, billID, token string) (*sqlc.Bill, *sqlc.Participant, *sqlc.Session, error) {
+	bills, err := q.GetBillsBySession(ctx, sessionID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	var targetBill *sqlc.Bill
+	for _, b := range bills {
+		if b.ID == billID {
+			targetBill = &b
+			break
+		}
+	}
+	if targetBill == nil {
+		return nil, nil, nil, errors.New("bill not found")
+	}
+
+	participants, err := q.GetParticipantsBySession(ctx, sessionID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	var caller *sqlc.Participant
+	for _, p := range participants {
+		if token != "" && p.Token == token {
+			caller = &p
+			break
+		}
+	}
+	if caller == nil {
+		return nil, nil, nil, ErrUnauthorized
+	}
+
+	session, err := q.GetSession(ctx, sessionID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return targetBill, caller, &session, nil
+}
+
 func (s *Service) DeleteBill(ctx context.Context, sessionID string, billID string, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
-		bills, err := q.GetBillsBySession(ctx, sessionID)
+		targetBill, caller, session, err := s.loadBillAndCaller(ctx, q, sessionID, billID, token)
 		if err != nil {
 			return err
 		}
 
-		var targetBill *sqlc.Bill
-		for _, b := range bills {
-			if b.ID == billID {
-				targetBill = &b
-				break
-			}
-		}
-		if targetBill == nil {
-			return errors.New("bill not found")
-		}
-
-		participants, err := q.GetParticipantsBySession(ctx, sessionID)
-		if err != nil {
-			return err
-		}
-
-		var caller *sqlc.Participant
-		for _, p := range participants {
-			if p.Token == token {
-				caller = &p
-				break
-			}
-		}
-		if caller == nil {
-			return ErrUnauthorized
-		}
-
-		session, err := q.GetSession(ctx, sessionID)
-		if err != nil {
-			return err
-		}
-
-		if caller.Name != targetBill.PayerName && caller.Name != session.PayerName {
+		if !canManageBill(caller.Name, targetBill.PayerName, session.PayerName) {
 			return ErrUnauthorized
 		}
 
@@ -952,12 +962,13 @@ func (s *Service) RenameParticipant(ctx context.Context, sessionID string, parti
 			return nil
 		}
 
-		existing, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+		// Case-insensitive so a rename cannot produce "budi" next to "Budi"; a case-only change of your own name is fine
+		existing, err := q.GetParticipantByNameFold(ctx, sqlc.GetParticipantByNameFoldParams{
 			SessionID: sessionID,
 			Name:      newName,
 		})
 		if err == nil && existing.ID != p.ID {
-			return NewNameConflictError(newName)
+			return NewNameConflictError(existing.Name)
 		} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}

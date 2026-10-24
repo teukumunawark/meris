@@ -10,7 +10,7 @@ interface RenameParticipantFormProps {
 }
 
 export default function RenameParticipantForm({ onDone, className = "" }: RenameParticipantFormProps) {
-  const { userName } = useSession();
+  const { myName: userName } = useSession();
   const { renameParticipant, renameError, clearRenameError } = useRenameParticipant();
   const [draft, setDraft] = useState(userName);
   const [isSaving, setIsSaving] = useState(false);

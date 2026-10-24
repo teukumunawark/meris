@@ -36,13 +36,15 @@ export function useJoinSession() {
       });
 
       if (participant.id !== undefined && participant.token) {
-        setParticipantData(participant.id, trimmedName, participant.token);
-        localStorage.setItem("meris_username", trimmedName);
+        // Rejoining as "MUNAWAR" returns the stored "Munawar"; keep the server's spelling
+        const savedName = participant.name ?? trimmedName;
+        setParticipantData(participant.id, savedName, participant.token);
+        localStorage.setItem("meris_username", savedName);
         localStorage.setItem(
           `meris_session_${sessionId}_participant`,
           JSON.stringify({
             id: participant.id,
-            name: trimmedName,
+            name: savedName,
             token: participant.token,
           })
         );

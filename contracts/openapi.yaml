@@ -122,8 +122,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ParticipantResponse'
+        '400':
+          description: Name is empty after trimming
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
-          description: Name already taken in this session
+          description: Name already taken in this session, compared case-insensitively
           content:
             application/json:
               schema:
@@ -449,6 +455,12 @@ paths:
       responses:
         '200':
           description: Bill updated
+        '401':
+          description: Token does not belong to this bill's payer or the session payer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       summary: Delete a bill from the session
       operationId: DeleteBill
@@ -555,7 +567,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Name already taken in this session
+          description: Name already taken in this session, compared case-insensitively
           content:
             application/json:
               schema:
