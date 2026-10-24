@@ -156,33 +156,31 @@ export function BillGroupCard({
       ) : !isSingleBill ? (
         /* Multiple Bills Header: shown only when there is more than 1 bill */
         <div className="flex flex-col gap-2 border-b border-[var(--glass-border)] pb-2.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex-1">
-            <h3 className="text-foreground flex flex-wrap items-center gap-2 font-serif text-base font-semibold sm:text-lg">
-              <span>{bill.name}</span>
-              <span className="text-foreground/50 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-0.5 font-sans text-[10px] font-medium">
-                Dibayar oleh {bill.payerName}
-              </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-foreground font-serif text-base font-semibold [overflow-wrap:anywhere] sm:text-lg">
+              {bill.name}
             </h3>
-            <div className="text-foreground/50 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs">
-              <span>Subtotal: {formatRupiah(billSubtotal)}</span>
-              {bill.tax > 0 && <span>Pajak: {formatRupiah(bill.tax)}</span>}
-              {bill.serviceCharge > 0 && <span>Layanan: {formatRupiah(bill.serviceCharge)}</span>}
-              <span className="text-sage font-bold">Total: {formatRupiah(bill.grandTotal)}</span>
+            <p className="text-foreground/70 font-sans text-xs [overflow-wrap:anywhere]">Dibayar oleh {bill.payerName}</p>
+            <div className="text-foreground/70 mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-sans text-xs tabular-nums">
+              <span>Subtotal {formatRupiah(billSubtotal)}</span>
+              {bill.tax > 0 && <span>Pajak {formatRupiah(bill.tax)}</span>}
+              {bill.serviceCharge > 0 && <span>Layanan {formatRupiah(bill.serviceCharge)}</span>}
+              <span className="text-foreground font-semibold">Total {formatRupiah(bill.grandTotal)}</span>
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="-ml-2 flex shrink-0 items-center gap-1 sm:ml-0">
             {isAuthorized && bill.id !== "" && (
               <>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="text-foreground/50 hover:text-sage cursor-pointer text-xs transition-colors"
+                  className="text-foreground/70 hover:text-sage min-h-11 cursor-pointer rounded-sm px-2 text-xs transition-colors"
                 >
                   Edit
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="cursor-pointer text-xs text-rose-400 transition-colors hover:text-rose-500"
+                  className="min-h-11 cursor-pointer rounded-sm px-2 text-xs text-rose-600 transition-colors hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
                 >
                   Hapus
                 </button>
@@ -190,7 +188,8 @@ export function BillGroupCard({
             )}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="text-foreground/50 hover:text-foreground cursor-pointer text-xs transition-colors"
+              aria-expanded={!isCollapsed}
+              className="text-foreground/70 hover:text-foreground min-h-11 cursor-pointer rounded-sm px-2 text-xs transition-colors"
             >
               {isCollapsed ? "Buka" : "Tutup"}
             </button>

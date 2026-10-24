@@ -44,7 +44,7 @@ export function useClaimItem() {
     let newShares = currentShares + increment;
     if (newShares < 0) newShares = 0;
     if (totalClaimedByOthers + newShares > targetItem.quantity) {
-      newShares = targetItem.quantity - totalClaimedByOthers;
+      newShares = Math.floor((targetItem.quantity - totalClaimedByOthers) * 1000) / 1000;
     }
 
     if (newShares === currentShares) return;

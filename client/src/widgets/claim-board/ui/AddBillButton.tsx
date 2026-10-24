@@ -31,7 +31,7 @@ export function AddBillButton({ addBill }: AddBillButtonProps) {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading}
-        className="text-sage hover:bg-sage/10 flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
+        className="text-sage hover:bg-sage/10 flex min-h-11 cursor-pointer items-center gap-1.5 rounded-sm px-2 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M12 5v14M5 12h14" />

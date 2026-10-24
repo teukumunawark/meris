@@ -29,6 +29,8 @@ export default function ClaimBoard() {
     userName,
     setUserName,
     items,
+    tax,
+    serviceCharge,
     payerName,
     participants,
     bills
@@ -122,7 +124,13 @@ export default function ClaimBoard() {
   }, 0);
   const claimProgressPercent = totalSubtotal > 0 ? Math.round((totalClaimedSubtotal / totalSubtotal) * 100) : 0;
 
-  const sessionTitle = bills[0]?.name?.trim() || "Tagihan Bersama";
+  const isMultiStop = bills.length > 1;
+  const stopPayerCount = new Set(bills.map((b) => b.payerName)).size;
+  const sessionTitle = isMultiStop ? "Tagihan Bersama" : bills[0]?.name?.trim() || "Tagihan Bersama";
+  const sessionGrandTotal = totalSubtotal + tax + serviceCharge;
+  const sessionSubtitle = isMultiStop
+    ? `${bills.length} tempat · ${stopPayerCount} pembayar · Total ${formatRupiah(sessionGrandTotal)}`
+    : `${payerName ? `Dibayar oleh ${payerName}` : "Belum ditentukan pembayar"} · Total ${formatRupiah(sessionGrandTotal)}`;
 
   const sortedItems = React.useMemo(() => {
     const result: Array<ReceiptItem & { depth: number }> = [];
@@ -211,8 +219,8 @@ export default function ClaimBoard() {
           <h1 className="text-foreground font-serif text-2xl font-normal tracking-tight sm:text-3xl">
             {sessionTitle}
           </h1>
-          <p className="text-foreground/60 font-sans text-xs">
-            {payerName ? `Dibayar oleh ${payerName}` : "Belum ditentukan pembayar"} · Total {formatRupiah(totalSubtotal)}
+          <p className="text-foreground/70 font-sans text-xs tabular-nums">
+            {sessionSubtitle}
           </p>
         </div>
 
@@ -317,8 +325,8 @@ export default function ClaimBoard() {
               <h1 className="text-foreground font-serif text-3xl leading-tight tracking-tight lg:text-4xl">
                 {sessionTitle}
               </h1>
-              <p className="text-foreground/50 mt-1 font-sans text-xs">
-                {payerName ? `Dibayar oleh ${payerName}` : "Belum ditentukan pembayar"} · Total {formatRupiah(totalSubtotal)}
+              <p className="text-foreground/70 mt-1 font-sans text-xs tabular-nums">
+                {sessionSubtitle}
               </p>
             </div>
             
@@ -672,16 +680,19 @@ export default function ClaimBoard() {
 
       {/* Inventory Items List */}
       <div className={`space-y-4 transition-all duration-700 sm:space-y-6 ${isShowClaimSpotlight ? 'relative z-50' : ''}`}>
-        <div className="flex items-end justify-between border-b border-[var(--glass-border)] pb-3 sm:pb-4">
-          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight sm:text-xl md:text-2xl">Bill Items</h2>
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[var(--glass-border)] pb-3 sm:pb-4">
+          <h2 className="text-foreground font-sans text-lg font-normal tracking-tight whitespace-nowrap sm:text-xl md:text-2xl">
+            Bill Items
+            <span className="text-foreground/65 ml-2 font-sans text-sm tabular-nums">{items.length} items</span>
+          </h2>
+          <div className="-mr-2 flex flex-wrap items-center gap-1">
             {isJoined && (
               <AddBillButton addBill={addBill} />
             )}
             {isPayer && (
               <button
                 onClick={() => setIsAdding(true)}
-                className="text-sage hover:bg-sage/10 flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
+                className="text-sage hover:bg-sage/10 flex min-h-11 cursor-pointer items-center gap-1.5 rounded-sm px-2 text-[10px] font-bold tracking-widest uppercase transition-colors sm:text-xs"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14M5 12h14" />
@@ -689,7 +700,6 @@ export default function ClaimBoard() {
                 Add Item
               </button>
             )}
-            <span className="text-foreground/20 text-[10px] font-bold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.3em]">{items.length} items</span>
           </div>
         </div>
 

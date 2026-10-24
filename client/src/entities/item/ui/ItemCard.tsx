@@ -4,7 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ReceiptItem } from "@/shared/types";
 import { GlassPanel } from "@/shared/ui/GlassPanel";
-import { formatRupiah } from "@/shared/lib";
+import { formatRupiah, formatShares, roundShares } from "@/shared/lib";
 import { useManageItems } from "@/features/manage-items";
 
 interface ItemCardProps {
@@ -55,8 +55,8 @@ export default function ItemCard({
   }, [item.name, item.price, item.quantity]);
   
   const totalClaimed = item.claims.reduce((sum, c) => sum + c.shares, 0);
-  const isFullyClaimed = totalClaimed >= item.quantity;
-  const remainingQty = Math.max(0, item.quantity - totalClaimed);
+  const remainingQty = Math.max(0, roundShares(item.quantity - totalClaimed));
+  const isFullyClaimed = remainingQty <= 0;
 
   const handleSave = async () => {
     const price = parseFloat(editPrice);
@@ -266,9 +266,9 @@ export default function ItemCard({
             {/* Left: Item Information */}
             <div className="min-w-0 flex-1 space-y-2.5">
               {/* Name + Badges */}
-              <div className="flex min-h-[1.75rem] items-center justify-between gap-3">
-                <div className="group/title flex min-w-0 flex-1 items-center gap-2.5">
-                  <h3 className="text-foreground truncate font-sans text-base font-normal tracking-tight sm:text-lg md:text-xl">
+              <div className="flex min-h-[1.75rem] items-start justify-between gap-3">
+                <div className="group/title flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <h3 className="text-foreground min-w-0 font-sans text-base font-normal tracking-tight [overflow-wrap:anywhere] sm:text-lg md:text-xl">
                     {item.name}
                   </h3>
                   {isSubItem && (
@@ -343,8 +343,8 @@ export default function ItemCard({
                         key={idx}
                         className="rounded-glass-sm text-foreground/70 flex items-center gap-1.5 border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 text-[10px] font-medium"
                       >
-                        <span className="font-sans text-xs">{claim.name}</span>
-                        <span className="text-sage font-mono font-bold">{claim.shares}x</span>
+                        <span className="font-sans text-xs [overflow-wrap:anywhere]">{claim.name}</span>
+                        <span className="text-sage shrink-0 font-mono font-bold">{formatShares(claim.shares)}x</span>
                       </div>
                     ))}
                   </div>
@@ -354,13 +354,13 @@ export default function ItemCard({
 
             {/* Right: Action Column */}
             {!isZeroPriceSubItem && (
-              <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-3 md:flex-col md:items-end md:gap-3 md:border-none md:pt-0">
+              <div className="flex shrink-0 flex-row flex-wrap items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-3 md:flex-col md:flex-nowrap md:items-end md:gap-3 md:border-none md:pt-0">
 
                 {/* Available count */}
                 <div className="flex flex-col gap-0.5 md:text-right">
                   <span className="text-foreground/30 text-[9px] font-bold tracking-widest uppercase sm:text-[10px]">Available</span>
                   <span className="text-foreground/60 font-mono text-xs font-bold sm:text-sm">
-                    {remainingQty} <span className="text-foreground/30 font-sans text-[10px] sm:text-xs">of</span> {item.quantity}
+                    {formatShares(remainingQty)} <span className="text-foreground/30 font-sans text-[10px] sm:text-xs">of</span> {item.quantity}
                   </span>
                 </div>
 
@@ -406,12 +406,12 @@ export default function ItemCard({
                           type="button"
                           onClick={handleClaimFull}
                           className="bg-sage text-background hover:bg-sage/90 rounded-glass-sm flex h-10 cursor-pointer items-center justify-center gap-1.5 px-4 text-xs font-bold tracking-wider uppercase shadow-[0_2px_12px_rgba(var(--sage-rgb),0.25)] transition-all active:scale-95 sm:h-11 sm:px-5"
-                          aria-label={`Claim ${remainingQty >= 1 ? "1" : remainingQty} portion`}
+                          aria-label={`Claim ${remainingQty >= 1 ? "1" : formatShares(remainingQty)} portion`}
                         >
                           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 5v14M5 12h14" />
                           </svg>
-                          <span>{remainingQty >= 1 ? "Claim 1x" : `Claim ${remainingQty}x`}</span>
+                          <span className="whitespace-nowrap">{remainingQty >= 1 ? "Claim 1x" : `Claim ${formatShares(remainingQty)}x`}</span>
                         </button>
                       </div>
                     )
@@ -432,7 +432,7 @@ export default function ItemCard({
 
                       <div className="flex min-w-[3.5rem] flex-col items-center justify-center px-1 text-center select-none sm:min-w-[4rem]">
                         <span className="text-sage font-mono text-base font-bold sm:text-lg">
-                          {userClaimAmt}x
+                          {formatShares(userClaimAmt)}x
                         </span>
                         {userClaimAmt === 1 && remainingQty >= 0 && (
                           <button

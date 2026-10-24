@@ -4,7 +4,7 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ReceiptItem } from "@/shared/types";
-import { formatRupiah, getAvatarBg, getInitials } from "@/shared/lib";
+import { formatRupiah, formatShares, getAvatarBg, getInitials } from "@/shared/lib";
 import { useMounted } from "@/shared/hooks";
 
 interface ParticipantBreakdownProps {
@@ -95,7 +95,7 @@ export default function ParticipantBreakdown({
                     {claimedItems.map((item) => (
                       <div key={item.id} className="flex justify-between gap-3">
                         <dt className="text-foreground/80 min-w-0 truncate">
-                          <span className="tabular-nums">{item.shares}×</span> {item.name}
+                          <span className="tabular-nums">{formatShares(item.shares)}×</span> {item.name}
                         </dt>
                         <dd className="text-foreground/80 shrink-0 tabular-nums">{formatRupiah(item.totalPrice)}</dd>
                       </div>

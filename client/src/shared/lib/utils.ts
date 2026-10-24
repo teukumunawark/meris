@@ -7,7 +7,21 @@ export const formatRupiah = (val: number) => {
 };
 
 export const getInitials = (name: string) => {
-  return name.trim().slice(0, 2).toUpperCase();
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .map((w) => Array.from(w).filter((ch) => /\p{L}/u.test(ch)).join(""))
+    .filter(Boolean);
+  if (words.length === 0) return Array.from(name.trim())[0] ?? "?";
+  const letters = words.length > 1 ? Array.from(words[0])[0] + Array.from(words[1])[0] : Array.from(words[0]).slice(0, 2).join("");
+  return letters.toUpperCase();
+};
+
+export const roundShares = (val: number) => Math.round(val * 1000) / 1000;
+
+export const formatShares = (val: number) => {
+  const rounded = Math.round(val * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0$/, "");
 };
 
 export const getAvatarBg = (name: string) => {
