@@ -17,11 +17,13 @@ import { useMounted, useOnboarding } from "@/shared/hooks";
 import type { ReceiptItem } from "@/shared/types";
 import { BillGroupCard } from "./BillGroupCard";
 import { AddBillButton } from "./AddBillButton";
+import { ParticipantsSheet } from "./ParticipantsSheet";
 
 export default function ClaimBoard() {
   const {
     sessionId,
     isJoined,
+    participantId,
     userName,
     setUserName,
     items,
@@ -39,6 +41,7 @@ export default function ClaimBoard() {
 
   const mounted = useMounted();
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
+  const [copyFailed, setCopyFailed] = useState<boolean>(false);
   const [copyCodeSuccess, setCopyCodeSuccess] = useState<boolean>(false);
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
@@ -49,6 +52,7 @@ export default function ClaimBoard() {
   const [newItemQty, setNewItemQty] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
+  const closeManageModal = React.useCallback(() => setShowManageModal(false), []);
 
   const handleConfirmRemoveParticipant = async () => {
     if (!participantToDelete) return;
@@ -67,11 +71,16 @@ export default function ClaimBoard() {
     }
   }, [isJoined, completeJoinHint]);
 
-  const handleCopyLink = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+  const handleCopyLink = async () => {
+    if (typeof window === "undefined") return;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
+    } catch {
+      // Clipboard can be denied (no permission, plain http); only claim success when it worked
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 2000);
     }
   };
 
@@ -518,209 +527,70 @@ export default function ClaimBoard() {
       {/* Modern Bottom Sheet & Confirm Dialog Portaled to Document Body (Bypasses Stacking Contexts) */}
       {mounted && typeof document !== "undefined" && createPortal(
         <>
-          {/* Modern Bottom Sheet (Mobile-First, Solid Opaque) */}
           <AnimatePresence>
             {showManageModal && (
-              <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
-                {/* Backdrop */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  onClick={() => setShowManageModal(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-                  aria-hidden="true"
-                />
-
-                {/* Bottom Sheet Panel */}
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className="bg-background text-foreground relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-[28px] border-t border-[var(--glass-border)] pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:border"
-                >
-                  {/* Drag Handle Indicator */}
-                  <div className="pt-3 pb-1 sm:hidden">
-                    <div className="bg-foreground/20 mx-auto h-1.5 w-12 rounded-full" />
-                  </div>
-
-                  {/* Sheet Header */}
-                  <div className="flex items-center justify-between border-b border-[var(--glass-border)] px-5 py-3.5">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-foreground font-serif text-lg font-normal tracking-tight">
-                          Daftar Peserta
-                        </h3>
-                        <span className="bg-sage/15 text-sage rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold">
-                          {participants.length}
-                        </span>
-                      </div>
-                      <p className="text-foreground/50 font-sans text-xs">
-                        Teman yang tergabung dalam sesi ini
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowManageModal(false)}
-                      className="text-foreground/50 hover:text-foreground bg-foreground/5 hover:bg-foreground/10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-colors active:scale-95"
-                      aria-label="Tutup"
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Share Invitation Action Bar */}
-                  <div className="bg-foreground/[0.02] flex items-center justify-between gap-3 border-b border-[var(--glass-border)] px-5 py-3">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="bg-sage/10 text-sage flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                        </svg>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-foreground text-xs font-semibold">Tautan Sesi</p>
-                        <p className="text-foreground/50 truncate text-[11px]">Bagikan agar teman bisa memilih menu</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleCopyLink}
-                      className="bg-sage text-background hover:bg-sage/90 flex min-h-[36px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold shadow-xs transition-all active:scale-95"
-                    >
-                      {copySuccess ? (
-                        <>
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                          <span>Tersalin</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                          </svg>
-                          <span>Salin Link</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Scrollable Participants Roster (Clean Flat Divided List) */}
-                  <div className="divide-y divide-[var(--glass-border)] overflow-y-auto px-5 pb-5">
-                    {participants.map((p) => {
-                      const isMe = isJoined && p.name === userName;
-                      const isTargetPayer = p.name.trim().toLowerCase() === payerName.trim().toLowerCase();
-                      const canKick = isPayer && !isTargetPayer;
-
-                      return (
-                        <div
-                          key={p.id}
-                          className="flex items-center justify-between gap-3 py-3.5 transition-colors"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="bg-sage text-background flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-xs">
-                              {getInitials(p.name)}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-foreground truncate font-sans text-sm font-semibold">
-                                  {p.name}
-                                </span>
-                                {isMe && (
-                                  <span className="text-sage bg-sage/10 rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                                    Anda
-                                  </span>
-                                )}
-                                {isTargetPayer && (
-                                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500">
-                                    Pembayar
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-foreground/50 mt-0.5 font-mono text-xs">
-                                Klaim: {formatRupiah(p.subtotal || 0)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {canKick && (
-                            <button
-                              type="button"
-                              disabled={removingId === p.id}
-                              onClick={() => setParticipantToDelete({ id: p.id, name: p.name })}
-                              className="flex min-h-[34px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/5 px-3 py-1 text-xs font-semibold text-rose-500 transition-all hover:border-rose-500/30 hover:bg-rose-500/15 active:scale-95 disabled:opacity-50"
-                              title={`Keluarkan ${p.name}`}
-                              aria-label={`Keluarkan ${p.name}`}
-                            >
-                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M3 6h18" />
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                              </svg>
-                              <span>{removingId === p.id ? "Menghapus..." : "Keluarkan"}</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              </div>
+              <ParticipantsSheet
+                participants={participants}
+                items={items}
+                currentParticipantId={isJoined ? participantId : null}
+                payerName={payerName}
+                isPayer={isPayer}
+                removingId={removingId}
+                copySuccess={copySuccess}
+                copyFailed={copyFailed}
+                onCopyLink={handleCopyLink}
+                onRequestRemove={setParticipantToDelete}
+                onClose={closeManageModal}
+                closeOnEscape={participantToDelete === null}
+              />
             )}
           </AnimatePresence>
 
           {/* Konfirmasi Keluarkan Peserta Centered Dialog */}
           <AnimatePresence>
             {participantToDelete && (
-              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <div
+                className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+                onKeyDown={(e) => {
+                  if (e.key !== "Escape") return;
+                  // Mark it handled so the participant sheet underneath stays open
+                  e.preventDefault();
+                  if (removingId === null) setParticipantToDelete(null);
+                }}
+              >
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                   onClick={() => setParticipantToDelete(null)}
-                  className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+                  className="fixed inset-0 bg-black/70"
                   aria-hidden="true"
                 />
                 <motion.div
-                  initial={{ scale: 0.92, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.92, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="bg-background text-foreground relative z-10 w-full max-w-sm rounded-2xl border border-rose-500/25 p-5 shadow-2xl sm:p-6"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="kick-participant-title"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="bg-background text-foreground relative z-10 w-full max-w-sm rounded-2xl border border-[var(--glass-border)] p-5 shadow-2xl sm:p-6"
                 >
-                  <div className="mb-4 flex items-start gap-3.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-400">
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        <line x1="10" y1="11" x2="10" y2="17" />
-                        <line x1="14" y1="11" x2="14" y2="17" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="text-foreground font-sans text-base font-semibold">
-                        Keluarkan {participantToDelete.name}?
-                      </h4>
-                      <p className="text-foreground/60 mt-1 font-sans text-xs leading-relaxed">
-                        Semua menu yang sudah diklaim oleh peserta ini akan dikembalikan ke tagihan bersama.
-                      </p>
-                    </div>
-                  </div>
+                  <h4 id="kick-participant-title" className="text-foreground font-serif text-xl leading-tight">
+                    Keluarkan {participantToDelete.name}?
+                  </h4>
+                  <p className="text-foreground/75 mt-2 font-sans text-sm leading-relaxed">
+                    Menu yang sudah diklaim {participantToDelete.name} kembali jadi belum diklaim dan bisa dipilih peserta lain.
+                  </p>
 
-                  <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border)] pt-3">
+                  <div className="mt-5 grid grid-cols-2 gap-2">
                     <button
                       type="button"
+                      autoFocus
                       onClick={() => setParticipantToDelete(null)}
                       disabled={removingId !== null}
-                      className="text-foreground/70 hover:text-foreground min-h-[38px] cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold transition-all hover:bg-[var(--glass-highlight)] active:scale-95"
+                      className="text-foreground rounded-glass-sm focus-visible:outline-sage min-h-11 cursor-pointer border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 font-sans text-sm font-semibold transition-colors hover:bg-[var(--glass-highlight)] focus-visible:outline-2 focus-visible:outline-offset-2"
                     >
                       Batal
                     </button>
@@ -728,9 +598,9 @@ export default function ClaimBoard() {
                       type="button"
                       disabled={removingId !== null}
                       onClick={handleConfirmRemoveParticipant}
-                      className="min-h-[38px] cursor-pointer rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-all hover:bg-rose-600 active:scale-95 disabled:opacity-50"
+                      className="rounded-glass-sm min-h-11 cursor-pointer bg-rose-600 px-4 font-sans text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50"
                     >
-                      {removingId !== null ? "Mengeluarkan..." : "Ya, Keluarkan"}
+                      {removingId !== null ? "Mengeluarkan..." : "Ya, keluarkan"}
                     </button>
                   </div>
                 </motion.div>
