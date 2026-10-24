@@ -13,8 +13,8 @@ export const getInitials = (name: string) => {
 export const getAvatarBg = (name: string) => {
   const colors = [
     "bg-slate-700 text-slate-100",
-    "bg-sage/40 text-white",
-    "bg-emerald-900/40 text-emerald-100",
+    "bg-sage text-background",
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100",
     "bg-slate-800 text-slate-200",
   ];
   let hash = 0;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 
 export interface ParticipantInfo {
   id: number;
@@ -18,46 +18,66 @@ export interface BankInfoFormProps {
   onUpdate: (id: number, bank: string, account: string) => Promise<boolean>;
 }
 
+const inputClass =
+  "rounded-glass-sm text-foreground placeholder:text-foreground/50 focus:border-sage min-h-11 w-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 font-sans text-base focus:outline-none sm:text-sm";
+
 export function BankInfoForm({ participant, onUpdate }: BankInfoFormProps) {
+  const bankId = useId();
+  const accountId = useId();
   const [bankName, setBankName] = useState(participant.bankName || "");
   const [bankAccount, setBankAccount] = useState(participant.bankAccount || "");
   const [isSaving, setIsSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saved" | "failed">("idle");
 
-  const handleSave = async () => {
+  const unchanged = bankName === (participant.bankName || "") && bankAccount === (participant.bankAccount || "");
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSaving(true);
     const success = await onUpdate(participant.id, bankName.trim(), bankAccount.trim());
-    if (success) {
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2000);
-    }
+    setStatus(success ? "saved" : "failed");
+    if (success) setTimeout(() => setStatus("idle"), 2000);
     setIsSaving(false);
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <input
-        type="text"
-        value={bankName}
-        onChange={(e) => setBankName(e.target.value)}
-        placeholder="Bank or E-Wallet (e.g. BCA, GoPay)"
-        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-36 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
-      />
-      <input
-        type="text"
-        value={bankAccount}
-        onChange={(e) => setBankAccount(e.target.value)}
-        placeholder="Account / Phone Number"
-        className="border-foreground/20 focus:border-sage text-foreground placeholder:text-foreground/20 w-36 border-b bg-transparent px-1 py-0.5 text-xs focus:outline-none"
-      />
+    <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <div className="space-y-1">
+        <label htmlFor={bankId} className="text-foreground/75 block font-sans text-xs">Bank atau e-wallet</label>
+        <input
+          id={bankId}
+          type="text"
+          value={bankName}
+          onChange={(e) => setBankName(e.target.value)}
+          placeholder="BCA, GoPay, ..."
+          autoComplete="off"
+          className={inputClass}
+        />
+      </div>
+      <div className="space-y-1">
+        <label htmlFor={accountId} className="text-foreground/75 block font-sans text-xs">Nomor rekening atau HP</label>
+        <input
+          id={accountId}
+          type="text"
+          inputMode="numeric"
+          value={bankAccount}
+          onChange={(e) => setBankAccount(e.target.value)}
+          autoComplete="off"
+          className={`${inputClass} tabular-nums`}
+        />
+      </div>
       <button
-        onClick={handleSave}
-        disabled={isSaving || (bankName === (participant.bankName || "") && bankAccount === (participant.bankAccount || ""))}
-        className="text-sage hover:bg-sage/10 cursor-pointer rounded px-2 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors disabled:opacity-30"
+        type="submit"
+        disabled={isSaving || unchanged}
+        className="bg-sage text-background rounded-glass-sm focus-visible:outline-sage min-h-11 cursor-pointer px-4 font-sans text-sm font-semibold transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {isSaving ? "Saving..." : isSaved ? "Saved!" : "Save"}
+        {isSaving ? "Menyimpan..." : "Simpan"}
       </button>
-    </div>
+      <p aria-live="polite" className="font-sans text-xs sm:col-span-3">
+        {status === "saved" && <span className="text-sage">Rekening tersimpan.</span>}
+        {status === "failed" && <span className="text-rose-600 dark:text-rose-300">Gagal menyimpan. Coba lagi.</span>}
+      </p>
+    </form>
   );
 }
 
