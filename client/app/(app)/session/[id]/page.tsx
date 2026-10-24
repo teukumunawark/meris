@@ -2,6 +2,7 @@
 
 import React, { use, useState, useMemo } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SessionProvider, useSession } from "@/entities/session/model/SessionContext";
 import { ThemeToggle } from "@/features/theme-toggle";
 import ClaimBoard from "@/widgets/claim-board/ui/ClaimBoard";
@@ -18,14 +19,14 @@ export default function ClaimSessionPage({ params }: PageProps) {
   const sessionId = resolvedParams.id;
 
   return (
-    <SessionProvider sessionId={sessionId}>
+    <SessionProvider key={sessionId} sessionId={sessionId}>
       <SessionPageContent />
     </SessionProvider>
   );
 }
 
 function SessionPageContent() {
-  const { isJoined, participants, userName } = useSession();
+  const { loadState, isJoined, participants, userName } = useSession();
   const mounted = useMounted();
   const [mobileTab, setMobileTab] = useState<"claims" | "settlement">("claims");
 
@@ -35,7 +36,12 @@ function SessionPageContent() {
     return match?.totalOwed || 0;
   }, [isJoined, userName, participants]);
 
-  if (!mounted) {
+  if (loadState === "notFound") {
+    notFound();
+  }
+
+  // Hold the spinner until the first state arrives so the empty "who paid?" view never flashes
+  if (!mounted || loadState === "loading") {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center">
         <div 

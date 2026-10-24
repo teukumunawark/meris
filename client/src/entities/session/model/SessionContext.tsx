@@ -2,7 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReceiptItem } from "@/shared/types";
-import { apiFetch } from "@/shared/api/client";
+import { apiFetch, ApiError } from "@/shared/api/client";
+
+export type SessionLoadState = "loading" | "ready" | "notFound" | "error";
 
 export interface Bill {
   id: string;
@@ -67,6 +69,7 @@ export interface SSEServerUpdatePayload {
 
 interface SessionContextType {
   sessionId: string;
+  loadState: SessionLoadState;
   userName: string;
   setUserName: (name: string) => void;
   participantId: number | null;
@@ -100,6 +103,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export function SessionProvider({ sessionId, children }: { sessionId: string, children: React.ReactNode }) {
+  const [loadState, setLoadState] = useState<SessionLoadState>("loading");
   const [userName, setUserName] = useState<string>("");
   const [participantId, setParticipantId] = useState<number | null>(null);
   const [participantToken, setParticipantToken] = useState<string>("");
@@ -236,8 +240,27 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
       try {
         const data = await apiFetch<SSEServerUpdatePayload>(`/session/${sessionId}`);
         if (data) mapBackendState(data);
+        setLoadState("ready");
       } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          // Drop the expired session from the landing page's recent list so it stops linking here
+          try {
+            const stored = localStorage.getItem("meris_recent_sessions");
+            if (stored) {
+              const list = JSON.parse(stored);
+              if (Array.isArray(list)) {
+                localStorage.setItem(
+                  "meris_recent_sessions",
+                  JSON.stringify(list.filter((item: { id?: string }) => item?.id !== sessionId))
+                );
+              }
+            }
+          } catch {}
+          setLoadState("notFound");
+          return;
+        }
         console.error("Initial fetch error:", err);
+        setLoadState("error");
       }
     };
     fetchInitialState();
@@ -249,7 +272,10 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
       eventSource.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data) as SSEServerUpdatePayload;
-          if (parsed && typeof parsed === "object") mapBackendState(parsed);
+          if (parsed && typeof parsed === "object") {
+            mapBackendState(parsed);
+            setLoadState((prev) => (prev === "notFound" ? prev : "ready"));
+          }
         } catch (err) {
           console.debug("SSE non-JSON message:", err);
         }
@@ -264,6 +290,7 @@ export function SessionProvider({ sessionId, children }: { sessionId: string, ch
   return (
     <SessionContext.Provider value={{
       sessionId,
+      loadState,
       userName,
       setUserName,
       participantId,
