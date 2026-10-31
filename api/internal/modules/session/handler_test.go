@@ -252,3 +252,16 @@ func TestHandleJSON(t *testing.T) {
 		}
 	})
 }
+
+func TestRescanBill_RejectsMissingToken(t *testing.T) {
+	h := &Handler{}
+	req := httptest.NewRequest(http.MethodPost, "/session/s1/bill/b1/rescan", strings.NewReader(`{"token":"   "}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.RescanBill(w, req, "s1", "b1")
+
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "errors.missing_token") {
+		t.Errorf("expected 400 errors.missing_token, got %d %s", w.Code, w.Body.String())
+	}
+}

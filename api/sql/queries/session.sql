@@ -83,8 +83,8 @@ SET payer_name = $1
 WHERE id = $2;
 
 -- name: CreateBill :exec
-INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, discount, other_charges, grand_total, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, discount, other_charges, grand_total, image_key, ocr_raw_response, ocr_model, ocr_status, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
 
 -- name: GetBillsBySession :many
 SELECT * FROM bills WHERE session_id = $1 ORDER BY created_at ASC;
@@ -93,6 +93,18 @@ SELECT * FROM bills WHERE session_id = $1 ORDER BY created_at ASC;
 UPDATE bills
 SET payer_name = $1, name = $2, tax = $3, service_charge = $4, discount = $5, other_charges = $6, grand_total = $7
 WHERE id = $8 AND session_id = $9;
+
+-- name: UpdateBillOCRResult :exec
+UPDATE bills
+SET name = $1, tax = $2, service_charge = $3, discount = $4, other_charges = $5, grand_total = $6, ocr_raw_response = $7, ocr_model = $8, ocr_status = $9
+WHERE id = $10 AND session_id = $11;
+
+-- name: DeleteItemsByBill :exec
+DELETE FROM items WHERE bill_id = $1 AND session_id = $2;
+
+-- name: CreateOCRLog :exec
+INSERT INTO ocr_logs (id, image_key, image_sha256, session_id, bill_id, status, model, raw_response, error_message, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: UpdateBillPayerName :exec
 UPDATE bills

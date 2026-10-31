@@ -42,7 +42,7 @@ export default function ClaimBoard() {
   const { joinSession, joinError } = useJoinSession();
   const { updateClaim } = useClaimItem();
   const { renameItem } = useRenameItem();
-  const { addItem, addBill, updateBill, deleteBill } = useManageItems();
+  const { addItem, addBill, rescanBill, updateBill, deleteBill } = useManageItems();
   const { removeParticipant } = useRemoveParticipant();
   const { showJoinHint, showClaimHint, completeJoinHint, completeClaimHint } = useOnboarding();
 
@@ -778,6 +778,8 @@ export default function ClaimBoard() {
                   sessionPayerName={payerName}
                   updateBill={updateBill}
                   deleteBill={deleteBill}
+                  rescanBill={rescanBill}
+                  addItem={addItem}
                   firstUnclaimedId={firstUnclaimedId}
                   showClaimHint={showClaimHint}
                   completeClaimHint={completeClaimHint}
@@ -807,6 +809,8 @@ export default function ClaimBoard() {
                 sessionPayerName={payerName}
                 updateBill={async () => false}
                 deleteBill={async () => false}
+                rescanBill={async () => null}
+                addItem={addItem}
                 firstUnclaimedId={firstUnclaimedId}
                 showClaimHint={showClaimHint}
                 completeClaimHint={completeClaimHint}

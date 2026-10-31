@@ -13,6 +13,15 @@ http://meris.munawar.my.id {
 		}
 	}
 
+	# S3 presigned GET/HEAD URLs for receipt images in RustFS (path-style /meris-receipts/*).
+	@s3_receipts {
+		method GET HEAD
+		path /meris-receipts/*
+	}
+	handle @s3_receipts {
+		reverse_proxy rustfs:9000
+	}
+
 	# Everything else is the Next.js client (its own /api/healthz stays here, it is not under /_api).
 	handle {
 		encode zstd gzip

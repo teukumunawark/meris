@@ -35,6 +35,9 @@
   "errors.bill_not_found": {
     "other": "Struk ini sudah tidak ada. Mungkin baru saja dihapus."
   },
+  "errors.bill_image_not_found": {
+    "other": "Foto struk ini tidak tersedia untuk dipindai ulang."
+  },
   "errors.cannot_remove_owner": {
     "other": "Pembayar sesi tidak bisa dikeluarkan."
   },

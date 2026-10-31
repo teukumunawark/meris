@@ -17,6 +17,7 @@ func allAppErrors() []*apperrors.AppError {
 	return []*apperrors.AppError{
 		session.ErrUnauthorized,
 		session.ErrBillNotFound,
+		session.ErrBillImageNotFound,
 		session.ErrCannotRemoveOwner,
 		session.ErrFileTooLarge,
 		session.ErrInvalidFile,

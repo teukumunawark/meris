@@ -22,6 +22,7 @@ import (
 	"meris-backend/internal/platform/logger"
 	"meris-backend/internal/platform/redis"
 	"meris-backend/internal/platform/sse"
+	"meris-backend/internal/platform/storage"
 	"meris-backend/internal/platform/telemetry"
 )
 
@@ -45,7 +46,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	shutdownTele, err := telemetry.Init(ctx, "meris-api", cfg.Env, cfg.Telemetry.OTLPEndpoint)
+	shutdownTele, err := telemetry.Init(ctx, "meris-api", cfg.Env, cfg.Telemetry.OTLPEndpoint, cfg.Telemetry.Enabled)
 	if err != nil {
 		slog.Error("Failed to initialize OpenTelemetry", "error", err)
 	} else {
@@ -75,8 +76,21 @@ func main() {
 
 	hub := sse.NewHub()
 
+	storageClient, err := storage.NewClient(cfg.Storage)
+	if err != nil {
+		slog.Error("Invalid object storage configuration", "error", err)
+		os.Exit(1)
+	}
+	if storageClient != nil {
+		if err := storageClient.EnsureBucket(ctx); err != nil {
+			slog.Warn("Could not ensure object storage bucket at startup", "bucket", cfg.Storage.Bucket, "error", err)
+		} else {
+			slog.Info("Object storage initialized", "endpoint", cfg.Storage.Endpoint, "bucket", cfg.Storage.Bucket)
+		}
+	}
+
 	repo := session.NewRepository(dbPool)
-	svc := session.NewService(repo, hub)
+	svc := session.NewService(repo, hub).WithStorage(storageClient)
 	sessionHandler := session.NewHandler(svc)
 
 	translator := i18n.NewTranslator()

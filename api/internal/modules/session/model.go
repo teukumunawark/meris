@@ -44,6 +44,7 @@ type CompiledBill struct {
 	Discount      float64 `json:"discount"`
 	OtherCharges  float64 `json:"otherCharges"`
 	GrandTotal    float64 `json:"grandTotal"`
+	ImageURL      string  `json:"imageUrl,omitempty"`
 	CreatedAt     string  `json:"createdAt"`
 }
 

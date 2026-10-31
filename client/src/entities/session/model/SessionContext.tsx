@@ -19,6 +19,7 @@ export interface Bill extends BillCharges {
   payerName: string;
   name: string;
   grandTotal: number;
+  imageUrl?: string;
   createdAt: string;
 }
 

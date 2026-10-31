@@ -59,6 +59,10 @@ func (s *OpenAPIServer) AddBill(w http.ResponseWriter, r *http.Request, id strin
 	s.sessionHandler.AddBill(w, r, id)
 }
 
+func (s *OpenAPIServer) RescanBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
+	s.sessionHandler.RescanBill(w, r, id, billId)
+}
+
 func (s *OpenAPIServer) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {
 	s.sessionHandler.DeleteBill(w, r, id, billId, params)
 }

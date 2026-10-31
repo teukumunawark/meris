@@ -26,6 +26,7 @@ type Bill struct {
 	Discount      float32 `json:"discount"`
 	GrandTotal    float32 `json:"grandTotal"`
 	Id            string  `json:"id"`
+	ImageUrl      *string `json:"imageUrl,omitempty"`
 	Name          string  `json:"name"`
 	OtherCharges  float32 `json:"otherCharges"`
 	PayerName     string  `json:"payerName"`
@@ -137,6 +138,7 @@ type CreateSessionMultipartBody struct {
 	PayerBankName    *string            `json:"payerBankName,omitempty"`
 	PayerName        *string            `json:"payerName,omitempty"`
 	Receipt          openapi_types.File `json:"receipt"`
+	SkipOcr          *string            `json:"skipOcr,omitempty"`
 }
 
 // CreateSessionParams defines parameters for CreateSession.
@@ -151,14 +153,13 @@ type GetSessionParams struct {
 	AcceptLanguage *string `json:"Accept-Language,omitempty"`
 }
 
-// AddBillJSONBody defines parameters for AddBill.
-type AddBillJSONBody struct {
-	GrandTotal    float32 `json:"grandTotal"`
-	Name          string  `json:"name"`
-	PayerName     string  `json:"payerName"`
-	ServiceCharge float32 `json:"serviceCharge"`
-	Tax           float32 `json:"tax"`
-	Token         string  `json:"token"`
+// AddBillMultipartBody defines parameters for AddBill.
+type AddBillMultipartBody struct {
+	Name      *string            `json:"name,omitempty"`
+	PayerName *string            `json:"payerName,omitempty"`
+	Receipt   openapi_types.File `json:"receipt"`
+	SkipOcr   *string            `json:"skipOcr,omitempty"`
+	Token     string             `json:"token"`
 }
 
 // DeleteBillParams defines parameters for DeleteBill.
@@ -178,6 +179,11 @@ type UpdateBillJSONBody struct {
 	Token         string   `json:"token"`
 }
 
+// RescanBillJSONBody defines parameters for RescanBill.
+type RescanBillJSONBody struct {
+	Token string `json:"token"`
+}
+
 // ClaimItemJSONBody defines parameters for ClaimItem.
 type ClaimItemJSONBody struct {
 	ItemId        string  `json:"itemId"`
@@ -194,6 +200,7 @@ type ClaimItemParams struct {
 
 // AddItemJSONBody defines parameters for AddItem.
 type AddItemJSONBody struct {
+	BillId   *string `json:"billId,omitempty"`
 	Name     string  `json:"name"`
 	Price    float32 `json:"price"`
 	Quantity int     `json:"quantity"`
@@ -258,11 +265,14 @@ type UpdatePaymentInfoJSONBody struct {
 // CreateSessionMultipartRequestBody defines body for CreateSession for multipart/form-data ContentType.
 type CreateSessionMultipartRequestBody CreateSessionMultipartBody
 
-// AddBillJSONRequestBody defines body for AddBill for application/json ContentType.
-type AddBillJSONRequestBody AddBillJSONBody
+// AddBillMultipartRequestBody defines body for AddBill for multipart/form-data ContentType.
+type AddBillMultipartRequestBody AddBillMultipartBody
 
 // UpdateBillJSONRequestBody defines body for UpdateBill for application/json ContentType.
 type UpdateBillJSONRequestBody UpdateBillJSONBody
+
+// RescanBillJSONRequestBody defines body for RescanBill for application/json ContentType.
+type RescanBillJSONRequestBody RescanBillJSONBody
 
 // ClaimItemJSONRequestBody defines body for ClaimItem for application/json ContentType.
 type ClaimItemJSONRequestBody ClaimItemJSONBody
@@ -305,6 +315,9 @@ type ServerInterface interface {
 	// Update an existing bill
 	// (PUT /session/{id}/bill/{billId})
 	UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string)
+	// Re-run AI OCR on a bill's stored receipt image using the escalation model
+	// (POST /session/{id}/bill/{billId}/rescan)
+	RescanBill(w http.ResponseWriter, r *http.Request, id string, billId string)
 	// Claim or adjust share of a specific item
 	// (POST /session/{id}/claim)
 	ClaimItem(w http.ResponseWriter, r *http.Request, id string, params ClaimItemParams)
@@ -368,6 +381,12 @@ func (_ Unimplemented) DeleteBill(w http.ResponseWriter, r *http.Request, id str
 // Update an existing bill
 // (PUT /session/{id}/bill/{billId})
 func (_ Unimplemented) UpdateBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-run AI OCR on a bill's stored receipt image using the escalation model
+// (POST /session/{id}/bill/{billId}/rescan)
+func (_ Unimplemented) RescanBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -634,6 +653,41 @@ func (siw *ServerInterfaceWrapper) UpdateBill(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateBill(w, r, id, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RescanBill operation middleware
+func (siw *ServerInterfaceWrapper) RescanBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "billId" -------------
+	var billId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "billId", chi.URLParam(r, "billId"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "billId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RescanBill(w, r, id, billId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1166,6 +1220,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/session/{id}/bill/{billId}", wrapper.UpdateBill)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/session/{id}/bill/{billId}/rescan", wrapper.RescanBill)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/session/{id}/claim", wrapper.ClaimItem)
 	})
 	r.Group(func(r chi.Router) {
@@ -1204,37 +1261,40 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"ePjfAA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

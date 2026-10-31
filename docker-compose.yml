@@ -19,39 +19,61 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
-  api:
-    build: ./api
-    container_name: meris-api
-    restart: unless-stopped
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: meris-rustfs
     ports:
-      - "8091:8080"
-    env_file:
-      - .env
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_NAME=merisdb
-      - REDIS_ADDR=redis:6379
-      - BIND_ADDRESS=0.0.0.0
-    depends_on:
-      - postgres
-      - redis
-
-  client:
-    build:
-      context: ./client
-      args:
-        - NEXT_PUBLIC_BACKEND_URL=http://localhost:8091
-    container_name: meris-client
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_VOLUMES: /data
+    volumes:
+      - rustfsdata:/data
     restart: unless-stopped
-    ports:
-      - "3011:3000"
-    env_file:
-      - .env
-    depends_on:
-      - api
+#
+#  api:
+#    build: ./api
+#    container_name: meris-api
+#    restart: unless-stopped
+#    ports:
+#      - "8091:8080"
+#    env_file:
+#      - .env
+#    environment:
+#      - DB_HOST=postgres
+#      - DB_PORT=5432
+#      - DB_USER=postgres
+#      - DB_PASSWORD=password
+#      - DB_NAME=merisdb
+#      - REDIS_ADDR=redis:6379
+#      - S3_ENDPOINT=http://rustfs:9000
+#      - S3_PUBLIC_ENDPOINT=http://localhost:9000
+#      - S3_ACCESS_KEY=rustfsadmin
+#      - S3_SECRET_KEY=rustfsadmin
+#      - S3_BUCKET=meris-receipts
+#      - BIND_ADDRESS=0.0.0.0
+#    depends_on:
+#      - postgres
+#      - redis
+#      - rustfs
+#
+#  client:
+#    build:
+#      context: ./client
+#      args:
+#        - NEXT_PUBLIC_BACKEND_URL=http://localhost:8091
+#    container_name: meris-client
+#    restart: unless-stopped
+#    ports:
+#      - "3011:3000"
+#    env_file:
+#      - .env
+#    depends_on:
+#      - api
 
 volumes:
   pgdata:
+  rustfsdata:

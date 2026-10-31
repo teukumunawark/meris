@@ -9,16 +9,20 @@ import (
 )
 
 type Bill struct {
-	ID            string             `db:"id" json:"id"`
-	SessionID     string             `db:"session_id" json:"session_id"`
-	PayerName     string             `db:"payer_name" json:"payer_name"`
-	Name          string             `db:"name" json:"name"`
-	Tax           float64            `db:"tax" json:"tax"`
-	ServiceCharge float64            `db:"service_charge" json:"service_charge"`
-	GrandTotal    float64            `db:"grand_total" json:"grand_total"`
-	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	Discount      float64            `db:"discount" json:"discount"`
-	OtherCharges  float64            `db:"other_charges" json:"other_charges"`
+	ID             string             `db:"id" json:"id"`
+	SessionID      string             `db:"session_id" json:"session_id"`
+	PayerName      string             `db:"payer_name" json:"payer_name"`
+	Name           string             `db:"name" json:"name"`
+	Tax            float64            `db:"tax" json:"tax"`
+	ServiceCharge  float64            `db:"service_charge" json:"service_charge"`
+	GrandTotal     float64            `db:"grand_total" json:"grand_total"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	Discount       float64            `db:"discount" json:"discount"`
+	OtherCharges   float64            `db:"other_charges" json:"other_charges"`
+	ImageKey       string             `db:"image_key" json:"image_key"`
+	OcrRawResponse []byte             `db:"ocr_raw_response" json:"ocr_raw_response"`
+	OcrModel       string             `db:"ocr_model" json:"ocr_model"`
+	OcrStatus      string             `db:"ocr_status" json:"ocr_status"`
 }
 
 type Claim struct {
@@ -36,6 +40,19 @@ type Item struct {
 	Quantity  int32       `db:"quantity" json:"quantity"`
 	ParentID  pgtype.Text `db:"parent_id" json:"parent_id"`
 	BillID    string      `db:"bill_id" json:"bill_id"`
+}
+
+type OcrLog struct {
+	ID           string             `db:"id" json:"id"`
+	ImageKey     string             `db:"image_key" json:"image_key"`
+	ImageSha256  string             `db:"image_sha256" json:"image_sha256"`
+	SessionID    pgtype.Text        `db:"session_id" json:"session_id"`
+	BillID       pgtype.Text        `db:"bill_id" json:"bill_id"`
+	Status       string             `db:"status" json:"status"`
+	Model        string             `db:"model" json:"model"`
+	RawResponse  []byte             `db:"raw_response" json:"raw_response"`
+	ErrorMessage string             `db:"error_message" json:"error_message"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
 
 type Participant struct {

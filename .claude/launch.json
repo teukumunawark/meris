@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "meris-client",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--cwd=client", "dev"],
+      "port": 3000,
+      "autoPort": false,
+      "env": { "NEXT_PUBLIC_BACKEND_URL": "http://localhost:8091" }
+    }
+  ]
+}

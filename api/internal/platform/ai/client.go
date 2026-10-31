@@ -169,6 +169,24 @@ func ExtractReceiptData(ctx context.Context, imageBytes []byte) (*ExtractedRecei
 	}
 }
 
+func ExtractReceiptDataWithEscalation(ctx context.Context, imageBytes []byte) (*ExtractedReceipt, error) {
+	cfg, err := resolveConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	model := cmp.Or(cfg.EscalationModel, cfg.Model)
+	slog.InfoContext(ctx, "Running AI receipt rescan with escalation model", "model", model)
+	extracted, err := extractWithRetry(ctx, cfg, model, imageBytes)
+	if err != nil {
+		return nil, err
+	}
+	if !extracted.MatchesPrintedTotal {
+		slog.WarnContext(ctx, "AI receipt amounts do not add up to the printed total on rescan", "model", extracted.ExtractedByModel)
+	}
+	return extracted, nil
+}
+
 func extractWithRetry(ctx context.Context, cfg Config, model string, imageBytes []byte) (*ExtractedReceipt, error) {
 	var lastErr error
 	for attempt := 1; attempt <= 2; attempt++ {

@@ -35,6 +35,9 @@
   "errors.bill_not_found": {
     "other": "This receipt no longer exists. It may have just been deleted."
   },
+  "errors.bill_image_not_found": {
+    "other": "The photo for this receipt isn't available to scan again."
+  },
   "errors.cannot_remove_owner": {
     "other": "The session payer can't be removed."
   },

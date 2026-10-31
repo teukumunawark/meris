@@ -68,3 +68,36 @@ func TestLoadRateLimitRejectsBadValues(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadTelemetryEnabled(t *testing.T) {
+	tests := []struct {
+		name         string
+		appEnv       string
+		otelEnabled  string
+		otlpEndpoint string
+		wantEnabled  bool
+	}{
+		{"disabled by default in local env", "local", "", "localhost:4317", false},
+		{"explicitly enabled in local env", "local", "true", "localhost:4317", true},
+		{"enabled by default in production when endpoint set", "production", "", "alloy:4317", true},
+		{"disabled in production when endpoint empty", "production", "", "", false},
+		{"explicitly disabled in production", "production", "false", "alloy:4317", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("APP_ENV", tt.appEnv)
+			t.Setenv("OTEL_ENABLED", tt.otelEnabled)
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", tt.otlpEndpoint)
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			got := cfg.Telemetry.Enabled && cfg.Telemetry.OTLPEndpoint != ""
+			if got != tt.wantEnabled {
+				t.Errorf("effective telemetry enabled = %v, want %v", got, tt.wantEnabled)
+			}
+		})
+	}
+}

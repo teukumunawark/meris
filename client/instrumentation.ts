@@ -26,6 +26,15 @@ const customSampler = {
 };
 
 export function register() {
+  const isDev = process.env.NODE_ENV === 'development';
+  const otelEnabled = process.env.OTEL_ENABLED
+    ? process.env.OTEL_ENABLED === 'true'
+    : !isDev && Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT);
+
+  if (!otelEnabled) {
+    return;
+  }
+
   registerOTel({
     serviceName: 'meris-client',
     traceSampler: customSampler,

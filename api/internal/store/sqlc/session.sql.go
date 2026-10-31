@@ -12,21 +12,25 @@ import (
 )
 
 const createBill = `-- name: CreateBill :exec
-INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, discount, other_charges, grand_total, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO bills (id, session_id, payer_name, name, tax, service_charge, discount, other_charges, grand_total, image_key, ocr_raw_response, ocr_model, ocr_status, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 `
 
 type CreateBillParams struct {
-	ID            string             `db:"id" json:"id"`
-	SessionID     string             `db:"session_id" json:"session_id"`
-	PayerName     string             `db:"payer_name" json:"payer_name"`
-	Name          string             `db:"name" json:"name"`
-	Tax           float64            `db:"tax" json:"tax"`
-	ServiceCharge float64            `db:"service_charge" json:"service_charge"`
-	Discount      float64            `db:"discount" json:"discount"`
-	OtherCharges  float64            `db:"other_charges" json:"other_charges"`
-	GrandTotal    float64            `db:"grand_total" json:"grand_total"`
-	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	ID             string             `db:"id" json:"id"`
+	SessionID      string             `db:"session_id" json:"session_id"`
+	PayerName      string             `db:"payer_name" json:"payer_name"`
+	Name           string             `db:"name" json:"name"`
+	Tax            float64            `db:"tax" json:"tax"`
+	ServiceCharge  float64            `db:"service_charge" json:"service_charge"`
+	Discount       float64            `db:"discount" json:"discount"`
+	OtherCharges   float64            `db:"other_charges" json:"other_charges"`
+	GrandTotal     float64            `db:"grand_total" json:"grand_total"`
+	ImageKey       string             `db:"image_key" json:"image_key"`
+	OcrRawResponse []byte             `db:"ocr_raw_response" json:"ocr_raw_response"`
+	OcrModel       string             `db:"ocr_model" json:"ocr_model"`
+	OcrStatus      string             `db:"ocr_status" json:"ocr_status"`
+	CreatedAt      pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
 
 func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) error {
@@ -40,6 +44,10 @@ func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) error {
 		arg.Discount,
 		arg.OtherCharges,
 		arg.GrandTotal,
+		arg.ImageKey,
+		arg.OcrRawResponse,
+		arg.OcrModel,
+		arg.OcrStatus,
 		arg.CreatedAt,
 	)
 	return err
@@ -85,6 +93,40 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) error {
 		arg.Name,
 		arg.Price,
 		arg.Quantity,
+	)
+	return err
+}
+
+const createOCRLog = `-- name: CreateOCRLog :exec
+INSERT INTO ocr_logs (id, image_key, image_sha256, session_id, bill_id, status, model, raw_response, error_message, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+`
+
+type CreateOCRLogParams struct {
+	ID           string             `db:"id" json:"id"`
+	ImageKey     string             `db:"image_key" json:"image_key"`
+	ImageSha256  string             `db:"image_sha256" json:"image_sha256"`
+	SessionID    pgtype.Text        `db:"session_id" json:"session_id"`
+	BillID       pgtype.Text        `db:"bill_id" json:"bill_id"`
+	Status       string             `db:"status" json:"status"`
+	Model        string             `db:"model" json:"model"`
+	RawResponse  []byte             `db:"raw_response" json:"raw_response"`
+	ErrorMessage string             `db:"error_message" json:"error_message"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+func (q *Queries) CreateOCRLog(ctx context.Context, arg CreateOCRLogParams) error {
+	_, err := q.db.Exec(ctx, createOCRLog,
+		arg.ID,
+		arg.ImageKey,
+		arg.ImageSha256,
+		arg.SessionID,
+		arg.BillID,
+		arg.Status,
+		arg.Model,
+		arg.RawResponse,
+		arg.ErrorMessage,
+		arg.CreatedAt,
 	)
 	return err
 }
@@ -187,6 +229,20 @@ func (q *Queries) DeleteItem(ctx context.Context, arg DeleteItemParams) error {
 	return err
 }
 
+const deleteItemsByBill = `-- name: DeleteItemsByBill :exec
+DELETE FROM items WHERE bill_id = $1 AND session_id = $2
+`
+
+type DeleteItemsByBillParams struct {
+	BillID    string `db:"bill_id" json:"bill_id"`
+	SessionID string `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) DeleteItemsByBill(ctx context.Context, arg DeleteItemsByBillParams) error {
+	_, err := q.db.Exec(ctx, deleteItemsByBill, arg.BillID, arg.SessionID)
+	return err
+}
+
 const deleteParticipant = `-- name: DeleteParticipant :exec
 DELETE FROM participants WHERE id = $1 AND session_id = $2
 `
@@ -202,7 +258,7 @@ func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantPa
 }
 
 const getBillsBySession = `-- name: GetBillsBySession :many
-SELECT id, session_id, payer_name, name, tax, service_charge, grand_total, created_at, discount, other_charges FROM bills WHERE session_id = $1 ORDER BY created_at ASC
+SELECT id, session_id, payer_name, name, tax, service_charge, grand_total, created_at, discount, other_charges, image_key, ocr_raw_response, ocr_model, ocr_status FROM bills WHERE session_id = $1 ORDER BY created_at ASC
 `
 
 func (q *Queries) GetBillsBySession(ctx context.Context, sessionID string) ([]Bill, error) {
@@ -225,6 +281,10 @@ func (q *Queries) GetBillsBySession(ctx context.Context, sessionID string) ([]Bi
 			&i.CreatedAt,
 			&i.Discount,
 			&i.OtherCharges,
+			&i.ImageKey,
+			&i.OcrRawResponse,
+			&i.OcrModel,
+			&i.OcrStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -547,6 +607,43 @@ func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) error {
 		arg.Discount,
 		arg.OtherCharges,
 		arg.GrandTotal,
+		arg.ID,
+		arg.SessionID,
+	)
+	return err
+}
+
+const updateBillOCRResult = `-- name: UpdateBillOCRResult :exec
+UPDATE bills
+SET name = $1, tax = $2, service_charge = $3, discount = $4, other_charges = $5, grand_total = $6, ocr_raw_response = $7, ocr_model = $8, ocr_status = $9
+WHERE id = $10 AND session_id = $11
+`
+
+type UpdateBillOCRResultParams struct {
+	Name           string  `db:"name" json:"name"`
+	Tax            float64 `db:"tax" json:"tax"`
+	ServiceCharge  float64 `db:"service_charge" json:"service_charge"`
+	Discount       float64 `db:"discount" json:"discount"`
+	OtherCharges   float64 `db:"other_charges" json:"other_charges"`
+	GrandTotal     float64 `db:"grand_total" json:"grand_total"`
+	OcrRawResponse []byte  `db:"ocr_raw_response" json:"ocr_raw_response"`
+	OcrModel       string  `db:"ocr_model" json:"ocr_model"`
+	OcrStatus      string  `db:"ocr_status" json:"ocr_status"`
+	ID             string  `db:"id" json:"id"`
+	SessionID      string  `db:"session_id" json:"session_id"`
+}
+
+func (q *Queries) UpdateBillOCRResult(ctx context.Context, arg UpdateBillOCRResultParams) error {
+	_, err := q.db.Exec(ctx, updateBillOCRResult,
+		arg.Name,
+		arg.Tax,
+		arg.ServiceCharge,
+		arg.Discount,
+		arg.OtherCharges,
+		arg.GrandTotal,
+		arg.OcrRawResponse,
+		arg.OcrModel,
+		arg.OcrStatus,
 		arg.ID,
 		arg.SessionID,
 	)

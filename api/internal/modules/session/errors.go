@@ -9,6 +9,7 @@ import (
 var (
 	ErrUnauthorized      = apperrors.NewAppError("errors.unauthorized", nil, http.StatusUnauthorized, errors.New("unauthorized"))
 	ErrBillNotFound      = apperrors.NewAppError("errors.bill_not_found", nil, http.StatusNotFound, errors.New("bill not found"))
+	ErrBillImageNotFound = apperrors.NewAppError("errors.bill_image_not_found", nil, http.StatusNotFound, errors.New("bill receipt image not found"))
 	ErrCannotRemoveOwner = apperrors.NewAppError("errors.cannot_remove_owner", nil, http.StatusConflict, errors.New("cannot remove the session payer"))
 	ErrFileTooLarge      = apperrors.NewAppError("errors.file_too_large", nil, http.StatusRequestEntityTooLarge, errors.New("receipt upload exceeds the size limit"))
 	ErrInvalidFile       = apperrors.NewAppError("errors.invalid_file", nil, http.StatusBadRequest, errors.New("receipt file missing from the request"))

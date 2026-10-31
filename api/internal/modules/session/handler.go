@@ -61,6 +61,7 @@ type paymentInfoPayload struct {
 }
 
 type itemPayload struct {
+	BillID   string  `json:"billId"`
 	Name     string  `json:"name"`
 	Price    float64 `json:"price"`
 	Quantity int32   `json:"quantity"`
@@ -122,6 +123,7 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	payerName := r.FormValue("payerName")
 	payerBankName := r.FormValue("payerBankName")
 	payerBankAccount := r.FormValue("payerBankAccount")
+	skipOCR := r.FormValue("skipOcr") == "true"
 
 	session, _, _, payerID, payerToken, err := h.service.ExtractAndCreateSession(
 		r.Context(),
@@ -129,6 +131,7 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		payerName,
 		payerBankName,
 		payerBankAccount,
+		skipOCR,
 	)
 	if err != nil {
 		httpresponse.RespondError(w, r, err)
@@ -247,7 +250,7 @@ func (h *Handler) UpdatePaymentInfo(w http.ResponseWriter, r *http.Request, id s
 
 func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request, id string) {
 	handleJSON(w, r, http.StatusCreated, func(p itemPayload) error {
-		return h.service.AddItem(r.Context(), id, p.Name, p.Price, p.Quantity, p.Token)
+		return h.service.AddItem(r.Context(), id, p.BillID, p.Name, p.Price, p.Quantity, p.Token)
 	})
 }
 
@@ -273,14 +276,35 @@ func (h *Handler) AddBill(w http.ResponseWriter, r *http.Request, id string) {
 	payerName := r.FormValue("payerName")
 	billName := r.FormValue("name")
 	token := r.FormValue("token")
+	skipOCR := r.FormValue("skipOcr") == "true"
 
-	err = h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token)
+	err = h.service.AddBillToSession(r.Context(), id, imageBytes, payerName, billName, token, skipOCR)
 	if err != nil {
 		httpresponse.RespondError(w, r, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Handler) RescanBill(w http.ResponseWriter, r *http.Request, id string, billId string) {
+	var payload struct {
+		Token string `json:"token"`
+	}
+	if !decodeBody(w, r, &payload) {
+		return
+	}
+	if strings.TrimSpace(payload.Token) == "" {
+		httpresponse.RespondError(w, r, apperrors.ErrMissingToken)
+		return
+	}
+
+	if err := h.service.RescanBill(r.Context(), id, billId, payload.Token); err != nil {
+		httpresponse.RespondError(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) DeleteBill(w http.ResponseWriter, r *http.Request, id string, billId string, params generated.DeleteBillParams) {

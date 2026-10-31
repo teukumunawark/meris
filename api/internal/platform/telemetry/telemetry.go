@@ -15,7 +15,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-func Init(ctx context.Context, serviceName, env, otlpEndpoint string) (func(context.Context) error, error) {
+func Init(ctx context.Context, serviceName, env, otlpEndpoint string, enabled bool) (func(context.Context) error, error) {
+	if !enabled || otlpEndpoint == "" {
+		return func(context.Context) error { return nil }, nil
+	}
+
 	if env == "" {
 		env = "production"
 	}
@@ -28,10 +32,6 @@ func Init(ctx context.Context, serviceName, env, otlpEndpoint string) (func(cont
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create resource: %w", err)
-	}
-
-	if otlpEndpoint == "" {
-		otlpEndpoint = "localhost:4317"
 	}
 
 	traceExporter, err := otlptracegrpc.New(ctx,

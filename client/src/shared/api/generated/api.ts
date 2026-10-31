@@ -175,6 +175,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/session/{id}/bill/{billId}/rescan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-run AI OCR on a bill's stored receipt image using the escalation model */
+        post: operations["RescanBill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/session/{id}/bill/{billId}": {
         parameters: {
             query?: never;
@@ -316,6 +333,7 @@ export interface components {
             discount: number;
             otherCharges: number;
             grandTotal: number;
+            imageUrl?: string;
             createdAt: string;
         };
         Transfer: {
@@ -350,6 +368,7 @@ export interface operations {
                     payerName?: string;
                     payerBankName?: string;
                     payerBankAccount?: string;
+                    skipOcr?: string;
                 };
             };
         };
@@ -556,6 +575,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    billId?: string;
                     name: string;
                     price: number;
                     quantity: number;
@@ -715,13 +735,13 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    payerName: string;
-                    name: string;
-                    tax: number;
-                    serviceCharge: number;
-                    grandTotal: number;
+                "multipart/form-data": {
+                    /** Format: binary */
+                    receipt: string;
+                    payerName?: string;
+                    name?: string;
                     token: string;
+                    skipOcr?: string;
                 };
             };
         };
@@ -732,6 +752,69 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    RescanBill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                billId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Bill re-scanned and items updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token does not belong to this bill's payer or the session payer */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Bill or receipt image not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Receipt unreadable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI service unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };

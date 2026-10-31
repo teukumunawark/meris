@@ -67,6 +67,10 @@ export const en: Messages = {
     readingHint: "Picking out the items and prices.",
     errorTitle: "Couldn't process the receipt",
     errorFallback: "Make sure the whole receipt is in the photo and well lit, then try again.",
+    retryButton: "Try reading again",
+    manualFallbackButton: "Enter items manually (keep receipt photo)",
+    changePhotoButton: "Pick another photo",
+    selectedPhotoAlt: "Receipt photo preview",
   },
 
   joinForm: {
@@ -150,7 +154,11 @@ export const en: Messages = {
   addBill: {
     button: "Add receipt",
     reading: "Reading receipt...",
-    failed: "Couldn't add the receipt. Try another photo.",
+    failed: "Couldn't read the receipt. Try reading again without retaking the photo, or enter items manually.",
+    retryButton: "Try reading again",
+    manualFallbackButton: "Keep receipt & enter manually",
+    changePhotoButton: "Pick another photo",
+    cancelButton: "Cancel",
   },
 
   billCard: {
@@ -173,6 +181,23 @@ export const en: Messages = {
     editDetails: "Edit receipt details",
     deleteConfirm: (name) => `Delete the receipt "${name}" and all its items?`,
     empty: "This receipt has no items yet.",
+    viewReceipt: "View receipt",
+    hideReceipt: "Hide receipt photo",
+    splitReceipt: "Side-by-side view",
+    fullscreenReceipt: "Full screen",
+    receiptAlt: (name) => `Receipt photo for ${name}`,
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    zoomReset: "Reset zoom",
+    rescanAi: "Rescan with AI",
+    rescanningAi: "Rescanning...",
+    rescanConfirmWithClaims: (name) =>
+      `Rescan "${name}" using the high-accuracy AI model? Existing items and participant claims on this receipt will be replaced with the new reading.`,
+    rescanConfirm: (name) =>
+      `Rescan "${name}" using the high-accuracy AI model? The items and charges on this receipt will be updated.`,
+    rescanFailed: "Couldn't rescan the receipt. Try again in a moment.",
+    addItemToBill: "Add item",
+    receiptLoadError: "Couldn't load the receipt photo.",
   },
 
   item: {

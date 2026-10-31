@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,34 +17,120 @@ import (
 
 	"meris-backend/internal/platform/ai"
 	"meris-backend/internal/platform/sse"
+	"meris-backend/internal/platform/storage"
 	"meris-backend/internal/store/sqlc"
 	"meris-backend/internal/store/sqlcutil"
 )
 
 const postgresUniqueViolation = "23505"
 
+type ReceiptStorage interface {
+	UploadReceipt(ctx context.Context, imageBytes []byte) (imageKey string, sha256Hex string, err error)
+	GetReceipt(ctx context.Context, imageKey string) ([]byte, error)
+	PresignReceiptURL(imageKey string) string
+}
+
 type Service struct {
-	repo *Repository
-	hub  *sse.Hub
+	repo    *Repository
+	hub     *sse.Hub
+	storage ReceiptStorage
 }
 
 func NewService(repo *Repository, hub *sse.Hub) *Service {
 	return &Service{repo: repo, hub: hub}
 }
 
-func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte, payerName, payerBankName, payerBankAccount string) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, uint, string, error) {
-	extracted, err := extractReceipt(ctx, imageBytes)
+func (s *Service) WithStorage(st ReceiptStorage) *Service {
+	s.storage = st
+	return s
+}
+
+func (s *Service) uploadReceiptBestEffort(ctx context.Context, imageBytes []byte) (string, string) {
+	sha256Hex, _, _ := storage.ReceiptImageHashAndKey(imageBytes)
+	if s.storage == nil {
+		return "", sha256Hex
+	}
+	key, hash, err := s.storage.UploadReceipt(ctx, imageBytes)
 	if err != nil {
-		return nil, nil, nil, 0, "", err
+		slog.WarnContext(ctx, "Failed to upload receipt image to object storage", "error", err)
+		return "", sha256Hex
+	}
+	return key, hash
+}
+
+func (s *Service) presignBillImage(imageKey string) string {
+	if s.storage == nil || strings.TrimSpace(imageKey) == "" {
+		return ""
+	}
+	return s.storage.PresignReceiptURL(imageKey)
+}
+
+func ocrMetadataOf(extracted *ai.ExtractedReceipt, skipOCR bool) ([]byte, string, string) {
+	if skipOCR || extracted == nil {
+		return nil, "manual", "manual_fallback"
+	}
+	rawJSON, _ := json.Marshal(extracted)
+	status := "success"
+	if !extracted.MatchesPrintedTotal {
+		status = "reconciled_mismatch"
+	}
+	return rawJSON, extracted.ExtractedByModel, status
+}
+
+func (s *Service) recordOCRLogBestEffort(ctx context.Context, q *sqlc.Queries, imageKey, sha256Hex, sessionID, billID, status, model string, rawJSON []byte, errMsg string, now time.Time) {
+	if q == nil {
+		if s.repo == nil || s.repo.pool == nil {
+			return
+		}
+		q = s.repo.GetQueries()
+	}
+	var sessText, billText pgtype.Text
+	if sessionID != "" {
+		sessText = sqlcutil.String(sessionID)
+	}
+	if billID != "" {
+		billText = sqlcutil.String(billID)
+	}
+	_ = q.CreateOCRLog(ctx, sqlc.CreateOCRLogParams{
+		ID:           uuid.New().String(),
+		ImageKey:     imageKey,
+		ImageSha256:  sha256Hex,
+		SessionID:    sessText,
+		BillID:       billText,
+		Status:       status,
+		Model:        model,
+		RawResponse:  rawJSON,
+		ErrorMessage: errMsg,
+		CreatedAt:    sqlcutil.Timestamptz(now),
+	})
+}
+
+func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte, payerName, payerBankName, payerBankAccount string, skipOCR bool) (*sqlc.Session, []sqlc.Item, []sqlc.Participant, uint, string, error) {
+	imageKey, sha256Hex := s.uploadReceiptBestEffort(ctx, imageBytes)
+	now := time.Now()
+
+	var extracted *ai.ExtractedReceipt
+	if skipOCR {
+		extracted = &ai.ExtractedReceipt{
+			ExtractedByModel:    "manual",
+			MatchesPrintedTotal: true,
+		}
+	} else {
+		var err error
+		extracted, err = extractReceipt(ctx, imageBytes)
+		if err != nil {
+			s.recordOCRLogBestEffort(ctx, nil, imageKey, sha256Hex, "", "", "failed", "", nil, err.Error(), now)
+			return nil, nil, nil, 0, "", err
+		}
 	}
 
 	sessionID := uuid.New().String()
-	now := time.Now()
+	rawJSON, ocrModel, ocrStatus := ocrMetadataOf(extracted, skipOCR)
 
 	var payerID uint
 	var payerToken string
 
-	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		err := q.CreateSession(ctx, sqlc.CreateSessionParams{
 			ID:               sessionID,
 			PayerName:        payerName,
@@ -64,20 +152,26 @@ func (s *Service) ExtractAndCreateSession(ctx context.Context, imageBytes []byte
 		}
 
 		err = q.CreateBill(ctx, sqlc.CreateBillParams{
-			ID:            initialBillID,
-			SessionID:     sessionID,
-			PayerName:     payerName,
-			Name:          billName,
-			Tax:           extracted.Tax,
-			ServiceCharge: extracted.ServiceCharge,
-			Discount:      extracted.Discount,
-			OtherCharges:  extracted.OtherCharges,
-			GrandTotal:    extracted.GrandTotal,
-			CreatedAt:     sqlcutil.Timestamptz(now),
+			ID:             initialBillID,
+			SessionID:      sessionID,
+			PayerName:      payerName,
+			Name:           billName,
+			Tax:            extracted.Tax,
+			ServiceCharge:  extracted.ServiceCharge,
+			Discount:       extracted.Discount,
+			OtherCharges:   extracted.OtherCharges,
+			GrandTotal:     extracted.GrandTotal,
+			ImageKey:       imageKey,
+			OcrRawResponse: rawJSON,
+			OcrModel:       ocrModel,
+			OcrStatus:      ocrStatus,
+			CreatedAt:      sqlcutil.Timestamptz(now),
 		})
 		if err != nil {
 			return err
 		}
+
+		s.recordOCRLogBestEffort(ctx, q, imageKey, sha256Hex, sessionID, initialBillID, ocrStatus, ocrModel, rawJSON, "", now)
 
 		if err := s.saveItemsRecursive(ctx, q, sessionID, sessionID, nil, extracted.Items); err != nil {
 			return err
@@ -136,6 +230,17 @@ func extractReceipt(ctx context.Context, imageBytes []byte) (*ai.ExtractedReceip
 	}
 	if err != nil {
 		return nil, NewReceiptServiceError(fmt.Errorf("extract receipt: %w", err))
+	}
+	return extracted, nil
+}
+
+func extractReceiptWithEscalation(ctx context.Context, imageBytes []byte) (*ai.ExtractedReceipt, error) {
+	extracted, err := ai.ExtractReceiptDataWithEscalation(ctx, imageBytes)
+	if errors.Is(err, ai.ErrUnreadableReceipt) {
+		return nil, NewUnreadableReceiptError()
+	}
+	if err != nil {
+		return nil, NewReceiptServiceError(fmt.Errorf("rescan receipt: %w", err))
 	}
 	return extracted, nil
 }
@@ -407,34 +512,37 @@ func (s *Service) UpdatePaymentInfo(ctx context.Context, sessionID string, bankN
 	return nil
 }
 
-func (s *Service) AddItem(ctx context.Context, sessionID string, name string, price float64, quantity int32, token string) error {
+func (s *Service) AddItem(ctx context.Context, sessionID string, billID string, name string, price float64, quantity int32, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		_, err := q.GetSessionForUpdate(ctx, sessionID)
 		if err != nil {
 			return err
 		}
 
-		session, err := q.GetSession(ctx, sessionID)
+		targetBillID := strings.TrimSpace(billID)
+		if targetBillID == "" {
+			targetBillID = sessionID
+		}
+
+		targetBill, caller, session, err := s.loadBillAndCaller(ctx, q, sessionID, targetBillID, token)
+		if errors.Is(err, ErrBillNotFound) && strings.TrimSpace(billID) == "" {
+			bills, bErr := q.GetBillsBySession(ctx, sessionID)
+			if bErr == nil && len(bills) > 0 {
+				targetBill, caller, session, err = s.loadBillAndCaller(ctx, q, sessionID, bills[0].ID, token)
+			}
+		}
 		if err != nil {
 			return err
 		}
 
-		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
-			SessionID: sessionID,
-			Name:      session.PayerName,
-		})
-		if err != nil {
-			return err
-		}
-
-		if payer.Token != token {
+		if !canManageBill(caller.Name, targetBill.PayerName, session.PayerName) {
 			return ErrUnauthorized
 		}
 
 		return q.CreateItem(ctx, sqlc.CreateItemParams{
 			ID:        uuid.New().String(),
 			SessionID: sessionID,
-			BillID:    sessionID,
+			BillID:    targetBill.ID,
 			Name:      name,
 			Price:     price,
 			Quantity:  quantity,
@@ -449,6 +557,48 @@ func (s *Service) AddItem(ctx context.Context, sessionID string, name string, pr
 	return nil
 }
 
+func (s *Service) authorizeItemBillManager(ctx context.Context, q *sqlc.Queries, sessionID, itemID, token string) error {
+	items, err := q.GetItemsBySession(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+	var targetItem *sqlc.Item
+	for _, it := range items {
+		if it.ID == itemID {
+			itemCopy := it
+			targetItem = &itemCopy
+			break
+		}
+	}
+	if targetItem == nil {
+		return NewItemNotFoundError(itemID)
+	}
+
+	targetBill, caller, session, err := s.loadBillAndCaller(ctx, q, sessionID, targetItem.BillID, token)
+	if errors.Is(err, ErrBillNotFound) {
+		sessionVal, sErr := q.GetSession(ctx, sessionID)
+		if sErr != nil {
+			return sErr
+		}
+		payer, pErr := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
+			SessionID: sessionID,
+			Name:      sessionVal.PayerName,
+		})
+		if pErr != nil || payer.Token != token {
+			return ErrUnauthorized
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	if !canManageBill(caller.Name, targetBill.PayerName, session.PayerName) {
+		return ErrUnauthorized
+	}
+	return nil
+}
+
 func (s *Service) UpdateItem(ctx context.Context, sessionID string, itemID string, name string, price float64, quantity int32, token string) error {
 	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		_, err := q.GetSessionForUpdate(ctx, sessionID)
@@ -456,21 +606,8 @@ func (s *Service) UpdateItem(ctx context.Context, sessionID string, itemID strin
 			return err
 		}
 
-		session, err := q.GetSession(ctx, sessionID)
-		if err != nil {
+		if err := s.authorizeItemBillManager(ctx, q, sessionID, itemID, token); err != nil {
 			return err
-		}
-
-		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
-			SessionID: sessionID,
-			Name:      session.PayerName,
-		})
-		if err != nil {
-			return err
-		}
-
-		if payer.Token != token {
-			return ErrUnauthorized
 		}
 
 		return q.UpdateItem(ctx, sqlc.UpdateItemParams{
@@ -497,21 +634,8 @@ func (s *Service) DeleteItem(ctx context.Context, sessionID string, itemID strin
 			return err
 		}
 
-		session, err := q.GetSession(ctx, sessionID)
-		if err != nil {
+		if err := s.authorizeItemBillManager(ctx, q, sessionID, itemID, token); err != nil {
 			return err
-		}
-
-		payer, err := q.GetParticipantByName(ctx, sqlc.GetParticipantByNameParams{
-			SessionID: sessionID,
-			Name:      session.PayerName,
-		})
-		if err != nil {
-			return err
-		}
-
-		if payer.Token != token {
-			return ErrUnauthorized
 		}
 
 		return q.DeleteItem(ctx, sqlc.DeleteItemParams{
@@ -745,6 +869,7 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 			Discount:      b.Discount,
 			OtherCharges:  b.OtherCharges,
 			GrandTotal:    b.GrandTotal,
+			ImageURL:      s.presignBillImage(b.ImageKey),
 			CreatedAt:     sqlcutil.Time(b.CreatedAt).Format(time.RFC3339),
 		})
 	}
@@ -768,21 +893,36 @@ func (s *Service) GetCompiledSession(ctx context.Context, sessionID string) (Com
 	}, nil
 }
 
-func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageBytes []byte, payerName string, billName string, token string) error {
-	extracted, err := extractReceipt(ctx, imageBytes)
-	if err != nil {
-		return err
+func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageBytes []byte, payerName string, billName string, token string, skipOCR bool) error {
+	imageKey, sha256Hex := s.uploadReceiptBestEffort(ctx, imageBytes)
+	now := time.Now()
+
+	var extracted *ai.ExtractedReceipt
+	if skipOCR {
+		extracted = &ai.ExtractedReceipt{
+			ExtractedByModel:    "manual",
+			MatchesPrintedTotal: true,
+		}
+	} else {
+		var err error
+		extracted, err = extractReceipt(ctx, imageBytes)
+		if err != nil {
+			s.recordOCRLogBestEffort(ctx, nil, imageKey, sha256Hex, sessionID, "", "failed", "", nil, err.Error(), now)
+			return err
+		}
 	}
 
 	if billName == "" {
 		if extracted.MerchantName != "" {
 			billName = extracted.MerchantName
 		} else {
-			billName = fmt.Sprintf("Stop %s", time.Now().Format("2006-01-02 15:04:05"))
+			billName = fmt.Sprintf("Stop %s", now.Format("2006-01-02 15:04:05"))
 		}
 	}
 
-	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+	rawJSON, ocrModel, ocrStatus := ocrMetadataOf(extracted, skipOCR)
+
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		participants, err := q.GetParticipantsBySession(ctx, sessionID)
 		if err != nil {
 			return err
@@ -805,23 +945,28 @@ func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageB
 		}
 
 		billID := uuid.New().String()
-		now := time.Now()
 
 		err = q.CreateBill(ctx, sqlc.CreateBillParams{
-			ID:            billID,
-			SessionID:     sessionID,
-			PayerName:     payerName,
-			Name:          billName,
-			Tax:           extracted.Tax,
-			ServiceCharge: extracted.ServiceCharge,
-			Discount:      extracted.Discount,
-			OtherCharges:  extracted.OtherCharges,
-			GrandTotal:    extracted.GrandTotal,
-			CreatedAt:     sqlcutil.Timestamptz(now),
+			ID:             billID,
+			SessionID:      sessionID,
+			PayerName:      payerName,
+			Name:           billName,
+			Tax:            extracted.Tax,
+			ServiceCharge:  extracted.ServiceCharge,
+			Discount:       extracted.Discount,
+			OtherCharges:   extracted.OtherCharges,
+			GrandTotal:     extracted.GrandTotal,
+			ImageKey:       imageKey,
+			OcrRawResponse: rawJSON,
+			OcrModel:       ocrModel,
+			OcrStatus:      ocrStatus,
+			CreatedAt:      sqlcutil.Timestamptz(now),
 		})
 		if err != nil {
 			return err
 		}
+
+		s.recordOCRLogBestEffort(ctx, q, imageKey, sha256Hex, sessionID, billID, ocrStatus, ocrModel, rawJSON, "", now)
 
 		if err := s.saveItemsRecursive(ctx, q, sessionID, billID, nil, extracted.Items); err != nil {
 			return err
@@ -830,6 +975,89 @@ func (s *Service) AddBillToSession(ctx context.Context, sessionID string, imageB
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
+	go s.broadcastFullState(context.WithoutCancel(ctx), sessionID)
+	return nil
+}
+
+func (s *Service) RescanBill(ctx context.Context, sessionID string, billID string, token string) error {
+	q := s.repo.GetQueries()
+	targetBill, caller, session, err := s.loadBillAndCaller(ctx, q, sessionID, billID, token)
+	if err != nil {
+		return err
+	}
+	if !canManageBill(caller.Name, targetBill.PayerName, session.PayerName) {
+		return ErrUnauthorized
+	}
+	if strings.TrimSpace(targetBill.ImageKey) == "" || s.storage == nil {
+		return ErrBillImageNotFound
+	}
+
+	imageBytes, err := s.storage.GetReceipt(ctx, targetBill.ImageKey)
+	if err != nil {
+		slog.WarnContext(ctx, "Failed to download receipt image for rescan", "billId", billID, "imageKey", targetBill.ImageKey, "error", err)
+		return ErrBillImageNotFound
+	}
+
+	sha256Hex, _, _ := storage.ReceiptImageHashAndKey(imageBytes)
+	now := time.Now()
+
+	extracted, err := extractReceiptWithEscalation(ctx, imageBytes)
+	if err != nil {
+		s.recordOCRLogBestEffort(ctx, nil, targetBill.ImageKey, sha256Hex, sessionID, billID, "rescan_failed", "", nil, err.Error(), now)
+		return err
+	}
+
+	rawJSON, ocrModel, _ := ocrMetadataOf(extracted, false)
+	ocrStatus := "rescan_success"
+	if !extracted.MatchesPrintedTotal {
+		ocrStatus = "rescan_reconciled_mismatch"
+	}
+
+	err = s.repo.WithTx(ctx, func(txQ *sqlc.Queries) error {
+		freshBill, freshCaller, freshSession, txErr := s.loadBillAndCaller(ctx, txQ, sessionID, billID, token)
+		if txErr != nil {
+			return txErr
+		}
+		if !canManageBill(freshCaller.Name, freshBill.PayerName, freshSession.PayerName) {
+			return ErrUnauthorized
+		}
+
+		if err := txQ.DeleteItemsByBill(ctx, sqlc.DeleteItemsByBillParams{
+			BillID:    billID,
+			SessionID: sessionID,
+		}); err != nil {
+			return err
+		}
+
+		updatedName := freshBill.Name
+		if extracted.MerchantName != "" && (updatedName == "" || updatedName == "Initial Stop" || strings.HasPrefix(updatedName, "Stop ")) {
+			updatedName = extracted.MerchantName
+		}
+
+		if err := txQ.UpdateBillOCRResult(ctx, sqlc.UpdateBillOCRResultParams{
+			Name:           updatedName,
+			Tax:            extracted.Tax,
+			ServiceCharge:  extracted.ServiceCharge,
+			Discount:       extracted.Discount,
+			OtherCharges:   extracted.OtherCharges,
+			GrandTotal:     extracted.GrandTotal,
+			OcrRawResponse: rawJSON,
+			OcrModel:       ocrModel,
+			OcrStatus:      ocrStatus,
+			ID:             billID,
+			SessionID:      sessionID,
+		}); err != nil {
+			return err
+		}
+
+		s.recordOCRLogBestEffort(ctx, txQ, freshBill.ImageKey, sha256Hex, sessionID, billID, ocrStatus, ocrModel, rawJSON, "", now)
+
+		return s.saveItemsRecursive(ctx, txQ, sessionID, billID, nil, extracted.Items)
+	})
 	if err != nil {
 		return err
 	}

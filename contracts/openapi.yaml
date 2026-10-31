@@ -30,6 +30,8 @@ paths:
                   type: string
                 payerBankAccount:
                   type: string
+                skipOcr:
+                  type: string
               required:
                 - receipt
       responses:
@@ -214,6 +216,8 @@ paths:
             schema:
               type: object
               properties:
+                billId:
+                  type: string
                 name:
                   type: string
                 price:
@@ -385,32 +389,80 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
+                receipt:
+                  type: string
+                  format: binary
                 payerName:
                   type: string
                 name:
                   type: string
-                tax:
-                  type: number
-                serviceCharge:
-                  type: number
-                grandTotal:
-                  type: number
                 token:
                   type: string
+                skipOcr:
+                  type: string
               required:
-                - payerName
-                - name
-                - tax
-                - serviceCharge
-                - grandTotal
+                - receipt
                 - token
       responses:
         '201':
           description: Bill added
+  /session/{id}/bill/{billId}/rescan:
+    post:
+      summary: Re-run AI OCR on a bill's stored receipt image using the escalation model
+      operationId: RescanBill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+              required:
+                - token
+      responses:
+        '200':
+          description: Bill re-scanned and items updated
+        '401':
+          description: Token does not belong to this bill's payer or the session payer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Bill or receipt image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Receipt unreadable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: AI service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /session/{id}/bill/{billId}:
     put:
       summary: Update an existing bill
@@ -763,6 +815,8 @@ components:
           type: number
         grandTotal:
           type: number
+        imageUrl:
+          type: string
         createdAt:
           type: string
       required:

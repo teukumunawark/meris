@@ -10,11 +10,17 @@ export function useManageItems() {
   const { sessionId, participantToken } = useSession();
   const { m } = useI18n();
 
-  const addItem = useCallback(async (name: string, price: number, quantity: number) => {
+  const addItem = useCallback(async (name: string, price: number, quantity: number, billId?: string) => {
     try {
       await apiFetch(`/session/${sessionId}/item`, {
         method: "POST",
-        body: { name, price, quantity, token: participantToken },
+        body: {
+          ...(billId ? { billId } : {}),
+          name,
+          price,
+          quantity,
+          token: participantToken,
+        },
       });
       return true;
     } catch (err) {
@@ -48,13 +54,16 @@ export function useManageItems() {
     }
   }, [sessionId, participantToken]);
 
-  const addBill = useCallback(async (file: File, payerName: string, billName: string): Promise<string | null> => {
+  const addBill = useCallback(async (file: File, payerName: string, billName: string, skipOcr?: boolean): Promise<string | null> => {
     try {
       const formData = new FormData();
       formData.append("receipt", await prepareReceiptImage(file));
       formData.append("payerName", payerName);
       formData.append("name", billName);
       formData.append("token", participantToken);
+      if (skipOcr) {
+        formData.append("skipOcr", "true");
+      }
 
       await apiFetch(`/session/${sessionId}/bill`, {
         method: "POST",
@@ -64,6 +73,19 @@ export function useManageItems() {
     } catch (err) {
       console.error("Failed to add bill stop:", err);
       return apiErrorMessage(err, m, m.addBill.failed);
+    }
+  }, [sessionId, participantToken, m]);
+
+  const rescanBill = useCallback(async (billId: string): Promise<string | null> => {
+    try {
+      await apiFetch(`/session/${sessionId}/bill/${billId}/rescan`, {
+        method: "POST",
+        body: { token: participantToken },
+      });
+      return null;
+    } catch (err) {
+      console.error("Failed to rescan bill:", err);
+      return apiErrorMessage(err, m, m.billCard.rescanFailed);
     }
   }, [sessionId, participantToken, m]);
 
@@ -115,5 +137,5 @@ export function useManageItems() {
     }
   }, [sessionId, participantToken]);
 
-  return { addItem, updateItem, deleteItem, addBill, updateBill, deleteBill, updateParticipantBank };
+  return { addItem, updateItem, deleteItem, addBill, rescanBill, updateBill, deleteBill, updateParticipantBank };
 }

@@ -64,6 +64,10 @@ export const id = {
     readingHint: "Mencatat menu dan harganya.",
     errorTitle: "Struk gagal diproses",
     errorFallback: "Pastikan seluruh struk masuk foto dan cukup terang, lalu coba lagi.",
+    retryButton: "Coba baca ulang",
+    manualFallbackButton: "Lanjut isi manual (simpan foto struk)",
+    changePhotoButton: "Pilih foto lain",
+    selectedPhotoAlt: "Pratinjau foto struk",
   },
 
   joinForm: {
@@ -147,7 +151,11 @@ export const id = {
   addBill: {
     button: "Tambah struk",
     reading: "Membaca struk...",
-    failed: "Struk gagal ditambahkan. Coba foto ulang.",
+    failed: "Struk gagal ditambahkan. Kamu bisa coba baca ulang tanpa foto ulang, atau lanjut isi manual.",
+    retryButton: "Coba baca ulang",
+    manualFallbackButton: "Simpan struk & isi manual",
+    changePhotoButton: "Ganti foto",
+    cancelButton: "Batal",
   },
 
   billCard: {
@@ -170,6 +178,23 @@ export const id = {
     editDetails: "Ubah rincian struk",
     deleteConfirm: (name: string) => `Hapus struk "${name}" beserta semua menunya?`,
     empty: "Belum ada menu di struk ini.",
+    viewReceipt: "Lihat struk",
+    hideReceipt: "Tutup foto struk",
+    splitReceipt: "Sandingkan struk",
+    fullscreenReceipt: "Layar penuh",
+    receiptAlt: (name: string) => `Foto struk ${name}`,
+    zoomIn: "Perbesar",
+    zoomOut: "Perkecil",
+    zoomReset: "Reset zoom",
+    rescanAi: "Scan ulang AI",
+    rescanningAi: "Memindai ulang...",
+    rescanConfirmWithClaims: (name: string) =>
+      `Scan ulang struk "${name}" dengan model AI akurasi tinggi? Semua menu dan klaim peserta pada struk ini akan diganti dengan hasil bacaan baru.`,
+    rescanConfirm: (name: string) =>
+      `Scan ulang struk "${name}" dengan model AI akurasi tinggi? Daftar menu dan rincian pajak pada struk ini akan diperbarui.`,
+    rescanFailed: "Gagal memindai ulang struk. Coba lagi sebentar lagi.",
+    addItemToBill: "Tambah menu",
+    receiptLoadError: "Foto struk gagal dimuat.",
   },
 
   item: {

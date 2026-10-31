@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"meris-backend/internal/platform/database"
+	"meris-backend/internal/platform/storage"
 )
 
 type Config struct {
@@ -17,6 +18,7 @@ type Config struct {
 	Database        database.Config
 	Redis           RedisConfig
 	AI              AIConfig
+	Storage         storage.Config
 	Telemetry       TelemetryConfig
 	CORS            CORSConfig
 	RateLimit       RateLimitConfig
@@ -43,6 +45,7 @@ type RedisConfig struct {
 }
 
 type TelemetryConfig struct {
+	Enabled      bool
 	OTLPEndpoint string
 }
 
@@ -62,8 +65,13 @@ func Load() (Config, error) {
 		_ = godotenv.Load("../.env")
 	}
 
+	appEnv := getEnv("APP_ENV", "local")
+	otlpEndpoint := getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	isDevEnv := appEnv == "local" || appEnv == "dev" || appEnv == "development"
+	otelEnabledDefault := !isDevEnv && otlpEndpoint != ""
+
 	cfg := Config{
-		Env: getEnv("APP_ENV", "local"),
+		Env: appEnv,
 		HTTP: HTTPConfig{
 			Addr:         getEnv("BIND_ADDRESS", "127.0.0.1") + ":" + getEnv("PORT", "8080"),
 			ReadTimeout:  5 * time.Second,
@@ -99,8 +107,18 @@ func Load() (Config, error) {
 			Model:           getEnv("AI_MODEL", "ag/gemini-3.8-flash-low"),
 			EscalationModel: getEnv("AI_ESCALATION_MODEL", "ag/gemini-3.8-flash-high"),
 		},
+		Storage: storage.Config{
+			Endpoint:       getEnv("S3_ENDPOINT", "http://localhost:9000"),
+			PublicEndpoint: getEnv("S3_PUBLIC_ENDPOINT", "http://localhost:9000"),
+			AccessKey:      getEnv("S3_ACCESS_KEY", "rustfsadmin"),
+			SecretKey:      getEnv("S3_SECRET_KEY", "rustfsadmin"),
+			Bucket:         getEnv("S3_BUCKET", "meris-receipts"),
+			Region:         getEnv("S3_REGION", "us-east-1"),
+			PresignExpiry:  24 * time.Hour,
+		},
 		Telemetry: TelemetryConfig{
-			OTLPEndpoint: getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
+			Enabled:      getBool("OTEL_ENABLED", otelEnabledDefault),
+			OTLPEndpoint: otlpEndpoint,
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: getEnv("ALLOWED_ORIGINS", "*"),
@@ -142,6 +160,10 @@ func Load() (Config, error) {
 		cfg.Redis.DB = redisDB
 	}
 
+	if cfg.Storage.PresignExpiry, err = getDuration("S3_PRESIGN_EXPIRY", cfg.Storage.PresignExpiry); err != nil {
+		return Config{}, err
+	}
+
 	return cfg, nil
 }
 
@@ -150,6 +172,18 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getBool(key string, fallback bool) bool {
+	raw, ok := os.LookupEnv(key)
+	if !ok || raw == "" {
+		return fallback
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return fallback
+	}
+	return value
 }
 
 func getInt32(key string, fallback int32) (int32, error) {
